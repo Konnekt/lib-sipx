@@ -1,9 +1,12 @@
 //
-// Copyright (C) 2004, 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
 #include <stdio.h>
@@ -139,9 +142,6 @@ int main(int argc, char* argv[])
    int proxyTlsPort;
    OsConfigDb configDb;
 
-   // siptest uses osPrintf for output, so we have to un-suppress it.
-   enableConsoleOutput(TRUE);
-
    if(configDb.loadFromFile(configFileName) == OS_SUCCESS)
    {
       osPrintf("Found config file: %s\n", configFileName);
@@ -194,7 +194,6 @@ int main(int argc, char* argv[])
       );
    sipUA->allowMethod(SIP_REGISTER_METHOD);
    sipUA->allowMethod(SIP_SUBSCRIBE_METHOD);
-   sipUA->allowMethod(SIP_NOTIFY_METHOD);
 
    sipUA->start();
 

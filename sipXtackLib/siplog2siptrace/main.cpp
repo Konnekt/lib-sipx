@@ -1,10 +1,10 @@
 //
 //
-// Copyright (c) Pingtel Corp. (work in progress)
+// Copyright (c) PingTel Corp. (work in progress)
 //
-// This is an unpublished work containing Pingtel Corporation's
-// proprietary information.  Disclosure, use or reproduction without
-// written authorization of Pingtel Corp. is prohibited.
+// This is an unpublished work containing PingTel Corporation's confidential
+// and proprietary information.  Disclosure, use or reproduction without
+// written authorization of PingTel Corp. is prohibited.
 //
 //! author="Daniel Petrie"
 //////////////////////////////////////////////////////////////////////////////
@@ -17,10 +17,9 @@
 #if defined(_WIN32)
 #   include <io.h>
 #   include <string.h>
-#elif defined(__linux__) || defined(__MACH__)
+#elif defined(__linux__)
 #   include <unistd.h>
-#   include <sys/types.h>
-#   include <sys/uio.h>
+#elif defined(__MACH__)
 #   include <unistd.h>
 #endif
 

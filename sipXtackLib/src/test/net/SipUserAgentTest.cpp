@@ -1,8 +1,12 @@
 //
-// Copyright (C) 2004, 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
+///////////////////////////////////////////////////////////////////////////////
 
 // Author: Scott Zuk
 //         szuk AT telusplanet DOT net
@@ -15,13 +19,13 @@
 #include <os/OsDefs.h>
 #include <os/OsTimerTask.h>
 #include <os/OsProcess.h>
-#include <os/OsStunAgentTask.h>
+#include <os/OsNatAgentTask.h>
 #include <net/SipMessage.h>
 #include <net/SipUserAgent.h>
 #include <net/SipLineMgr.h>
 #include <net/SipRefreshMgr.h>
 
-#define SHUTDOWN_TEST_ITERATIONS 2
+#define SHUTDOWN_TEST_ITERATIONS 3
 
 /**
  * Unittest for SipUserAgent
@@ -144,7 +148,10 @@ public:
          sipUA->send(testMsg);
 
          // Wait long enough for some stack timeouts/retansmits to occur
-         OsTask::delay(10000); // 10 seconds
+         for(int i = 0; i < 10; ++i)
+         {
+             OsTask::delay(1000);
+         }
 
          sipUA->shutdown(TRUE);
          lineMgr->requestShutdown();
@@ -156,7 +163,7 @@ public:
          delete refreshMgr;
          delete lineMgr;
          OsTimerTask::destroyTimer();
-         OsStunAgentTask::releaseInstance();
+         OsNatAgentTask::releaseInstance();
 
          int numThreads = getNumThreads(myPID);
          CPPUNIT_ASSERT(numThreads == 1);
@@ -214,7 +221,10 @@ public:
          sipUA->send(testMsg);
 
          // Wait long enough for some stack timeouts/retansmits to occur
-         OsTask::delay(10000); // 10 seconds
+         for(int i = 0; i < 10; ++i)
+         {
+             OsTask::delay(1000);
+         }
 
          sipUA->shutdown(FALSE);
          lineMgr->requestShutdown();
@@ -230,7 +240,7 @@ public:
          delete refreshMgr;
          delete lineMgr;
          OsTimerTask::destroyTimer();
-         OsStunAgentTask::releaseInstance();
+         OsNatAgentTask::releaseInstance();
 
          int numThreads = getNumThreads(myPID);
          CPPUNIT_ASSERT(numThreads == 1);

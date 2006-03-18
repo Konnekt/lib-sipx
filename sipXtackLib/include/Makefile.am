@@ -19,8 +19,6 @@ EXTRA_DIST = \
 
 nobase_include_HEADERS =  \
     net/HttpBody.h \
-    net/HttpConnection.h \
-    net/HttpConnectionMap.h \
     net/HttpMessage.h \
     net/HttpRequestContext.h \
     net/HttpServer.h \
@@ -34,7 +32,6 @@ nobase_include_HEADERS =  \
     net/NetAttributeTokenizer.h \
     net/NetBase64Codec.h \
     net/NetMd5Codec.h \
-    net/PidfBody.h \
     net/ProvisioningAgent.h \
     net/ProvisioningAgentXmlRpcAdapter.h \
     net/ProvisioningAttrList.h \

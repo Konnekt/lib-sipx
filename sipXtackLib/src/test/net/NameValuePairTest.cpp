@@ -1,9 +1,12 @@
 //
-// Copyright (C) 2004, 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/TestCase.h>
@@ -11,9 +14,9 @@
 
 #include <net/NameValuePair.h>
 
-class NameValuePairTest : public CppUnit::TestCase
+class TestTemplate : public CppUnit::TestCase
 {
-    CPPUNIT_TEST_SUITE(NameValuePairTest);
+    CPPUNIT_TEST_SUITE(TestTemplate);
     CPPUNIT_TEST(testAccessors);
     CPPUNIT_TEST_SUITE_END();
 
@@ -44,9 +47,8 @@ public:
         CPPUNIT_ASSERT_MESSAGE("nv should be != nv_different_case",
                                nv->compareTo(nv_different_case) != 0);
 
-        delete nv;
-        delete nv_different_case;
+        delete nv, nv_different_case;
     }
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(NameValuePairTest);
+CPPUNIT_TEST_SUITE_REGISTRATION(TestTemplate);

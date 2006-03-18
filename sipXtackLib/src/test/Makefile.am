@@ -4,7 +4,7 @@ TESTS = testsuite
 
 check_PROGRAMS = testsuite sandbox
 
-INCLUDES = -I$(top_srcdir)/include
+INCLUDES = -I$(top_srcdir)/include -I${top_srcdir}/../sipXcallLib/include
 
 # Make TESTDIR an absolute path to the directory containing
 # SipSrvLookupTest.named.*
@@ -40,21 +40,14 @@ testsuite_SOURCES = \
     net/UrlTest.cpp \
     net/XmlRpcTest.cpp
 
-# These all crash with no unit test results
-# Temporarily remove these from the testsuite until they are fixed
-#    net/SipRefreshManagerTest.cpp \
-#    net/SipSubcribeServerTest.cpp \
-#    net/SipSubcriptionClientTest.cpp \
-#
-
 EXTRA_DIST = \
     net/SipSrvLookupTest.named.zone
 
-# [DEBUG ASSISTANT] List a single unittest to isolate a unittest for
+# [DEBUG ASSISTANT] List a single unittest to isoloate a unittest for
 # debugging or when developing a new unittest. As courtesy remove all
 # unittests before checking in, although forgetting to has no ill
 # effects.
 sandbox_LDADD = $(testsuite_LDADD)
 sandbox_CXXFLAGS = $(testsuite_CXXFLAGS)
 sandbox_SOURCES = \
-    net/XmlRpcTest.cpp
+    net/SipPublishContentMgrTest.cpp

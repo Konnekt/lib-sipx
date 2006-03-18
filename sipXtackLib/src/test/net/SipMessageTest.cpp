@@ -1,9 +1,12 @@
 //
-// Copyright (C) 2004, 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/TestCase.h>
@@ -25,7 +28,6 @@ class SipMessageTest : public CppUnit::TestCase
 {
       CPPUNIT_TEST_SUITE(SipMessageTest);
       CPPUNIT_TEST(testGetVia);
-      CPPUNIT_TEST(testGetViaShort);
       CPPUNIT_TEST(testGetAddrVia);
       CPPUNIT_TEST(testGetNoBranchVia);
       CPPUNIT_TEST(testGetViaPort);
@@ -42,7 +44,6 @@ class SipMessageTest : public CppUnit::TestCase
       CPPUNIT_TEST(testSetInviteDataHeaders);
       CPPUNIT_TEST(testSetInviteDataHeadersUnique);
       CPPUNIT_TEST(testSetInviteDataHeadersForbidden);
-      CPPUNIT_TEST(testCompactNames);
       CPPUNIT_TEST_SUITE_END();
 
       public:
@@ -86,50 +87,6 @@ class SipMessageTest : public CppUnit::TestCase
          ASSERT_STR_EQUAL("TCP",protocol.data());
 
       };
-
-   void testGetViaShort()
-      {
-         const char* SimpleMessage =
-            "REGISTER sip:sipx.local SIP/2.0\r\n"
-            "v: SIP/2.0/TCP sipx.local:33855;branch=z9hG4bK-9378a12d4218e10ef4dc78ea3d\r\n"
-            "v: SIP/2.0/UDP sipx.remote:9999;branch=z9hG4bK-10cb6f\r\n"
-            "To: sip:sipx.local\r\n"
-            "From: Sip Send <sip:sipsend@pingtel.org>; tag=30543f3483e1cb11ecb40866edd3295b\r\n"
-            "Call-ID: f88dfabce84b6a2787ef024a7dbe8749\r\n"
-            "Cseq: 1 REGISTER\r\n"
-            "Max-Forwards: 20\r\n"
-            "User-Agent: sipsend/0.01\r\n"
-            "Contact: me@127.0.0.1\r\n"
-            "Expires: 300\r\n"
-            "Date: Fri, 16 Jul 2004 02:16:15 GMT\r\n"
-            "Content-Length: 0\r\n"
-            "\r\n";
-         SipMessage testMsg( SimpleMessage, strlen( SimpleMessage ) );
-
-         UtlString viaAddress;
-         int viaPort;
-         UtlString protocol;
-         int recievedPort;
-         UtlBoolean receivedSet;
-         UtlBoolean maddrSet;
-         UtlBoolean receivePortSet;
-         
-         testMsg.removeLastVia();
-
-         testMsg.getLastVia(&viaAddress,
-                            &viaPort,
-                            &protocol,
-                            &recievedPort,
-                            &receivedSet,
-                            &maddrSet,
-                            &receivePortSet);
-
-         ASSERT_STR_EQUAL("sipx.remote",viaAddress.data());
-         CPPUNIT_ASSERT_EQUAL(9999, viaPort);
-         ASSERT_STR_EQUAL("UDP",protocol.data());
-
-      };
-
 
    void testGetAddrVia()
       {
@@ -742,7 +699,7 @@ class SipMessageTest : public CppUnit::TestCase
          ASSERT_STR_EQUAL("1234-2345", tag);
          ASSERT_STR_EQUAL("sipserver", address);
 
-         OsSocket::IpProtocolSocketType protoNumber;
+         OsSocket::SocketProtocolTypes protoNumber;
          SipMessage::convertProtocolStringToEnum(protocol.data(), protoNumber);
 
          CPPUNIT_ASSERT_EQUAL(OsSocket::TCP, protoNumber);
@@ -764,7 +721,7 @@ class SipMessageTest : public CppUnit::TestCase
             "Content-Length: 0\r\n"
             "\r\n";
          // Construct a message.
-         SipMessage testMsg(message, strlen(message));
+         SipMessage* pTestMsg = new SipMessage(message, strlen(message));
 
          // Construct a SipUserAgent to provide the "agent name" for
          // the Warning header.
@@ -793,7 +750,7 @@ class SipMessageTest : public CppUnit::TestCase
 
          // Construct error response for insufficient codeecs.
          SipMessage response;
-         response.setInviteBadCodecs(&testMsg, &user_agent);
+         response.setInviteBadCodecs(pTestMsg, &user_agent);
 
          // Check that the response code is 488.
          // Note this code is hard-coded here, because it is fixed by the
@@ -829,6 +786,7 @@ class SipMessageTest : public CppUnit::TestCase
          }
          // Check the agent value.
          ASSERT_STR_EQUAL(agent_expected, agent);
+         delete pTestMsg;
       }
 
  void testSdpParse()
@@ -953,15 +911,7 @@ class SipMessageTest : public CppUnit::TestCase
                             "sip:remotecontact@example.com", // farEndContact
                             "sip:contact@example.com", // contactUrl
                             "callid@example.com", // callId
-                            NULL, // rtpAddress
-                            0, // rtpAudioPort
-                            0, // rtcpAudioPort
-                            0, // rtpVideoPort
-                            0, // rtcpVideoPort
-                            NULL, // srtpParams
                             0, // sequenceNumber
-                            0, // numRtpCodecs
-                            NULL, // rtpCodecs
                             17 // sessionReinviteTimer
             );
 
@@ -987,15 +937,7 @@ class SipMessageTest : public CppUnit::TestCase
                             "sip:remotecontact@example.com", // farEndContact
                             "sip:contact@example.com", // contactUrl
                             "callid@example.com", // callId
-                            NULL, // rtpAddress
-                            0, // rtpAudioPort
-                            0, // rtcpAudioPort
-                            0, // rtpVideoPort
-                            0, // rtcpVideoPort
-                            NULL, // srtpParams
                             0, // sequenceNumber
-                            0, // numRtpCodecs
-                            NULL, // rtpCodecs
                             17 // sessionReinviteTimer
             );
 
@@ -1049,15 +991,7 @@ class SipMessageTest : public CppUnit::TestCase
                             "sip:remotecontact@example.com", // farEndContact
                             "sip:contact@example.com", // contactUrl
                             "callid@example.com", // callId
-                            NULL, // rtpAddress
-                            0, // rtpAudioPort
-                            0, // rtcpAudioPort
-                            0, // rtpVideoPort
-                            0, // rtcpVideoPort
-                            NULL, // srtpParams
                             0, // sequenceNumber
-                            0, // numRtpCodecs
-                            NULL, // rtpCodecs
                             17 // sessionReinviteTimer
             );
 
@@ -1083,15 +1017,7 @@ class SipMessageTest : public CppUnit::TestCase
                             "sip:remotecontact@example.com", // farEndContact
                             "sip:contact@example.com", // contactUrl
                             "callid@example.com", // callId
-                            NULL, // rtpAddress
-                            0, // rtpAudioPort
-                            0, // rtcpAudioPort
-                            0, // rtpVideoPort
-                            0, // rtcpVideoPort
-                            NULL, // srtpParams
                             0, // sequenceNumber
-                            0, // numRtpCodecs
-                            NULL, // rtpCodecs
                             17 // sessionReinviteTimer
             );
 
@@ -1151,14 +1077,6 @@ class SipMessageTest : public CppUnit::TestCase
                             "sip:remotecontact@example.com", // farEndContact
                             "sip:contact@example.com", // contactUrl
                             "callid@example.com", // callId
-                            NULL, // rtpAddress
-                            0, // rtpAudioPort
-                            0, // rtcpAudioPort
-                            0, // rtpVideoPort
-                            0, // rtcpVideoPort
-                            NULL, // srtpParams
-                            0, // sequenceNumber
-                            0, // numRtpCodecs
                             NULL, // rtpCodecs
                             17 // sessionReinviteTimer
             );
@@ -1180,66 +1098,6 @@ class SipMessageTest : public CppUnit::TestCase
          delete msg;
       }
    }
-
-   void testCompactNames()
-      {
-         const char* CompactMessage =
-            "METHOD sip:sipx.local SIP/2.0\r\n"
-            "v: SIP/2.0/TCP sipx.local:33855;branch=z9hG4bK-10cb6f9378a12d4218e10ef4dc78ea3d\r\n"
-            "v: SIP/2.0/TCP sipx.remote:999999;branch=z9hG4bK-remote-tid\r\n"
-            "t: sip:sipx.local\r\n"
-            "f: Sip Send <sip:sipsend@pingtel.org>; tag=30543f3483e1cb11ecb40866edd3295b\r\n"
-            "i: f88dfabce84b6a2787ef024a7dbe8749\r\n"
-            "Cseq: 1 REGISTER\r\n"
-            "Max-Forwards: 20\r\n"
-            "o: event-package\r\n"
-            "r: sip:refer@address.example.com\r\n"
-            "b: sip:refered-by@address.example.com\r\n"
-            "User-Agent: sipsend/0.01\r\n"
-            "s: Some silly subject\r\n"
-            "k: a-supported-token\r\n"
-            "m: me@127.0.0.1\r\n"
-            "Expires: 300\r\n"
-            "Date: Fri, 16 Jul 2004 02:16:15 GMT\r\n"
-            "l: 0\r\n"
-            "c: application/sdp\r\n"
-            "e: gzip\r\n"
-            "\r\n";
-         SipMessage testMsg( CompactMessage, strlen( CompactMessage ) );
-
-         const char* LongForm =
-            "METHOD sip:sipx.local SIP/2.0\r\n"
-            "Via: SIP/2.0/TCP sipx.local:33855;branch=z9hG4bK-10cb6f9378a12d4218e10ef4dc78ea3d\r\n"
-            "Via: SIP/2.0/TCP sipx.remote:999999;branch=z9hG4bK-remote-tid\r\n"
-            "To: sip:sipx.local\r\n"
-            "From: Sip Send <sip:sipsend@pingtel.org>; tag=30543f3483e1cb11ecb40866edd3295b\r\n"
-            "Call-Id: f88dfabce84b6a2787ef024a7dbe8749\r\n"
-            "Cseq: 1 REGISTER\r\n"
-            "Max-Forwards: 20\r\n"
-            "Event: event-package\r\n"
-            "Refer-To: sip:refer@address.example.com\r\n"
-            "Referred-By: sip:refered-by@address.example.com\r\n"
-            "User-Agent: sipsend/0.01\r\n"
-            "Subject: Some silly subject\r\n"
-            "Supported: a-supported-token\r\n"
-            "Contact: me@127.0.0.1\r\n"
-            "Expires: 300\r\n"
-            "Date: Fri, 16 Jul 2004 02:16:15 GMT\r\n"
-            "Content-Length: 0\r\n"
-            "Content-Type: application/sdp\r\n"
-            "Content-Encoding: gzip\r\n"
-            "\r\n";
-
-         UtlString translated;
-         int length;
-         
-         testMsg.getBytes(&translated, &length);
-         
-         ASSERT_STR_EQUAL(LongForm, translated.data());
-         
-      };
-
-
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SipMessageTest);

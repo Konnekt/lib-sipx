@@ -10,13 +10,14 @@ EXTRA_DIST = \
 
 INCLUDES = \
 	-I$(top_srcdir)/include \
-	-I$(top_builddir)/include
+	-I$(top_builddir)/include \
+	-I$(top_srcdir)/../sipXcallLib/include
 
 lib_LTLIBRARIES = libsipXtack.la
 
 ## Libtool version info - update only immediately before a release
 # Current - increment if any interfaces are added, removed, or changed
-version_Current=2
+version_Current=1
 # Revision - set to 0 if Current was incremented
 #            increment if any implementation has changed
 version_Revision=0
@@ -38,12 +39,17 @@ libsipXtack_la_LIBADD = \
 	@SSL_LIBS@ \
 	-lresolv -lstdc++
 
+if BUILDTLS
+SECURITY_FILES=\
+    net/SipTlsServer.cpp
+else
+SECURITY_FILES=
+endif
+
 libsipXtack_la_SOURCES =  \
     ../config/sipxtacklib-buildstamp.h \
     ../config/sipxtacklib-buildstamp.cpp \
     net/HttpBody.cpp \
-    net/HttpConnection.cpp \
-    net/HttpConnectionMap.cpp \
     net/HttpMessage.cpp \
     net/HttpRequestContext.cpp \
     net/HttpServer.cpp \
@@ -57,7 +63,6 @@ libsipXtack_la_SOURCES =  \
     net/NetAttributeTokenizer.cpp \
     net/NetBase64Codec.cpp \
     net/NetMd5Codec.cpp \
-    net/PidfBody.cpp \
     net/ProvisioningAgent.cpp \
     net/ProvisioningAgentXmlRpcAdapter.cpp \
     net/ProvisioningAttrList.cpp \
@@ -103,7 +108,6 @@ libsipXtack_la_SOURCES =  \
     net/SipSubscribeServerEventHandler.cpp \
     net/SipSubscriptionMgr.cpp \
     net/SipTcpServer.cpp \
-    net/SipTlsServer.cpp \
     net/SipTransaction.cpp \
     net/SipTransactionList.cpp \
     net/SipUdpServer.cpp \
@@ -133,5 +137,6 @@ libsipXtack_la_SOURCES =  \
     resparse/res_parse.c \
     resparse/res_print.c \
     resparse/res_query.c \
-    resparse/res_send.c
+    resparse/res_send.c \
+    $(SECURITY_FILES)
 

@@ -1,13 +1,12 @@
-// 
-// 
-// Copyright (C) 2005 SIPfoundry Inc.
+//
+// Copyright (C) 2004-2006 SIPfoundry Inc.
 // Licensed by SIPfoundry under the LGPL license.
-// 
-// Copyright (C) 2005 Pingtel Corp.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
 // Licensed to SIPfoundry under a Contributor Agreement.
-// 
+//
 // $$
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Author: Dan Petrie (dpetrie AT SIPez DOT com)
 
 #include <cppunit/extensions/HelperMacros.h>
@@ -37,9 +36,41 @@ class SipSubscriptionMgrTest : public CppUnit::TestCase
 
    void subscriptionTest()
    {
+         const char* configSubscribeRequestString =
+            "SUBSCRIBE sip:sipuaconfig@sipuaconfig.example.com SIP/2.0\r\n\
+From: sip:10.1.1.10;Vendor=Pingtel;Model=xpressa_strongarm_vxworks;Version=2.4.0.0009;Serial=00d01e00f4f4;Mac=00d01e00f4f4;tag=17747cec9\r\n\
+To: sip:sipuaconfig@sipuaconfig.example.com\r\n\
+Call-Id: config-17747cec9-00d01e004e6f@10.1.1.10\r\n\
+Cseq: 7 SUBSCRIBE\r\n\
+Contact: sip:10.1.1.10\r\n\
+Event: sip-config\r\n\
+Config_allow: http\r\n\
+Config_require: x-xpressa-apps, x-xpressa-device, x-xpressa-install, x-xpressa-user\r\n\
+Expires: 86400\r\n\
+Date: Tue, 26 Apr 2005 03:54:16 GMT\r\n\
+Max-Forwards: 20\r\n\
+User-Agent: Pingtel/2.4.0 (VxWorks)\r\n\
+Accept-Language: en\r\n\
+Supported: sip-cc, sip-cc-01, timer, replaces\r\n\
+Via: SIP/2.0/UDP 10.1.1.10;branch=z9hG4bKedff6a4031b8220192be959d966159b6\r\n\
+Content-Length: 0\r\n";
+         const char* configSubscribeResponseString = 
+             "SIP/2.0 202 Accepted\r\n\
+Expires: 86400\r\n\
+From: sip:10.1.1.10;Vendor=Pingtel;Model=xpressa_strongarm_vxworks;Version=2.4.0.0009;Serial=00d01e004e6f;Mac=00d01e004e6f;tag=17747cec9\r\n\
+To: sip:sipuaconfig@sipuaconfig.example.com;tag=1114487634asd\r\n\
+Call-Id: config-17747cec9-00d01e004e6f@10.1.1.10\r\n\
+Cseq: 7 SUBSCRIBE\r\n\
+Via: SIP/2.0/UDP 10.1.1.10;branch=z9hG4bKedff6a4031b8220192be959d966159b6\r\n\
+Date: Tue, 26 Apr 2005 03:53:55 GMT\r\n\
+Contact: sip:10.1.1.10:5090\r\n\
+Allow: INVITE, ACK, CANCEL, BYE, REFER, OPTIONS, SUBSCRIBE\r\n\
+User-Agent: sipX/2.8.0 (Linux)\r\n\
+Accept-Language: en\r\n\
+Content-Length: 0\r\n\r\n";
 
           // Test MWI messages
-const char* mwiSubscribe="SUBSCRIBE sip:111@example.com SIP/2.0\r\n\
+char* mwiSubscribe="SUBSCRIBE sip:111@example.com SIP/2.0\r\n\
 From: \"Dan Petrie\"<sip:111@example.com>;tag=1612c1612\r\n\
 To: \"Dan Petrie\"<sip:111@example.com>\r\n\
 Call-Id: e2aab34a72a0eb18300fbec445d5d665\r\n\
@@ -57,7 +88,7 @@ Via: SIP/2.0/UDP 10.1.2.3;branch=z9hG4bK7ce947ad9439bfeb6226852d87f5cca8\r\n\
 Content-Length: 0\r\n\
 \r\n";
 
-const char* mwiSubscribe401 = "SIP/2.0 401 Unauthorized\r\n\
+char* mwiSubscribe401 = "SIP/2.0 401 Unauthorized\r\n\
 From: \"Dan Petrie\"<sip:111@example.com>;tag=1612c1612\r\n\
 To: \"Dan Petrie\"<sip:111@example.com>\r\n\
 Call-Id: e2aab34a72a0eb18300fbec445d5d665\r\n\
@@ -72,7 +103,7 @@ Supported: sip-cc-01, timer\r\n\
 Contact: sip:10.1.2.4:5110\r\n\
 \r\n";
 
-const char* mwiSubscribeAuth = "SUBSCRIBE sip:111@example.com SIP/2.0\r\n\
+char* mwiSubscribeAuth = "SUBSCRIBE sip:111@example.com SIP/2.0\r\n\
 From: \"Dan Petrie\"<sip:111@example.com>;tag=1612c1612\r\n\
 To: \"Dan Petrie\"<sip:111@example.com>\r\n\
 Call-Id: e2aab34a72a0eb18300fbec445d5d665\r\n\
@@ -91,7 +122,7 @@ Via: SIP/2.0/UDP 10.1.1.177;branch=z9hG4bK64807d4040eecf1d8b0ae759505b81b0\r\n\
 Content-Length: 0\r\n\
 \r\n";
 
-const char* mwiSubscribe202 = "SIP/2.0 202 Accepted\r\n\
+char* mwiSubscribe202 = "SIP/2.0 202 Accepted\r\n\
 Expires: 3600\r\n\
 From: \"Dan Petrie\"<sip:111@example.com>;tag=1612c1612\r\n\
 To: \"Dan Petrie\"<sip:111@example.com>;tag=435889744\r\n\
@@ -107,7 +138,7 @@ Supported: sip-cc-01, timer\r\n\
 Content-Length: 0\r\n\
 \r\n";
 
-const char* mwiNotify = "NOTIFY sip:111@10.1.1.177 SIP/2.0\r\n\
+char* mwiNotify = "NOTIFY sip:111@10.1.1.177 SIP/2.0\r\n\
 Content-Type: application/simple-message-summary\r\n\
 Content-Length: 50\r\n\
 Event: message-summary\r\n\
@@ -127,8 +158,23 @@ Via: SIP/2.0/UDP 10.1.20.3:5110;branch=z9hG4bK-1334bee34ff713f3b58e898d1a2eaf06\
 Messages-Waiting: no\r\n\
 Voice-Message: 0/0 (0/0)\r\n";
 
+char* mwiNotify200 = "SIP/2.0 200 OK\r\n\
+From: \"Dan Petrie\"<sip:111@example.com>;tag=435889744\r\n\
+To: \"Dan Petrie\"<sip:111@example.com>;tag=1612c1612\r\n\
+Call-Id: e2aab34a72a0eb18300fbec445d5d665\r\n\
+Cseq: 10 NOTIFY\r\n\
+Via: SIP/2.0/UDP 10.1.20.3:5110;branch=z9hG4bK-1334bee34ff713f3b58e898d1a2eaf06\r\n\
+Date: Tue, 26 Apr 2005 14:59:30 GMT\r\n\
+Contact: sip:10.1.1.177\r\n\
+Allow: INVITE, ACK, CANCEL, BYE, REFER, OPTIONS, NOTIFY, REGISTER, SUBSCRIBE\r\n\
+User-Agent: Pingtel/2.2.0 (VxWorks)\r\n\
+Accept-Language: en\r\n\
+Supported: sip-cc, sip-cc-01, timer, replaces\r\n\
+Content-Length: 0\r\n\
+\r\n";
+
         // Set up some subscribe messages
-         SipDialogMgr dialogMgr;
+         SipDialogMgr* dialogMgr = new SipDialogMgr();
          SipMessage mwiSubRequest(mwiSubscribe);
          SipMessage mwiSub401Response(mwiSubscribe401);
          SipMessage mwiSubWithAuthRequest(mwiSubscribeAuth);
@@ -137,7 +183,7 @@ Voice-Message: 0/0 (0/0)\r\n";
          //CPPUNIT_ASSERT(TRUE);
          //ASSERT_STR_EQUAL("a", "a");
 
-         SipSubscriptionMgr subMgr(dialogMgr);
+         SipSubscriptionMgr subMgr(*dialogMgr);
          SipSubscribeServerEventHandler eventHandler;
          UtlString resourceId;
          UtlString eventTypeKey;
@@ -174,11 +220,11 @@ Voice-Message: 0/0 (0/0)\r\n";
          ASSERT_STR_EQUAL(responseDialogHandle, subscribeDialogHandle);
          CPPUNIT_ASSERT(!SipDialog::isEarlyDialog(subscribeDialogHandle));
          CPPUNIT_ASSERT(!SipDialog::isEarlyDialog(responseDialogHandle));
-         CPPUNIT_ASSERT(dialogMgr.countDialogs() == 1);
+         CPPUNIT_ASSERT(dialogMgr->countDialogs() == 1);
          UtlString mgrEstablishedDialogHandle;
-         CPPUNIT_ASSERT(dialogMgr.getEstablishedDialogHandleFor(earlyDialogHandle,
+         CPPUNIT_ASSERT(dialogMgr->getEstablishedDialogHandleFor(earlyDialogHandle,
              mgrEstablishedDialogHandle));
-         CPPUNIT_ASSERT(dialogMgr.dialogExists(subscribeDialogHandle));
+         CPPUNIT_ASSERT(dialogMgr->dialogExists(subscribeDialogHandle));
          int expiration = 0;
          CPPUNIT_ASSERT(createdSubscribeResponse.getExpiresField(&expiration));
          CPPUNIT_ASSERT(expiration == 3600);
@@ -250,7 +296,7 @@ Voice-Message: 0/0 (0/0)\r\n";
 
          // End the dialog and subscription
          subMgr.endSubscription(subscribeDialogHandle);
-         CPPUNIT_ASSERT(dialogMgr.countDialogs() == 0);
+         CPPUNIT_ASSERT(dialogMgr->countDialogs() == 0);
          CPPUNIT_ASSERT(!subMgr.dialogExists(subscribeDialogHandle));
          CPPUNIT_ASSERT(subMgr.isExpired(subscribeDialogHandle));
 
@@ -263,12 +309,12 @@ Voice-Message: 0/0 (0/0)\r\n";
                                                 isNew,
                                                 isExpired,
                                                 createdSubscribeResponse));
-         CPPUNIT_ASSERT(dialogMgr.countDialogs() == 1);
+         CPPUNIT_ASSERT(dialogMgr->countDialogs() == 1);
 
          long now = OsDateTime::getSecsSinceEpoch();
          now+=3700;
          subMgr.removeOldSubscriptions(now);
-         CPPUNIT_ASSERT(dialogMgr.countDialogs() == 0);
+         CPPUNIT_ASSERT(dialogMgr->countDialogs() == 0);
          CPPUNIT_ASSERT(subMgr.isExpired(subscribeDialogHandle));
          CPPUNIT_ASSERT(!subMgr.dialogExists(subscribeDialogHandle));
 

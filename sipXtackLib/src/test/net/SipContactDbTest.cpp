@@ -1,9 +1,12 @@
 //
-// Copyright (C) 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/TestCase.h>
@@ -19,7 +22,7 @@
 class SipContactDbTest : public CppUnit::TestCase
 {
       CPPUNIT_TEST_SUITE(SipContactDbTest);
-      CPPUNIT_TEST(testSipContactDb);
+      //CPPUNIT_TEST(testSipContactDb);
       CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -100,20 +103,20 @@ public:
         CPPUNIT_ASSERT(pFound == NULL);
         
         // search by IP and port - positive
-        pFound = pDb->find("9.9.9.1", 9991);
+        pFound = pDb->find("9.9.9.1", 9991, NAT_MAPPED);
         CPPUNIT_ASSERT(pFound != NULL);
         CPPUNIT_ASSERT(pFound->id == 1);
         
         // search by IP and port - negative
         // bad IP
-        pFound = pDb->find("zaphod", 9991);
+        pFound = pDb->find("zaphod", 9991, NAT_MAPPED);
         CPPUNIT_ASSERT(pFound == NULL);
 
         // search by IP and port - negative
         // bad port
-        pFound = pDb->find("9.9.9.1", 42);
+        pFound = pDb->find("9.9.9.1", 42, NAT_MAPPED);
         CPPUNIT_ASSERT(pFound == NULL);
-        
+
         // get All records
         CONTACT_ADDRESS* addresses[MAX_IP_ADDRESSES];
         int num = 0;

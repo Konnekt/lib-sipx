@@ -1,9 +1,12 @@
 //
-// Copyright (C) 2004, 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/TestCase.h>
@@ -1082,7 +1085,7 @@ public:
        url6.getUrlParameter("abcd", value, 0);
        ASSERT_STR_EQUAL("27", value.data());
        url6.getUrlParameter("abcd", value, 1);
-       // Double-quotes do not quote URI parameters.
+       // getUrlParameter does not de-quote field values!
        ASSERT_STR_EQUAL("\"12\"", value.data());
        url6.getUrlParameter("abcd", value, 2);
        ASSERT_STR_EQUAL("EfG", value.data());
@@ -1090,7 +1093,6 @@ public:
        url6.getUrlParameter("ABCD", value, 0);
        ASSERT_STR_EQUAL("27", value.data());
        url6.getUrlParameter("ABCD", value, 1);
-       // Double-quotes do not quote URI parameters.
        ASSERT_STR_EQUAL("\"12\"", value.data());
        url6.getUrlParameter("ABCD", value, 2);
        ASSERT_STR_EQUAL("EfG", value.data());
@@ -1098,7 +1100,6 @@ public:
        url6.getUrlParameter("aBCd", value, 0);
        ASSERT_STR_EQUAL("27", value.data());
        url6.getUrlParameter("aBCd", value, 1);
-       // Double-quotes do not quote URI parameters.
        ASSERT_STR_EQUAL("\"12\"", value.data());
        url6.getUrlParameter("aBCd", value, 2);
        ASSERT_STR_EQUAL("EfG", value.data());
@@ -1108,13 +1109,6 @@ public:
     void testGetFieldParameterCase()
     {
        UtlString value;
-
-       Url url00("<sip:333@212.247.206.174:2052;transport=tcp;line=98tq8dsn>;q=1.0;+sip.instance=\"<urn:uuid:1d960183-88c9-4813-80e1-b97946c09465>\";audio;mobility=\"fixed\";duplex=\"full\";description=\"snom320\";actor=\"principal\";events=\"dialog\";methods=\"INVITE,ACK,CANCEL,BYE,REFER,OPTIONS,NOTIFY,SUBSCRIBE,PRACK,MESSAGE,INFO\"");
-
-       url00.getFieldParameter("+sip.instance", value, 0);
-
-       ASSERT_STR_EQUAL("<urn:uuid:1d960183-88c9-4813-80e1-b97946c09465>",
-                        value.data());
 
        Url url1("<sip:600-3@cdhcp139.pingtel.com>;q=0.8");
 
@@ -1149,24 +1143,22 @@ public:
        url6.getFieldParameter("abcd", value, 0);
        ASSERT_STR_EQUAL("27", value.data());
        url6.getFieldParameter("abcd", value, 1);
-       // getFieldParameter now de-quotes field values.
-       ASSERT_STR_EQUAL("12", value.data());
+       // getFieldParameter does not de-quote field values!
+       ASSERT_STR_EQUAL("\"12\"", value.data());
        url6.getFieldParameter("abcd", value, 2);
        ASSERT_STR_EQUAL("EfG", value.data());
 
        url6.getFieldParameter("ABCD", value, 0);
        ASSERT_STR_EQUAL("27", value.data());
        url6.getFieldParameter("ABCD", value, 1);
-       // getFieldParameter now un-quotes quoted values.
-       ASSERT_STR_EQUAL("12", value.data());
+       ASSERT_STR_EQUAL("\"12\"", value.data());
        url6.getFieldParameter("ABCD", value, 2);
        ASSERT_STR_EQUAL("EfG", value.data());
 
        url6.getFieldParameter("aBCd", value, 0);
        ASSERT_STR_EQUAL("27", value.data());
        url6.getFieldParameter("aBCd", value, 1);
-       // getFieldParameter now de-quotes field values.
-       ASSERT_STR_EQUAL("12", value.data());
+       ASSERT_STR_EQUAL("\"12\"", value.data());
        url6.getFieldParameter("aBCd", value, 2);
        ASSERT_STR_EQUAL("EfG", value.data());
     }
@@ -1267,7 +1259,7 @@ public:
         Url url(szUrl);
         
         sprintf(msg, "test=%s, url=%s", szTest, szUrl);
-        CPPUNIT_ASSERT_MESSAGE(msg, !url.isUserHostPortEqual(szTest));
+        CPPUNIT_ASSERT_MESSAGE(msg, url.isUserHostPortEqual(szTest));
     }
 
     void testIsUserHostPortNoMatch()
@@ -1282,77 +1274,48 @@ public:
 
     void testIsUserHostPortPorts()
     {
-       // Urls which are all the same.
+       const char *szUrl = "R V<sip:Raghu@SF.oRg:5080>";
+       const char *szTest =        "raghu@sf.org:5080";
+       Url url(szUrl);
+        
+       sprintf(msg, "test=%s, url=%s", szTest, szUrl);
+       CPPUNIT_ASSERT_MESSAGE(msg, !url.isUserHostPortEqual(szTest));
+
+       const char* strings[] = {
+          "sip:foo@bar",
+          "sip:foo@bar:5060",
+          "sip:foo@bar:1",
+          "sip:foo@bar:100",
+          "sip:foo@bar:65535",
+       };
+       Url urls[sizeof (strings) / sizeof (strings[0])];
+       unsigned int i;
+
+       // Set up the Url objects.
+       for (i = 0; i < sizeof (strings) / sizeof (strings[0]);
+            i++)
        {
-          const char* strings[] = {
-             "R V<sip:Raghu@SF.oRg:5080>",
-             "<sip:Raghu@SF.oRg:5080>",
-             "Raghu@SF.oRg:5080",
-             // Make sure that case differences are handled correctly.
-             "Raghu@sf.org:5080",
-          };
-          Url urls[sizeof (strings) / sizeof (strings[0])];
-          unsigned int i;
-
-          // Set up the Url objects.
-          for (i = 0; i < sizeof (strings) / sizeof (strings[0]);
-               i++)
-          {
-             urls[i] = strings[i];
-          }
-
-          // Do all the comparisons.
-          for (i = 0; i < sizeof (strings) / sizeof (strings[0]);
-               i++)
-          {
-             for (unsigned int j = 0;
-                  j < sizeof (strings) / sizeof (strings[0]);
-                  j++)
-             {
-                int expected = TRUE;
-                int actual = urls[i].isUserHostPortEqual(urls[j]);
-                char msg[80];
-                sprintf(msg, "%s != %s", strings[i], strings[j]);
-                CPPUNIT_ASSERT_EQUAL_MESSAGE(msg, expected, actual);
-             }
-          }
+          urls[i] = strings[i];
        }
 
-       // Urls which are all different.
+       // Do all the comparisons.
+       for (i = 0; i < sizeof (strings) / sizeof (strings[0]);
+            i++)
        {
-          const char* strings[] = {
-             "sip:foo@bar",
-             "sip:foo@bar:5060",
-             "sip:foo@bar:1",
-             "sip:foo@bar:100",
-             "sip:foo@bar:65535",
-             // Make sure case differences are detected.
-             "sip:Foo@bar",
-          };
-          Url urls[sizeof (strings) / sizeof (strings[0])];
-          unsigned int i;
-
-          // Set up the Url objects.
-          for (i = 0; i < sizeof (strings) / sizeof (strings[0]);
-               i++)
+          for (unsigned int j = 0;
+               j < sizeof (strings) / sizeof (strings[0]);
+               j++)
           {
-             urls[i] = strings[i];
-          }
-
-          // Do all the comparisons.
-          for (i = 0; i < sizeof (strings) / sizeof (strings[0]);
-               i++)
-          {
-             for (unsigned int j = 0;
-                  j < sizeof (strings) / sizeof (strings[0]);
-                  j++)
+             int expected = (i == j);
+             // Until XSL-96 is fixed, url[0] == url[1].
+             if ((i == 0 || i == 1) && (j == 0 || j == 1))
              {
-                int expected = (i == j);
-                int actual = urls[i].isUserHostPortEqual(urls[j]);
-                char msg[80];
-                sprintf(msg, "%s == %s", strings[i], strings[j]);
-                CPPUNIT_ASSERT_EQUAL_MESSAGE(msg, expected, actual);
+                expected = 1;
              }
+             int actual = urls[i].isUserHostPortEqual(urls[j]);
+             char msg[80];
+             sprintf(msg, "%s == %s", strings[i], strings[j]);
+             CPPUNIT_ASSERT_EQUAL_MESSAGE(msg, expected, actual);
           }
        }
     }
@@ -1370,33 +1333,28 @@ public:
 
     void testGetIdentity()
     {
-       // The data for a single test.
-       struct test {
-          // The string to convert to a URI.
-          const char* string;
-          // The identity to be returned by getIdentity().
-          const char* identity;
+       const char* strings[] = {
+          "sip:foo@bar",
+          "sip:foo@bar:5060",
+          "sip:foo@bar:1",
+          "sip:foo@bar:100",
+          "sip:foo@bar:65535",
        };
-       // The tests.
-       struct test tests[] = {
-          { "sip:foo@bar", "foo@bar" },
-          { "sip:foo@bar:5060", "foo@bar:5060" },
-          { "sip:foo@bar:1", "foo@bar:1" },
-          { "sip:foo@bar:100", "foo@bar:100" },
-          { "sip:foo@bar:65535", "foo@bar:65535" },
-          { "<sip:foo@bar>", "foo@bar" },
-          { "<sip:foo@bar:5060>", "foo@bar:5060" },
-          { "<sip:foo@bar:1>", "foo@bar:1" },
-          { "<sip:foo@bar:100>", "foo@bar:100" },
-          { "<sip:foo@bar:65535>", "foo@bar:65535" },
+       Url urls[sizeof (strings) / sizeof (strings[0])];
+       const char* identities[sizeof (strings) / sizeof (strings[0])] = {
+          "foo@bar",
+          "foo@bar",
+          "foo@bar:1",
+          "foo@bar:100",
+          "foo@bar:65535",
        };
 
-       for (unsigned int i = 0; i < sizeof (tests) / sizeof (tests[0]);
+       for (unsigned int i = 0; i < sizeof (strings) / sizeof (strings[0]);
             i++)
        {
-          Url url = tests[i].string;
-          ASSERT_STR_EQUAL_MESSAGE(tests[i].string, tests[i].identity,
-                                   getIdentity(url));
+          urls[i] = strings[i];
+          ASSERT_STR_EQUAL_MESSAGE(strings[i], identities[i],
+                                   getIdentity(urls[i]));
        }
     }
 

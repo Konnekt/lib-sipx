@@ -2,7 +2,8 @@
 
 INCLUDES = \
 	-I$(top_srcdir)/include \
-	-I$(srcdir)/../../include
+	-I$(srcdir)/../../include \
+	-I$(top_srcdir)/../sipXcallLib/include
 
 bin_PROGRAMS = siptest
 
