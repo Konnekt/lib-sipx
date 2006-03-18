@@ -58,4 +58,7 @@ sipXezPhone_SOURCES = \
 	states/PhoneStateTransfering.cpp \
 	states/PhoneStateTransferRequested.cpp \
 	stdwx.cpp \
-    sipXSrtpSettingsDlg.cpp 
+    sipXSrtpSettingsDlg.cpp \
+	CameraSettingsDlg.cpp \ 
+	ImportCertificateDlg.cpp \
+	sipXTabbedDlg.cpp 

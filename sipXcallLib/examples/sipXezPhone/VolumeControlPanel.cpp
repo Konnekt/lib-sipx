@@ -42,11 +42,11 @@ VolumeControlPanel::VolumeControlPanel(wxWindow* parent, const wxPoint& pos, con
     controlSize.SetWidth(16);
     wxBitmap* pSpeakerBitmap = new wxBitmap("res/speaker.bmp", wxBITMAP_TYPE_BMP );
     pSpeakerBitmap->SetMask(new wxMask(*pSpeakerBitmap, * (wxTheColourDatabase->FindColour("RED"))));
-    new wxStaticBitmap(this, -1, *pSpeakerBitmap, origin, controlSize);
+    mpSpeakerBitmap = new wxStaticBitmap(this, -1, *pSpeakerBitmap, origin, controlSize);
 
         origin.x = 0;
         origin.y = 30;
-        controlSize.SetHeight(100);
+        controlSize.SetHeight(size.GetHeight()-50);
         controlSize.SetWidth(16);
         mpVolumeControl = new wxSlider(this, IDR_SPEAKER_SLIDER, VOLUME_MAX + 1 - volumeLevel, 0, VOLUME_MAX, origin, controlSize, wxSL_VERTICAL);
         mpVolumeControl->SetThumbLength(10);
@@ -61,11 +61,11 @@ VolumeControlPanel::VolumeControlPanel(wxWindow* parent, const wxPoint& pos, con
     controlSize.SetWidth(16);
     wxBitmap* pMicBitmap = new wxBitmap("res/microphone.bmp", wxBITMAP_TYPE_BMP );
     pMicBitmap->SetMask(new wxMask(*pMicBitmap, * (wxTheColourDatabase->FindColour("RED"))));
-    new wxStaticBitmap(this, -1, *pMicBitmap, origin, controlSize);
+    mpMicBitmap = new wxStaticBitmap(this, -1, *pMicBitmap, origin, controlSize);
 
 }
 
-void VolumeControlPanel::OnSpeakerSlider(wxEvent& event)
+void VolumeControlPanel::OnSpeakerSlider(wxScrollEvent& event)
 {
    if (VOLUME_MAX + 1 - mpVolumeControl->GetValue() != sipXmgr::getInstance().getSpeakerVolume())
    {
@@ -74,7 +74,7 @@ void VolumeControlPanel::OnSpeakerSlider(wxEvent& event)
    }
 }
 
-void VolumeControlPanel::OnMicrophoneSlider(wxEvent& event)
+void VolumeControlPanel::OnMicrophoneSlider(wxScrollEvent& event)
 {
    if (GAIN_MAX + 1 - mpMicGainControl->GetValue() != sipXmgr::getInstance().getMicGain())
    {
@@ -87,3 +87,17 @@ void VolumeControlPanel::OnMicrophoneSlider(wxEvent& event)
 VolumeControlPanel::~VolumeControlPanel()
 {
 }
+
+void VolumeControlPanel::UpdateBackground(wxColour color)
+{
+    SetBackgroundColour(color);
+
+    mpMicBitmap->SetBackgroundColour(color);
+    mpSpeakerBitmap->SetBackgroundColour(color);
+
+    mpVolumeControl->SetFocus();
+    mpVolumeControl->SetBackgroundColour(color);
+    mpMicGainControl->SetFocus();
+    mpMicGainControl->SetBackgroundColour(color);
+}
+

@@ -32,14 +32,21 @@ END_EVENT_TABLE()
 
 
 // Constructor
-ButtonPanel::ButtonPanel(wxWindow* parent, const wxPoint& pos, const wxSize& size) :
+ButtonPanel::ButtonPanel(wxWindow* parent, const wxPoint& pos, const wxSize& size, bool bLogo) :
    wxPanel(parent, IDR_BUTTON_PANEL, pos, size, wxTAB_TRAVERSAL, "ButtonPanel")
 {
    wxColor* pPanelColor = & (sipXezPhoneSettings::getInstance().getBackgroundColor());
    SetBackgroundColour(*pPanelColor);
 
    wxColor* wxLightBlue = wxTheColourDatabase->FindColour("LIGHT BLUE");
-   mpGridSizer = new wxGridSizer(1,4,5,5);
+   if (bLogo)
+   {
+      mpGridSizer = new wxGridSizer(2,2,5,5);
+   }
+   else
+   {
+      mpGridSizer = new wxGridSizer(1,4,5,5);
+   }
 
    wxBitmap bitmapHandset("res/handset.bmp",wxBITMAP_TYPE_BMP);
    bitmapHandset.SetMask(new wxMask(bitmapHandset, * (wxTheColourDatabase->FindColour("RED"))));
@@ -91,22 +98,36 @@ ButtonPanel::~ButtonPanel()
 {
 }
 
-void ButtonPanel::OnHandsetClick(wxEvent& event)
+void ButtonPanel::OnHandsetClick(wxCommandEvent& event)
 {
    PhoneStateMachine::getInstance().OnFlashButton();
 }
 
-void ButtonPanel::OnHoldButton(wxEvent& event)
+void ButtonPanel::OnHoldButton(wxCommandEvent& event)
 {
     PhoneStateMachine::getInstance().OnHoldButton();
 }
 
-void ButtonPanel::OnMuteButton(wxEvent &event)
+void ButtonPanel::OnMuteButton(wxCommandEvent &event)
 {
     sipXmgr::getInstance().toggleMute();
 }
 
-void ButtonPanel::OnTransferButton(wxEvent& event)
+void ButtonPanel::OnTransferButton(wxCommandEvent& event)
 {
-    PhoneStateMachine::getInstance().OnTransferRequested(thePhoneApp->getEnteredText());
+    wxString dialString = wxGetTextFromUser("Please enter the transfer address:", 
+            "Blind Transfer", 
+            "sip:", 
+            this) ;
+
+    if (dialString.Length() > 0)
+    {
+        PhoneStateMachine::getInstance().OnTransferRequested(dialString);
+    }
+}
+
+void ButtonPanel::UpdateBackground(wxColor color)
+{
+    SetBackgroundColour(color);
+    //mpGridSizer->SetBackgroundColour(color);
 }

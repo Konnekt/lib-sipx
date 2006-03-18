@@ -15,6 +15,7 @@
 #include "../sipXmgr.h"
 #include "PhoneStateRemoteAlerting.h"
 #include "PhoneStateConnected.h"
+#include "PhoneStateIdle.h"
 #include "../sipXezPhoneApp.h"
 
 // EXTERNAL FUNCTIONS
@@ -35,6 +36,15 @@ PhoneStateRemoteAlerting::~PhoneStateRemoteAlerting(void)
 PhoneState* PhoneStateRemoteAlerting::OnConnected()
 {
    return (new PhoneStateConnected());
+}
+
+PhoneState* PhoneStateRemoteAlerting::OnDisconnected(const SIPX_CALL hCall)
+{
+   if (hCall == sipXmgr::getInstance().getCurrentCall())
+   {
+      sipXmgr::getInstance().disconnect(hCall, false);
+   }
+   return (new PhoneStateIdle());
 }
 
 PhoneState* PhoneStateRemoteAlerting::Execute()

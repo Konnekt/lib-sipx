@@ -86,7 +86,7 @@ typedef enum SIPX_EVENT_CATEGORY
  * @param pInfo Pointer to the event info structure.
  * @param pUserData User data provided when listener was added
  */
-typedef bool (*SIPX_EVENT_CALLBACK_PROC)(SIPX_EVENT_CATEGORY category, 
+typedef bool (__stdcall *SIPX_EVENT_CALLBACK_PROC)(SIPX_EVENT_CATEGORY category, 
                                          void* pInfo, 
                                          void* pUserData);
 

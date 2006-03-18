@@ -45,12 +45,14 @@ public:
    /**
     * Event handler for the speaker slider control.
     */
-   void OnSpeakerSlider(wxEvent& event);
+   void OnSpeakerSlider(wxScrollEvent& event);
 
    /**
     * Event handler for the microphone gain slider control.
     */
-   void OnMicrophoneSlider(wxEvent& event);
+   void OnMicrophoneSlider(wxScrollEvent& event);
+
+   void UpdateBackground(wxColour color);
 
 /* ============================ ACCESSORS ================================= */
 /* ============================ INQUIRY =================================== */
@@ -63,6 +65,8 @@ protected:
 private:
         wxSlider* mpVolumeControl;
         wxSlider* mpMicGainControl;
+        wxStaticBitmap* mpMicBitmap;
+        wxStaticBitmap* mpSpeakerBitmap;
 };
 
 

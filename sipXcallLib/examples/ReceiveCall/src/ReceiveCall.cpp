@@ -8,30 +8,40 @@
 // $$
 ///////////////////////////////////////////////////////////////////////////////
 
-
-#include "os/OsDefs.h"
-
 #include <assert.h>
+#include <stdio.h>
 
 #if defined(_WIN32)
 #  include <windows.h>
 #  define SLEEP(milliseconds) Sleep(milliseconds)
+#  include "ReceiveCallWntApp.h"
+DWORD WINAPI ConsoleStart(LPVOID lpParameter);
 #else
 #  include <unistd.h>
 #  define SLEEP(milliseconds) usleep((milliseconds)*1000)
 #endif
 
-#include "os/OsDefs.h"
 #include "tapi/sipXtapi.h"
 #include "tapi/sipXtapiEvents.h"
 
 #define SAMPLES_PER_FRAME   80          // Number of samples per frame time
 #define LOOPBACK_LENGTH     200         // Frames for loopback delay (10ms per frame)
 
+#define portIsValid(p) ((p) >= 1 && (p) <= 65535)
+
 static short* g_loopback_samples[LOOPBACK_LENGTH] ; // loopback buffer
 static short g_loopback_head = 0 ;      // index into loopback
 static char* g_szPlayTones = NULL ;     // tones to play on answer
 static char* g_szFile = NULL ;          // file to play on answer
+#if defined(_WIN32) && defined(VIDEO)
+extern HWND ghPreview;
+extern HWND ghVideo;
+extern HWND hMain;
+static SIPX_VIDEO_DISPLAY gDisplay;
+static SIPX_VIDEO_DISPLAY gPreviewDisplay;
+#endif
+static bool  bVideo = false;
+
 
 // Print usage message
 void usage(const char* szExecutable)
@@ -57,6 +67,7 @@ void usage(const char* szExecutable)
     printf("   -x proxy (outbound proxy)\n");
     printf("   -S stun server\n") ;
     printf("   -v show sipXtapi version\n");
+    printf("   -V receive video calls.\n");
     printf("\n") ;
 }
 
@@ -243,6 +254,10 @@ bool parseArgs(int argc,
             printf("%s\n", szBuffer);
             exit(0);
         }
+        else if (strcmp(argv[i], "-V") == 0)
+        {
+            bVideo = true;
+        }
         else
         {
             bRC = false ;
@@ -257,7 +272,7 @@ bool parseArgs(int argc,
 bool playFile(char* szFile, SIPX_CALL hCall)
 {
     bool bRC = false ;
-    sipxCallPlayFile(hCall, g_szFile, true, true) ;
+    sipxCallAudioPlayFileStart(hCall, g_szFile, false, true, true) ;
 
     return true ;
 }
@@ -358,7 +373,18 @@ bool EventCallBack(SIPX_EVENT_CATEGORY category,
         switch (pCallInfo->event)
         {
         case CALLSTATE_OFFERING:
-            sipxCallAccept(pCallInfo->hCall) ;
+#if defined(_WIN32) && defined(VIDEO)
+            gDisplay.type = SIPX_WINDOW_HANDLE_TYPE;
+            gDisplay.handle = ghVideo;
+            if (bVideo)
+            {
+                sipxCallAccept(pCallInfo->hCall, &gDisplay) ;
+            }
+            else
+#endif
+            {
+                sipxCallAccept(pCallInfo->hCall);
+            }
             break ;
         case CALLSTATE_ALERTING:
             clearLoopback() ;
@@ -388,12 +414,13 @@ bool EventCallBack(SIPX_EVENT_CATEGORY category,
         case CALLSTATE_DISCONNECTED:
             sipxCallDestroy(pCallInfo->hCall) ;
             break ;
-        case CALLSTATE_AUDIO_EVENT:
-            if (pCallInfo->cause == CALLSTATE_AUDIO_START)
-            {
-                printf("* Negotiated codec: %s, payload type %d\n", pCallInfo->codecs.audioCodec.cName, pCallInfo->codecs.audioCodec.iPayloadType);
-            }
-            break;
+// ::TODO:: Fix me with new media event
+//        case CALLSTATE_AUDIO_EVENT:
+//            if (pCallInfo->cause == CALLSTATE_CAUSE_AUDIO_START)
+//            {
+//                printf("* Negotiated codec: %s, payload type %d\n", pCallInfo->codecs.audioCodec.cName, pCallInfo->codecs.audioCodec.iPayloadType);
+//            }
+//            break;
         case CALLSTATE_DESTROYED:
             break ;
         }
@@ -464,7 +491,7 @@ void dumpLocalContacts(SIPX_INST hInst)
 }
 
 
-int main(int argc, char* argv[])
+int local_main(int argc, char* argv[])
 {
     bool bError = true ;
     int iDuration, iSipPort, iRtpPort ;
@@ -501,9 +528,19 @@ int main(int argc, char* argv[])
             sipxConfigEnableRport(hInst, true) ;
             if (szStunServer)
             {
-                sipxConfigEnableStun(hInst, szStunServer, 28) ;
+                sipxConfigEnableStun(hInst, szStunServer, DEFAULT_STUN_PORT, 28) ;
             }
             sipxEventListenerAdd(hInst, EventCallBack, NULL) ;
+                
+#if defined(_WIN32) && defined(VIDEO)
+            if (bVideo)
+            {
+                gPreviewDisplay.type = SIPX_WINDOW_HANDLE_TYPE;
+                gPreviewDisplay.handle = ghPreview;
+                sipxConfigSetVideoPreviewDisplay(hInst, &gPreviewDisplay);
+            }
+#endif
+
             hLine = lineInit(hInst, szIdentity, szUsername, szPassword, szRealm) ;
 
             dumpLocalContacts(hInst) ;
@@ -522,9 +559,45 @@ int main(int argc, char* argv[])
     {
         usage(argv[0]) ;
     }
-
+#if defined(_WIN32) && defined(VIDEO)
+    PostMessage(hMain, WM_CLOSE, 0, 0L);
+#endif
     return (int) bError ;
 }
+
+int main(int argc, char* argv[])
+{
+#if defined(_WIN32) && defined(VIDEO)
+    CreateWindows();
+
+    DWORD dwThreadId = 0;
+    CmdParams cmdParams;
+    cmdParams.argc = argc;
+    cmdParams.argv = argv;
+
+    HANDLE hThread = CreateThread(NULL, 0, ConsoleStart, &cmdParams, 0, &dwThreadId);
+
+    MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0)) 
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+    return 0;
+#else
+    return local_main(argc, argv);
+#endif
+}
+
+#if defined(_WIN32) && defined(VIDEO)
+DWORD WINAPI ConsoleStart(LPVOID lpParameter)
+{
+    CmdParams* pParams = (CmdParams*)lpParameter;
+	local_main(pParams->argc, pParams->argv);
+
+    return 0;
+}
+#endif
 
 #if !defined(_WIN32)
 // Dummy definition of JNI_LightButton() to prevent the reference in

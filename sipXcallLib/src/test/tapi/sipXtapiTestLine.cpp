@@ -144,6 +144,17 @@ void sipXtapiTestSuite::testLineAPI_Get()
         size_t nActual ;
         CPPUNIT_ASSERT_EQUAL(sipxLineGetURI(hLine, cBuf, sizeof(cBuf), nActual), SIPX_RESULT_SUCCESS) ;
 #ifdef _WIN32
+        // strip out angle brackets
+        if (cBuf[0] == '<')
+        {
+            strcpy(cBuf, &cBuf[1]);
+            nActual--;
+        }
+        if (cBuf[strlen(cBuf)-1] == '>')
+        {
+            cBuf[strlen(cBuf)-1] = '\0';
+            nActual--;
+        }     
         CPPUNIT_ASSERT(stricmp(cBuf, szURI) == 0) ;
 #else
         CPPUNIT_ASSERT(strcasecmp(cBuf, szURI) == 0) ;
@@ -208,7 +219,7 @@ void sipXtapiTestSuite::testLineAPI_GetURI()
 
 
 
-bool linetest_verify_lineurl(SIPX_EVENT_CATEGORY event, 
+bool SIPX_CALLING_CONVENTION linetest_verify_lineurl(SIPX_EVENT_CATEGORY event, 
                              void* pInfo, 
                              void* pUserData)
 {
@@ -324,7 +335,7 @@ void sipXtapiTestSuite::testLines()
     checkForLeaks();
 }
 
-bool lineCallback(SIPX_EVENT_CATEGORY event,
+bool SIPX_CALLING_CONVENTION lineCallback(SIPX_EVENT_CATEGORY event,
                   void* pInfo,
                   void* pUser)
 {
@@ -387,6 +398,8 @@ void sipXtapiTestSuite::testLineAliases()
 
         validatorCalling.reset() ;
         validatorCalled.reset() ;
+        validatorCalling.ignoreEventCategory(EVENT_CATEGORY_MEDIA);
+        validatorCalled.ignoreEventCategory(EVENT_CATEGORY_MEDIA);
 
         // Setup Auto-answer call back
         resetAutoAnswerCallback() ;
@@ -407,27 +420,23 @@ void sipXtapiTestSuite::testLineAliases()
         sipxCallConnect(hCall, "sip:foo@127.0.0.1:9100") ;
         
         // Validate Calling Side
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_DIALTONE, CALLSTATE_DIALTONE_UNKNOWN, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_DIALTONE, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_REMOTE_OFFERING, CALLSTATE_REMOTE_OFFERING_NORMAL, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_REMOTE_OFFERING, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_REMOTE_ALERTING, CALLSTATE_REMOTE_ALERTING_NORMAL, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_REMOTE_ALERTING, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_CONNECTED, CALLSTATE_CONNECTED_ACTIVE, true) ;
-        CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_AUDIO_EVENT, CALLSTATE_AUDIO_START, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_CONNECTED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
 
         // Validate Called Side
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_NEWCALL, CALLSTATE_NEW_CALL_NORMAL, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_NEWCALL, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_OFFERING, CALLSTATE_OFFERING_ACTIVE, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_OFFERING, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_ALERTING, CALLSTATE_ALERTING_NORMAL, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_ALERTING, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_CONNECTED, CALLSTATE_CONNECTED_ACTIVE, true) ;
-        CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_AUDIO_EVENT, CALLSTATE_AUDIO_START, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_CONNECTED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
                 
         int connectionId = -1;
@@ -439,26 +448,24 @@ void sipXtapiTestSuite::testLineAliases()
         destroyCall(hCall) ;
 
         // Validate Calling Side
-        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_CONNECTED, CALLSTATE_CONNECTED_ACTIVE_HELD, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_BRIDGED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_AUDIO_EVENT, CALLSTATE_AUDIO_STOP, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_DISCONNECTED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_DISCONNECTED, CALLSTATE_DISCONNECTED_NORMAL, true) ;
-        CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_DESTROYED, CALLSTATE_DESTROYED_NORMAL, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_DESTROYED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
 
         // Validate Called Side
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_AUDIO_EVENT, CALLSTATE_AUDIO_STOP, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_DISCONNECTED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_DISCONNECTED, CALLSTATE_DISCONNECTED_NORMAL, true) ;
-        CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_DESTROYED, CALLSTATE_DESTROYED_NORMAL, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_DESTROYED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
 
 
         validatorCalling.reset() ;
         validatorCalled.reset() ;        
+        validatorCalling.ignoreEventCategory(EVENT_CATEGORY_MEDIA);
+        validatorCalled.ignoreEventCategory(EVENT_CATEGORY_MEDIA);
         resetAutoAnswerCallback() ;
         CPPUNIT_ASSERT_EQUAL(sipxLineRemove(hLine), SIPX_RESULT_SUCCESS);
 
@@ -469,27 +476,23 @@ void sipXtapiTestSuite::testLineAliases()
         sipxCallConnect(hCall, "sip:alias@127.0.0.1:9100") ;
         
         // Validate Calling Side
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_DIALTONE, CALLSTATE_DIALTONE_UNKNOWN, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_DIALTONE, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_REMOTE_OFFERING, CALLSTATE_REMOTE_OFFERING_NORMAL, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_REMOTE_OFFERING, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_REMOTE_ALERTING, CALLSTATE_REMOTE_ALERTING_NORMAL, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_REMOTE_ALERTING, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_CONNECTED, CALLSTATE_CONNECTED_ACTIVE, true) ;
-        CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_AUDIO_EVENT, CALLSTATE_AUDIO_START, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hCall, CALLSTATE_CONNECTED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
 
         // Validate Called Side
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_NEWCALL, CALLSTATE_NEW_CALL_NORMAL, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_NEWCALL, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_OFFERING, CALLSTATE_OFFERING_ACTIVE, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_OFFERING, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_ALERTING, CALLSTATE_ALERTING_NORMAL, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_ALERTING, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_CONNECTED, CALLSTATE_CONNECTED_ACTIVE, true) ;
-        CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_AUDIO_EVENT, CALLSTATE_AUDIO_START, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_CONNECTED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
                 
         connectionId = -1;
@@ -501,21 +504,17 @@ void sipXtapiTestSuite::testLineAliases()
         destroyCall(hCall) ;
 
         // Validate Calling Side
-        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_CONNECTED, CALLSTATE_CONNECTED_ACTIVE_HELD, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_BRIDGED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_AUDIO_EVENT, CALLSTATE_AUDIO_STOP, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_DISCONNECTED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_DISCONNECTED, CALLSTATE_DISCONNECTED_NORMAL, true) ;
-        CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_DESTROYED, CALLSTATE_DESTROYED_NORMAL, true) ;
+        bRC = validatorCalling.waitForCallEvent(hLine, hDestroyedCall, CALLSTATE_DESTROYED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
 
         // Validate Called Side
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_AUDIO_EVENT, CALLSTATE_AUDIO_STOP, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_DISCONNECTED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_DISCONNECTED, CALLSTATE_DISCONNECTED_NORMAL, true) ;
-        CPPUNIT_ASSERT(bRC) ;
-        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_DESTROYED, CALLSTATE_DESTROYED_NORMAL, true) ;
+        bRC = validatorCalled.waitForCallEvent(hReceivingLine, g_hAutoAnswerCallbackCall, CALLSTATE_DESTROYED, CALLSTATE_CAUSE_NORMAL, true) ;
         CPPUNIT_ASSERT(bRC) ;
 
         
@@ -565,15 +564,15 @@ void sipXtapiTestSuite::testRegistration()
         CPPUNIT_ASSERT(g_lineRecorder.compare()) ;
         g_lineRecorder.clear() ;
 
-        // try to register, for a user that needs credentials,
-        // but without credentials
-        rc = sipxLineRemove(hLine); 
-        CPPUNIT_ASSERT_EQUAL(rc, SIPX_RESULT_SUCCESS) ;
-
+        sipxLineRegister(hLine, false);
         g_lineRecorder.addCompareEvent(hLine, LINESTATE_UNREGISTERING, LINESTATE_UNREGISTERING_NORMAL);
         g_lineRecorder.addCompareEvent(hLine, LINESTATE_UNREGISTERED, LINESTATE_UNREGISTERED_NORMAL);
         OsTask::delay(1000);
         CPPUNIT_ASSERT(g_lineRecorder.compare()) ;
+
+        rc = sipxLineRemove(hLine); 
+        CPPUNIT_ASSERT_EQUAL(rc, SIPX_RESULT_SUCCESS) ;
+
         
         g_lineRecorder.clear() ;
 
@@ -604,16 +603,17 @@ void sipXtapiTestSuite::testRegistration()
 
         CPPUNIT_ASSERT(g_lineRecorder.compare()) ;
 
-        rc = sipxLineRemove(hLine) ; 
-        CPPUNIT_ASSERT_EQUAL(rc, SIPX_RESULT_SUCCESS) ;    
-
+        sipxLineRegister(hLine, false);
         g_lineRecorder.addCompareEvent(hLine, LINESTATE_UNREGISTERING, LINESTATE_UNREGISTERING_NORMAL);
         g_lineRecorder.addCompareEvent(hLine, LINESTATE_UNREGISTERED, LINESTATE_UNREGISTERED_NORMAL);
         OsTask::delay(1000);
         CPPUNIT_ASSERT(g_lineRecorder.compare()) ;
+
+        rc = sipxLineRemove(hLine) ; 
+        CPPUNIT_ASSERT_EQUAL(rc, SIPX_RESULT_SUCCESS) ;    
+
         rc = sipxEventListenerRemove(g_hInst4, lineCallback, NULL) ;
         CPPUNIT_ASSERT_EQUAL(rc, SIPX_RESULT_SUCCESS) ;
-
     }    
 
     OsTask::delay(TEST_DELAY) ;    

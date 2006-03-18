@@ -5,6 +5,7 @@ nobase_includeHEADERS_INSTALL = $(INSTALL) -D -p -c -m 644
 
 nobase_include_HEADERS =  \
     cp/CallManager.h \
+    cp/CSeqManager.h \
     cp/Connection.h \
     cp/CpCall.h \
     cp/CpCallManager.h \

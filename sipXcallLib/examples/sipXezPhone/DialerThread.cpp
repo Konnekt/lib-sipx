@@ -40,3 +40,28 @@ void DialerThread::OnExit()
 {
 
 }
+
+
+// Constructor
+TransferThread::TransferThread(SIPX_CALL hCall,
+                               wxString phoneNumber) :
+   wxThread(),
+   mhCall(hCall),
+   mPhoneNumber(phoneNumber)
+{
+}
+
+
+// Entry point into the thread
+void* TransferThread::Entry()
+{
+    sipxCallBlindTransfer(mhCall, mPhoneNumber);
+
+    return NULL ;
+}
+
+// Routine called by the base when exiting the thread
+void TransferThread::OnExit()
+{
+
+}

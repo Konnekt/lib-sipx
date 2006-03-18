@@ -43,7 +43,7 @@ public:
    /**
     * MainPanel contructor.
     */
-   MainPanel(wxWindow* parent, const wxPoint& pos, const wxSize& size);
+   MainPanel(wxWindow* parent, const wxPoint& pos, const wxSize& size, bool bLogo);
 
    /**
     * MainPanel destructor.
@@ -59,17 +59,25 @@ public:
    /**
     * Conferencing Button event handler
     */
-   void OnConferencingButton(wxEvent& event);
+   void OnConferencingButton(wxCommandEvent& event);
 
    /**
     * Call History Button event handler
     */
-   void OnCallHistoryButton(wxEvent& event);
+   void OnCallHistoryButton(wxCommandEvent& event);
    
    /**
     * Video button event handler
     */
-   void OnVideoButton(wxEvent& event);
+   void OnVideoButton(wxCommandEvent& event);
+
+   void UpdateBackground();
+
+   /** 
+    * Timer handler 
+    */
+   void OnTimer(wxTimerEvent& event);
+
 
 /* ============================ ACCESSORS ================================= */
 /* ============================ INQUIRY =================================== */
@@ -86,6 +94,7 @@ private:
         ButtonPanel* mpButtonPanel;
         CallHistoryPanel* mpCallHistoryPanel;
         VideoPanel*       mpVideoPanel;
+        wxTimer m_timer ;
 
         /**
          * Text control for displaying the phone's state.
@@ -98,13 +107,13 @@ private:
     */
    wxTextCtrl* mpCallerID;
 
-   void CreateCallHistoryButton();
-   void CreateConferencingButton();
-   void CreateVideoButton();
+   void CreateCallHistoryButton(bool bLogo);
+   void CreateConferencingButton(bool bLogo);
+   void CreateVideoButton(bool bLogo);
    wxBitmapButton* mpCallHistoryBtn;
    wxBitmapButton* mpConferencingBtn;
    wxBitmapButton* mpVideoBtn;
-
+   wxStaticBitmap* mpLogo;
 };
 
 

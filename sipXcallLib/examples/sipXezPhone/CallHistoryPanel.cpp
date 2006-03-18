@@ -29,11 +29,11 @@ CallHistoryPanel::CallHistoryPanel(wxWindow* parent, const wxPoint& pos, const w
 {
         mpNotebook = new wxNotebook(this, IDR_CALL_HISTORY_NOTEBOOK, pos, size);
         mpContactListPanel = new ContactListPanel(mpNotebook, pos, size);
-        mpReceivedCallListCtrl = new ReceivedCallList(mpNotebook, pos, size);
-        mpPlacedCallListCtrl = new PlacedCallList(mpNotebook, pos, size);        
+//        mpReceivedCallListCtrl = new ReceivedCallList(mpNotebook, pos, size);
+//        mpPlacedCallListCtrl = new PlacedCallList(mpNotebook, pos, size);        
         mpNotebook->AddPage(mpContactListPanel, "Contacts");
-        mpNotebook->AddPage(mpReceivedCallListCtrl, "Received Calls");
-        mpNotebook->AddPage(mpPlacedCallListCtrl, "Placed Calls");
+//        mpNotebook->AddPage(mpReceivedCallListCtrl, "Received Calls");
+//        mpNotebook->AddPage(mpPlacedCallListCtrl, "Placed Calls");
         
 
 }
@@ -46,4 +46,9 @@ void CallHistoryPanel::OnPageChanged( wxNotebookEvent &event )
 // Destructor
 CallHistoryPanel::~CallHistoryPanel()
 {
+}
+
+void CallHistoryPanel::UpdateBackground(wxColor color)
+{
+    mpContactListPanel->SetBackgroundColour(color);
 }

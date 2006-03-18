@@ -17,6 +17,8 @@
 #include "PhoneStateIdle.h"
 #include "PhoneStateDialing.h"
 #include "PhoneStateRinging.h"
+#include "PhoneStateConnected.h"
+#include "PhoneStateDisconnectRequested.h"
 #include "PhoneStateAccepted.h"
 #include "../sipXezPhoneSettings.h"
 
@@ -37,16 +39,26 @@ PhoneStateRinging::~PhoneStateRinging(void)
 {
 #ifdef VOICE_ENGINE
     if (mbPlayingTone)
-        sipxCallPlayFileStop(sipXmgr::getInstance().getCurrentCall());
+        sipxCallAudioPlayFileStop(sipXmgr::getInstance().getCurrentCall());
 #else
     if (mbPlayingTone)
         sipxCallStopTone(mhCall);
 #endif
 }
 
+PhoneState* PhoneStateRinging::OnDisconnected(const SIPX_CALL hCall)
+{
+   return (new PhoneStateDisconnectRequested());
+}
+
 PhoneState* PhoneStateRinging::OnFlashButton()
 {
     return (new PhoneStateAccepted(mhCall));
+}
+
+PhoneState* PhoneStateRinging::OnConnected()
+{
+   return (new PhoneStateConnected());
 }
 
 PhoneState* PhoneStateRinging::Execute()
@@ -60,7 +72,7 @@ PhoneState* PhoneStateRinging::Execute()
     thePhoneApp->setStatusMessage(incomingNumber);
 
 #ifdef VOICE_ENGINE
-    if (SIPX_RESULT_SUCCESS == sipxCallPlayFileStart(sipXmgr::getInstance().getCurrentCall(), "res/ringTone.raw", true, true, false))
+    if (SIPX_RESULT_SUCCESS == sipxCallAudioPlayFileStart(sipXmgr::getInstance().getCurrentCall(), "res/ringTone.raw", true, true, false))
     {
         mbPlayingTone  = true;
     }
@@ -80,6 +92,7 @@ PhoneState* PhoneStateRinging::Execute()
 
     if (sipXezPhoneSettings::getInstance().getAutoAnswer() == true)
     {
+        sipxCallAudioPlayFileStop(sipXmgr::getInstance().getCurrentCall()) ;
         // if in Auto Answer mode, go ahead and answer
         sipxCallAnswer(sipXmgr::getInstance().getCurrentCall());
     }

@@ -23,6 +23,7 @@ EventValidator::EventValidator(const char* szTitle)
 {
     m_title = szTitle ;
     m_pUnfoundEvent = NULL ;
+    m_bIgnoreMessages = false ;
     reset() ;
 }
 
@@ -46,9 +47,17 @@ bool EventValidator::isIgnoredCateogry(SIPX_EVENT_CATEGORY category)
     assert((category >= 0) && (category < MAX_EVENT_CATEGORIES)) ;
 
     return m_filterCategories[category] ;
-
 }
 
+void EventValidator::ignoreMessages() 
+{
+    m_bIgnoreMessages = true ;
+}
+
+bool EventValidator::isMessageIgnored() 
+{
+    return m_bIgnoreMessages ;
+}
 
 void EventValidator::setDefaultTimeout(int iTimeoutInSecs)
 {
@@ -68,7 +77,7 @@ void EventValidator::reset()
 {
     OsLock lock(m_mutLists) ;
 
-    m_iDefaultTimeoutInSecs = 45 ;
+    m_iDefaultTimeoutInSecs = 10 ;
     m_iMaxLookAhead = 4 ;
 
     for (int i=0; i<MAX_EVENT_CATEGORIES; i++)
@@ -138,22 +147,24 @@ bool EventValidator::waitForMessage(SIPX_LINE hLine,
                                     bool bStrictOrderMatch, 
                                     int iTimeoutInSecs) 
 {
-    bool bFound ;
+    bool bFound = true ;
 
-    UtlString* pString = allocMessageEvent(hLine, szMsg) ;
-    bFound = waitForEvent(pString->data(), bStrictOrderMatch, iTimeoutInSecs) ;
-
-    delete pString ;
-
-    if (!bFound)
+    if (!isMessageIgnored())
     {
-        // Wait a second for any additional events to pour in -- useful for 
-        // debugging.
-        OsTask::delay(1000) ;
+        UtlString* pString = allocMessageEvent(hLine, szMsg) ;
+        bFound = waitForEvent(pString->data(), bStrictOrderMatch, iTimeoutInSecs) ;
 
-        report() ;
+        delete pString ;
+
+        if (!bFound)
+        {
+            // Wait a second for any additional events to pour in -- useful for 
+            // debugging.
+            OsTask::delay(1000) ;
+
+            report() ;
+        }
     }
-
 
     return bFound ;
 }
@@ -294,6 +305,114 @@ bool EventValidator::waitForConfigEvent(SIPX_CONFIG_EVENT event,
 }
 
 
+bool EventValidator::waitForSecurityEvent(SIPX_SECURITY_EVENT event,
+                                          SIPX_SECURITY_CAUSE cause,
+                                        bool bStrictOrderMatch, 
+                                        int iTimeoutInSecs) 
+{
+    bool bFound = true ;
+
+    if (!isIgnoredCateogry(EVENT_CATEGORY_SECURITY))
+    {
+        UtlString* pString = allocSecurityEvent(event, cause) ;
+        bFound = waitForEvent(pString->data(), bStrictOrderMatch, iTimeoutInSecs) ;
+
+        delete pString ;
+    }
+
+    if (!bFound)
+    {
+        // Wait a second for any additional events to pour in -- useful for 
+        // debugging.
+        OsTask::delay(1000) ;
+
+        report() ;
+    }
+
+    return bFound ;
+}
+
+bool EventValidator::waitForMediaEvent(SIPX_MEDIA_EVENT event,
+                                       SIPX_MEDIA_CAUSE cause,
+                                       SIPX_MEDIA_TYPE  type,
+                                        bool bStrictOrderMatch, 
+                                        int iTimeoutInSecs) 
+{
+    bool bFound = true ;
+
+    if (!isIgnoredCateogry(EVENT_CATEGORY_MEDIA))
+    {
+        UtlString* pString = allocMediaEvent(event, cause, type) ;
+        bFound = waitForEvent(pString->data(), bStrictOrderMatch, iTimeoutInSecs) ;
+
+        delete pString ;
+    }
+
+    if (!bFound)
+    {
+        // Wait a second for any additional events to pour in -- useful for 
+        // debugging.
+        OsTask::delay(1000) ;
+
+        report() ;
+    }
+
+    return bFound ;
+}
+
+bool EventValidator::waitForSubStatusEvent(SIPX_SUBSCRIPTION_STATE state, 
+                                              SIPX_SUBSCRIPTION_CAUSE cause, 
+                                           bool bStrictOrderMatch, 
+                                           int iTimeoutInSecs) 
+{ 
+    bool bFound = true ; 
+
+    if (!isIgnoredCateogry(EVENT_CATEGORY_SUB_STATUS)) 
+    { 
+        UtlString* pString = allocSubStatusEvent(state, cause) ; 
+        bFound = waitForEvent(pString->data(), bStrictOrderMatch, iTimeoutInSecs) ; 
+
+        delete pString ; 
+    } 
+
+    if (!bFound) 
+    { 
+        // Wait a second for any additional events to pour in -- useful for 
+        // debugging. 
+        OsTask::delay(1000) ; 
+
+        report() ; 
+    } 
+
+    return bFound ; 
+} 
+
+bool EventValidator::waitForNotifyEvent(SIPX_NOTIFY_INFO* event, 
+                                        bool bStrictOrderMatch, 
+                                        int iTimeoutInSecs) 
+{ 
+    bool bFound = true ; 
+
+    if (!isIgnoredCateogry(EVENT_CATEGORY_NOTIFY)) 
+    { 
+        UtlString* pString = allocNotifyEvent(event) ; 
+        bFound = waitForEvent(pString->data(), bStrictOrderMatch, iTimeoutInSecs) ; 
+
+        delete pString ; 
+    } 
+
+    if (!bFound) 
+    { 
+        // Wait a second for any additional events to pour in -- useful for 
+        // debugging. 
+        OsTask::delay(1000) ; 
+
+        report() ; 
+    } 
+
+    return bFound ; 
+} 
+
 bool EventValidator::hasUnprocessedEvents() 
 {
     bool bRC = false ;
@@ -308,6 +427,8 @@ bool EventValidator::hasUnprocessedEvents()
 
 bool EventValidator::validateNoWaitingEvent() 
 {
+    addMarker("Validate No Waiting Events") ;
+
     bool bWaitingEvents = hasUnprocessedEvents() ;
     if (bWaitingEvents)
     {
@@ -351,19 +472,19 @@ void EventValidator::report()
     for (i=0; i<nElements; i++)
     {
         UtlString* pString = (UtlString*) m_processedEvents.at(i) ;
-        printf("[OK] %s\r\n", pString->data()) ;
+        printf("%s\t[OK] %s\r\n", m_title.data(), pString->data()) ;
     }
     
     if (m_pUnfoundEvent) 
     {
-        printf("[!!] %s\r\n", m_pUnfoundEvent->data()) ;
+        printf("%s\t[!!] %s\r\n", m_title.data(), m_pUnfoundEvent->data()) ;
     }
 
     nElements = m_unprocessedEvents.entries() ;
     for (i=0; i<nElements; i++)
     {
         UtlString* pString = (UtlString*) m_unprocessedEvents.at(i) ;
-        printf("[??] %s\r\n", pString->data()) ;
+        printf("%s\t[??] %s\r\n", m_title.data(), pString->data()) ;
     }
 
     printf("\r\n") ;
@@ -444,8 +565,47 @@ void EventValidator::addEvent(SIPX_EVENT_CATEGORY category, void* pInfo)
                     m_semUnprocessed.release() ;
                 }
                 break ;
-            // TODO: Add support for EVENT_CATEGORY_SUB_STATUS
-            // TODO: Add support for EVENT_CATEGORY_NOTIFY
+            case EVENT_CATEGORY_SUB_STATUS: 
+                {
+                    SIPX_SUBSTATUS_INFO* pStateInfo = (SIPX_SUBSTATUS_INFO*) pInfo ; 
+    
+                    UtlString* pString = allocSubStatusEvent(pStateInfo->state, pStateInfo->cause) ; 
+
+                    m_unprocessedEvents.append(pString) ; 
+                    m_semUnprocessed.release() ; 
+                } 
+                break; 
+            case EVENT_CATEGORY_NOTIFY: 
+                { 
+                    SIPX_NOTIFY_INFO* pStateInfo = (SIPX_NOTIFY_INFO*) pInfo ; 
+
+                    UtlString* pString = allocNotifyEvent(pStateInfo) ; 
+
+                    m_unprocessedEvents.append(pString) ; 
+                    m_semUnprocessed.release() ; 
+                } 
+                break; 
+            case EVENT_CATEGORY_SECURITY:
+                {
+                    SIPX_SECURITY_INFO* pSecurityInfo = (SIPX_SECURITY_INFO*) pInfo;
+                    UtlString* pString = allocSecurityEvent(pSecurityInfo->event,
+                                                            pSecurityInfo->cause) ;
+
+                    m_unprocessedEvents.append(pString) ; 
+                    m_semUnprocessed.release() ;
+
+                }
+            case EVENT_CATEGORY_MEDIA:
+                {
+                    SIPX_MEDIA_INFO* pMediaInfo = (SIPX_MEDIA_INFO*) pInfo;
+                    UtlString* pString = allocMediaEvent(pMediaInfo->event,
+                                                         pMediaInfo->cause,
+                                                         pMediaInfo->mediaType) ;
+
+                    m_unprocessedEvents.append(pString) ; 
+                    m_semUnprocessed.release() ;
+
+                }
         }
     }
 }
@@ -453,9 +613,12 @@ void EventValidator::addEvent(SIPX_EVENT_CATEGORY category, void* pInfo)
 
 void EventValidator::addMessage(SIPX_LINE hLine, const char* szMsg) 
 {
-    OsLock lock(m_mutLists) ;       
-    m_unprocessedEvents.append(allocMessageEvent(hLine, szMsg)) ;
-    m_semUnprocessed.release() ;
+    if (!isMessageIgnored())
+    {
+        OsLock lock(m_mutLists) ;       
+        m_unprocessedEvents.append(allocMessageEvent(hLine, szMsg)) ;
+        m_semUnprocessed.release() ;
+    }
 }
 
 void EventValidator::addMarker(const char* szMarkerText) 
@@ -481,8 +644,8 @@ UtlString* EventValidator::allocCallStateEntry(SIPX_CALL hCall,
 
 
     sipxCallEventToString(
-            (SIPX_CALLSTATE_MAJOR)(int) event, 
-            (SIPX_CALLSTATE_MINOR)(int)cause, 
+            event, 
+            cause, 
             szBuffer, 
             sizeof(szBuffer));
 
@@ -502,10 +665,7 @@ UtlString* EventValidator::allocLineStateEntry(SIPX_LINE hLine,
     char szBuffer[256] ;
     char szBuffer2[256] ;
     
-    sipxLineEventToString((SIPX_LINE_EVENT_TYPE_MAJOR)(int) event, 
-            (SIPX_LINE_EVENT_TYPE_MINOR)(int) cause, 
-            szBuffer, 
-            sizeof(szBuffer)) ;
+    sipxLineEventToString(event, cause, szBuffer, sizeof(szBuffer)) ;
     sprintf(szBuffer2, "<LINE> hLine=%d: %s", hLine, szBuffer);
 
     return new UtlString(szBuffer2) ;
@@ -582,6 +742,79 @@ UtlString* EventValidator::allocConfigEvent(SIPX_CONFIG_EVENT hEvent)
     return new UtlString(szBuffer) ;
 
 }
+
+UtlString* EventValidator::allocSecurityEvent(SIPX_SECURITY_EVENT event,
+                                              SIPX_SECURITY_CAUSE cause)
+{
+    char szBuffer[2048] ;
+    char szBuffer2[1024] ;                        
+    char szBuffer3[1024];
+
+    sprintf(szBuffer, "<SECURITY> event=%s, cause=%s",
+            sipxSecurityEventToString(event, szBuffer2, sizeof(szBuffer2)),
+            sipxSecurityCauseToString(cause, szBuffer3, sizeof(szBuffer3))) ;
+
+    return new UtlString(szBuffer) ;
+
+}
+
+UtlString* EventValidator::allocMediaEvent(SIPX_MEDIA_EVENT event,
+                                              SIPX_MEDIA_CAUSE cause,
+                                              SIPX_MEDIA_TYPE type)
+{
+    char szBuffer[2048] ;
+    char szBuffer2[1024];
+    char szBuffer3[1024];
+    char szType[256];
+    
+    if (MEDIA_TYPE_AUDIO == type)
+    {
+        strcpy(szType, "AUDIO");
+    }
+    else if (MEDIA_TYPE_VIDEO == type)
+    {
+        strcpy(szType, "VIDEO");
+    }
+    sprintf(szBuffer, "<MEDIA> event=%s, cause=%s type=%s",
+            sipxMediaEventToString(event, szBuffer2, sizeof(szBuffer2)),
+            sipxMediaCauseToString(cause, szBuffer3, sizeof(szBuffer3)),
+            szType) ;
+
+    return new UtlString(szBuffer) ;
+
+}
+
+UtlString* EventValidator::allocSubStatusEvent(SIPX_SUBSCRIPTION_STATE state, 
+                                    SIPX_SUBSCRIPTION_CAUSE cause) 
+{ 
+    char szBuffer1[1024] ; 
+    char szBuffer2[1024] ; 
+    char szBuffer3[1024]; 
+
+    sipxSubStatusStateToString(state, szBuffer1, sizeof(szBuffer1)); 
+    sipxSubStatusCauseToString(cause, szBuffer2, sizeof(szBuffer2)); 
+
+
+    sprintf(szBuffer3, "<SUBSTATUS> state=%s, cause=%s", 
+            szBuffer1, 
+            szBuffer2) ; 
+
+    return new UtlString(szBuffer3) ; 
+} 
+
+
+UtlString* EventValidator::allocNotifyEvent(SIPX_NOTIFY_INFO* pInfo) 
+{ 
+    char szBuffer[1024] ; 
+
+    sprintf(szBuffer, "<NOTIFY> hSub=%d, contentType=%s, contentLength=%d, content=%s", 
+                        pInfo->hSub, 
+                        pInfo->szContentType, 
+                        pInfo->nContentLength, 
+                        pInfo->pContent); 
+
+    return new UtlString(szBuffer) ; 
+} 
 
 
 bool EventValidator::findEvent(const char* szEvent, int nMaxLookAhead, int &nActualLookAhead)

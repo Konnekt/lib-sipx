@@ -44,15 +44,21 @@ PhoneState* PhoneStateConnected::OnFlashButton()
 
 PhoneState* PhoneStateConnected::OnDisconnected(SIPX_CALL hCall)
 {
-   if (hCall == sipXmgr::getInstance().getCurrentCall())
-   {
-      sipXmgr::getInstance().disconnect();
-      return (new PhoneStateIdle());
-   }
+   //if (hCall == sipXmgr::getInstance().getCurrentCall())
+   //{
+      if (sipXmgr::getInstance().disconnect(hCall, false))
+      {
+        return (new PhoneStateIdle());
+      }
+      else
+      {
+          return this;
+      }
+   /*}
    else
    {
       return this;
-   }
+   }*/
 }
 
 PhoneState* PhoneStateConnected::OnHoldButton()

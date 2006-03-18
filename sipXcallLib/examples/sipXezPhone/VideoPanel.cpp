@@ -43,3 +43,8 @@ VideoPanel::VideoPanel(wxWindow* parent, const wxPoint& pos, const wxSize& size)
 VideoPanel::~VideoPanel()
 {
 }
+
+void VideoPanel::UpdateBackground(wxColor color)
+{
+    SetBackgroundColour(color);
+}

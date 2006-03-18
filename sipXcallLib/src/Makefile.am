@@ -1,10 +1,11 @@
 ## Process this file with automake to produce Makefile.in
 
+
 EXTRA_DIST = tapi
 
 SUBDIRS = . test
 
-INCLUDES = -I$(top_srcdir)/include
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/../sipXmediaAdapterLib/sipXmediaVoiceEngine
 
 lib_LTLIBRARIES = libsipXcall.la
 
@@ -24,12 +25,14 @@ libsipXcall_la_LIBADD = \
 	@SIPXMEDIA_LIBS@ @SIPXTACK_LIBS@ @SIPXPORT_LIBS@ -lstdc++
 
 libsipXcall_la_CXXFLAGS = \
-	-DSIPX_CONFDIR=\"@SIPX_CONFDIR@\"
+	-DSIPX_CONFDIR=\"@SIPX_CONFDIR@\" \
+    @VIDEO_DEFINE@
 
 libsipXcall_la_SOURCES = \
     ../config/sipxcalllib-buildstamp.h \
     ../config/sipxcalllib-buildstamp.cpp \
     cp/CallManager.cpp \
+    cp/CSeqManager.cpp \
     cp/Connection.cpp \
     cp/CpCall.cpp \
     cp/CpCallManager.cpp \
@@ -143,10 +146,5 @@ libsipXcall_la_SOURCES = \
     tapi/sipXtapiInternal.cpp \
     tapi/SipXHandleMap.cpp \
     tapi/SipXMessageObserver.cpp
-
-noinst_HEADERS = \
-    cp/ConfirmationTone.h \
-    cp/DialTone.h \
-    cp/BusyTone.h
 
 DISTCLEANFILES = Makefile.in

@@ -46,6 +46,8 @@ public:
    virtual ~CallHistoryPanel();
    void OnPageChanged( wxNotebookEvent &event );
 
+   void UpdateBackground(wxColor color);
+
 /* ============================ MANIPULATORS ============================== */
 /* ============================ ACCESSORS ================================= */
 /* ============================ INQUIRY =================================== */

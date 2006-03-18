@@ -38,7 +38,10 @@
 				DebugInformationFormat="3"
 				CompileAs="0"/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCCustomBuildTool"
+				CommandLine="copy ..\..\sipXtapi\Debug\sipXtapid.dll Debug
+xcopy  res Debug\res /I /Y /S"
+				Outputs="Debug\sipXtapid.dll"/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrtd.lib msvcprtd.lib rpcrt4.lib Ws2_32.lib comctl32.lib zlib.lib regex.lib png.lib jpeg.lib tiff.lib wxmsw.lib sipXtapid.lib sipXportLib.lib libpcre.a winmm.lib"
@@ -108,7 +111,11 @@
 				SuppressStartupBanner="TRUE"
 				CompileAs="0"/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCCustomBuildTool"
+				CommandLine="copy ..\..\sipXtapi\Release\sipXtapid.dll Debug
+xcopy  res Release\res /I /Y /S
+"
+				Outputs="Release\sipXtapid.dll"/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib msvcprt.lib rpcrt4.lib wsock32.lib comctl32.lib zlib.lib regex.lib png.lib jpeg.lib tiff.lib wxmsw.lib sipXtapi.lib sipXportLib.lib libpcre.a "
@@ -413,6 +420,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\CameraSettingsDlg.cpp">
+			</File>
+			<File
 				RelativePath=".\ConferencePanel.cpp">
 			</File>
 			<File
@@ -546,6 +556,9 @@
 			</File>
 			<File
 				RelativePath=".\EventLogDlg.cpp">
+			</File>
+			<File
+				RelativePath=".\ImportCertificateDlg.cpp">
 			</File>
 			<File
 				RelativePath="MainPanel.cpp">
@@ -956,6 +969,9 @@
 				RelativePath=".\sipXSrtpSettingsDlg.cpp">
 			</File>
 			<File
+				RelativePath=".\sipXTabbedDlg.cpp">
+			</File>
+			<File
 				RelativePath=".\sipXVideoSettingsDlg.cpp">
 			</File>
 			<File
@@ -1114,6 +1130,9 @@
 				RelativePath="CallList.h">
 			</File>
 			<File
+				RelativePath=".\CameraSettingsDlg.h">
+			</File>
+			<File
 				RelativePath=".\ConferencePanel.h">
 			</File>
 			<File
@@ -1133,6 +1152,9 @@
 			</File>
 			<File
 				RelativePath=".\EventLogDlg.h">
+			</File>
+			<File
+				RelativePath=".\ImportCertificateDlg.h">
 			</File>
 			<File
 				RelativePath="MainPanel.h">
@@ -1166,6 +1188,9 @@
 			</File>
 			<File
 				RelativePath=".\sipXSrtpSettingsDlg.h">
+			</File>
+			<File
+				RelativePath=".\sipXTabbedDlg.h">
 			</File>
 			<File
 				RelativePath=".\sipXVideoSettingsDlg.h">
