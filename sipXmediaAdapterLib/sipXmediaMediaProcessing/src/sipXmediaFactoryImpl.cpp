@@ -93,9 +93,6 @@ sipXmediaFactoryImpl::sipXmediaFactoryImpl(OsConfigDb* pConfigDb)
         pConfigDb->get(CONFIG_PHONESET_SEND_INBAND_DTMF, strInBandDTMF) ;
         strInBandDTMF.toUpper() ;
 
-        OsSysLog::add(FAC_MP, PRI_DEBUG, 
-                      "sipXmediaFactoryImpl::sipXmediaFactoryImpl maxFlowGraph = %d",
-                      maxFlowGraph);
     }
 
     // Max Flow graphs
@@ -143,7 +140,7 @@ sipXmediaFactoryImpl::~sipXmediaFactoryImpl()
     if (miInstanceCount == 0)
     {
         // Temporarily comment out this function because it causes the program hung.
-        //mpStopTasks();
+        mpStopTasks();
         mpShutdown();
     }
 }
@@ -157,13 +154,22 @@ CpMediaInterface* sipXmediaFactoryImpl::createMediaInterface( const char* public
                                                               const char* locale,
                                                               int expeditedIpTos,
                                                               const char* szStunServer,
-                                                              int stunOptions,
-                                                              int iStunKeepAliveSecs 
-                                                            ) 
+                                                              int iStunPort,
+                                                              int iStunKeepAliveSecs,
+                                                              const char* szTurnServer,
+                                                              int iTurnPort,
+                                                              const char* szTurnUsername,
+                                                              const char* szTurnPassword,
+                                                              int iTurnKeepAlivePeriodSecs,
+                                                              bool bEnableICE) 
+
+
 {
     return new CpPhoneMediaInterface(this, publicAddress, localAddress, 
             numCodecs, sdpCodecArray, locale, expeditedIpTos, szStunServer,
-            iStunKeepAliveSecs) ;
+            iStunPort, iStunKeepAliveSecs, szTurnServer, iTurnPort, 
+            szTurnUsername, szTurnPassword, iTurnKeepAlivePeriodSecs, 
+            bEnableICE) ;
 }
 
 
@@ -223,19 +229,10 @@ OsStatus sipXmediaFactoryImpl::muteMicrophone(UtlBoolean bMute)
     return OS_SUCCESS ;
 }
 
-OsStatus sipXmediaFactoryImpl::enableAudioAEC(UtlBoolean bEnable)
-{
-    return OS_SUCCESS;
-}
-
-OsStatus sipXmediaFactoryImpl::enableOutOfBandDTMF(UtlBoolean bEnable)
-{
-    return OS_SUCCESS;
-}
-
 OsStatus sipXmediaFactoryImpl::buildCodecFactory(SdpCodecFactory *pFactory, 
                                                  const UtlString& sPreferences,
                                                  const UtlString& sVideoPreferences,
+                                                 int videoFormat,
                                                  int* iRejected)
 {
     OsStatus rc = OS_FAILED;
@@ -372,20 +369,6 @@ OsStatus sipXmediaFactoryImpl::getMicrophoneDevice(UtlString& device) const
 }
 
 
-OsStatus sipXmediaFactoryImpl::isAudioAECEnabled(UtlBoolean& bEnabled) const
-{
-    bEnabled = false;
-    return OS_SUCCESS;
-}
-
-
-OsStatus sipXmediaFactoryImpl::isOutOfBandDTMFEnabled(UtlBoolean& bEnabled) const
-{
-    bEnabled = false;
-    return OS_SUCCESS;
-}
-
-
 OsStatus sipXmediaFactoryImpl::getNumOfCodecs(int& iCodecs) const
 {
     iCodecs = 3;
@@ -496,6 +479,14 @@ OsStatus sipXmediaFactoryImpl::getCodecNameByType(SdpCodec::SdpCodecTypes type, 
     }
 
     return rc;
+}
+
+OsStatus sipXmediaFactoryImpl::getLocalAudioConnectionId(int& connectionId) const 
+{
+    connectionId = -1 ;
+
+    return OS_NOT_SUPPORTED ;
+
 }
 
 /* ============================ INQUIRY =================================== */

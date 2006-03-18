@@ -59,7 +59,14 @@ public:
                          const char* pLocale = "",
                          int expeditedIpTos = QOS_LAYER3_LOW_DELAY_IP_TOS,
                          const char* szStunServer = NULL,
-                         int iStunKeepAlivePeriodSecs = 28);
+                         int iStunPort = PORT_NONE,
+                         int iStunKeepAlivePeriodSecs = 28,
+                         const char* szTurnServer = NULL,
+                         int iTurnPort = PORT_NONE,
+                         const char* szTurnUsername = NULL,
+                         const char* szTurnPassword = NULL,
+                         int iTurnKeepAlivePeriodSecs = 28,
+                         bool mbEnableICE = false);
      //:Default constructor
 
   protected:
@@ -75,11 +82,13 @@ public:
 
 /* ============================ MANIPULATORS ============================== */
 
-   CpPhoneMediaInterface& operator=(const CpPhoneMediaInterface& rhs);
-     //:Assignment operator
 
-
-   virtual OsStatus createConnection(int& connectionId, void* videoWindowHandle) ;
+   virtual OsStatus createConnection(int& connectionId,
+                                     const char* szLocalAddress,
+                                     void* videoWindowHandle, 
+                                     void* const pSecurityAttributes = NULL,
+                                     ISocketIdle* pIdleSink = NULL,
+                                     IMediaEventListener* pMediaEventListener = NULL) ;
    
    virtual OsStatus getCapabilities(int connectionId, 
                                     UtlString& rtpHostAddress, 
@@ -88,7 +97,24 @@ public:
                                     int& rtpVideoPort,
                                     int& rtcpVideoPort,
                                     SdpCodecFactory& supportedCodecs,
-                                    SdpSrtpParameters& srtpParams);
+                                    SdpSrtpParameters& srtpParams,
+                                    int bandWidth,
+                                    int& videoBandwidth,
+                                    int& videoFramerate) ;
+
+   virtual OsStatus getCapabilitiesEx(int connectionId, 
+                                      int nMaxAddresses,
+                                      UtlString rtpHostAddresses[], 
+                                      int rtpAudioPorts[],
+                                      int rtcpAudioPorts[],
+                                      int rtpVideoPorts[],
+                                      int rtcpVideoPorts[],
+                                      int& nActualAddresses,
+                                      SdpCodecFactory& supportedCodecs,
+                                      SdpSrtpParameters& srtpParameters,
+                                      int bandWidth,
+                                      int& videoBandwidth,
+                                      int& videoFramerate);
 
    virtual OsStatus setConnectionDestination(int connectionId,
                                              const char* rtpHostAddress, 
@@ -97,21 +123,14 @@ public:
                                              int rtpVideoPort,
                                              int rtcpVideoPort);
 
-
-   virtual OsStatus addAlternateDestinations(int connectionId,
-                                             unsigned char cPriority,
-                                             const char* rtpHostAddress, 
-                                             int port,
-                                             bool bRtp) ;
-
    virtual OsStatus startRtpSend(int connectionId, 
                                  int numCodecs,
-                                 SdpCodec* sendCodec[],
-                                 SdpSrtpParameters& srtpParams);
+                                 SdpCodec* sendCodec[]);
+
    virtual OsStatus startRtpReceive(int connectionId,
                                     int numCodecs,
-                                    SdpCodec* sendCodec[],
-                                    SdpSrtpParameters& srtpParams);
+                                    SdpCodec* sendCodec[]);
+
    virtual OsStatus stopRtpSend(int connectionId);
    virtual OsStatus stopRtpReceive(int connectionId);
 
@@ -120,18 +139,45 @@ public:
    virtual OsStatus startTone(int toneId, UtlBoolean local, UtlBoolean remote);
    virtual OsStatus stopTone();
 
+   virtual OsStatus startChannelTone(int connectionId, int toneId, UtlBoolean local, UtlBoolean remote) ;
+   virtual OsStatus stopChannelTone(int connectionId) ;
+
    virtual OsStatus playAudio(const char* url, 
                               UtlBoolean repeat,
                               UtlBoolean local, 
-                              UtlBoolean remote);
-   virtual OsStatus playBuffer(char* buf, 
+                              UtlBoolean remote,
+                              UtlBoolean mixWithMic = false,
+                              int downScaling = 100);
+
+
+    virtual OsStatus playBuffer(char* buf, 
                                unsigned long bufSize,
                                int type, 
                               UtlBoolean repeat,
                               UtlBoolean local, 
                               UtlBoolean remote,
-                              OsNotification* event = NULL);
-   virtual OsStatus stopAudio();
+                              OsNotification* event = NULL,
+                              UtlBoolean mixWithMic = false,
+                              int downScaling = 100);
+
+    virtual OsStatus stopAudio();
+
+    virtual OsStatus playChannelAudio(int connectionId,
+                                     const char* url,
+                                     UtlBoolean repeat,
+                                     UtlBoolean local,
+                                     UtlBoolean remote,
+                                     UtlBoolean mixWithMic = false,
+                                     int downScaling = 100) ;
+
+
+   virtual OsStatus stopChannelAudio(int connectionId) ;
+
+
+   virtual OsStatus recordChannelAudio(int connectionId,
+                                       const char* szFile) ;
+
+   virtual OsStatus stopRecordChannelAudio(int connectionId) ;
 
    virtual OsStatus createPlayer(MpStreamPlayer** ppPlayer, 
                                  const char* szStream, 
@@ -168,11 +214,48 @@ public:
            int& dtmfterm,
            OsProtectedEvent* ev = NULL);
 
-   virtual void setContactType(int connectionId, CONTACT_TYPE eType) ;
+    virtual void setContactType(int connectionId, CONTACT_TYPE eType, CONTACT_ID contactId) ;
      //: Set the contact type for this Phone media interface.  
      //  It is important to set the contact type BEFORE creating the 
      //  connection -- setting after the connection has been created
      //  is essentially a NOP.
+
+    //! Rebuild the codec factory on the fly
+    virtual OsStatus setAudioCodecBandwidth(int connectionId, int bandWidth) ;
+
+   virtual OsStatus rebuildCodecFactory(int connectionId, 
+                                        int audioBandwidth, 
+                                        int videoBandwidth, 
+                                        UtlString& videoCodec);
+
+    //! Set conneection bitrate on the fly
+    virtual OsStatus setConnectionBitrate(int connectionId, int bitrate) ;
+
+    //! Set connection framerate on the fly
+    virtual OsStatus setConnectionFramerate(int connectionId, int framerate) ;
+
+    virtual OsStatus setSecurityAttributes(const void* security) ;
+
+    virtual OsStatus addAudioRtpConnectionDestination(int         connectionId,
+                                                      int         iPriority,
+                                                      const char* candidateIp, 
+                                                      int         candidatePort) ;
+
+    virtual OsStatus addAudioRtcpConnectionDestination(int         connectionId,
+                                                       int         iPriority,
+                                                       const char* candidateIp, 
+                                                       int         candidatePort) ;
+
+    virtual OsStatus addVideoRtpConnectionDestination(int         connectionId,
+                                                      int         iPriority,
+                                                      const char* candidateIp, 
+                                                      int         candidatePort) ;
+
+    virtual OsStatus addVideoRtcpConnectionDestination(int         connectionId,
+                                                       int         iPriority,
+                                                       const char* candidateIp, 
+                                                       int         candidatePort) ;
+
 
 /* ============================ ACCESSORS ================================= */
 
@@ -190,7 +273,6 @@ public:
    virtual OsStatus getVideoBitRate(int& bitRate);
    virtual OsStatus getVideoFrameRate(int& frameRate);
 
-   virtual OsStatus getPrimaryCodec(int connectionId, UtlString& audioCodec, UtlString& videoCodec, int *payloadType, int* videoPayloadType);
      //:Returns primary codec for the connection
    virtual OsStatus setVideoWindowDisplay(const void* hWnd);
    virtual const void* getVideoWindowDisplay();
@@ -198,6 +280,13 @@ public:
    virtual OsStatus setVideoQuality(int quality);
    virtual OsStatus setVideoParameters(int bitRate, int frameRate);
 
+   // Returns the primary codec for the connection
+   virtual OsStatus getPrimaryCodec(int connectionId, 
+                                    UtlString& audioCodec,
+                                    UtlString& videoCodec,
+                                    int* audiopPayloadType,
+                                    int* videoPayloadType,
+                                    bool& isEncrypted) ;
 
 /* ============================ INQUIRY =================================== */
 
@@ -207,14 +296,72 @@ public:
    virtual UtlBoolean isReceivingRtpVideo(int connectionId);
    virtual UtlBoolean isDestinationSet(int connectionId);   
    virtual UtlBoolean canAddParty() ;
+   virtual bool isVideoInitialized(int connectionId) ;
+   virtual bool isAudioInitialized(int connectionId) ;
+   virtual bool isAudioAvailable() ;
+   virtual bool isVideoConferencing() { return false; } ;
+
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
 
+    bool getLocalAddresses( int connectionId,
+                            UtlString& hostIp,
+                            int& rtpAudioPort,
+                            int& rtcpAudioPort,
+                            int& rtpVideoPort,
+                            int& rtcpVideoPort) ;
+
+    bool getNatedAddresses( int connectionId,
+                            UtlString& hostIp,
+                            int& rtpAudioPort,
+                            int& rtcpAudioPort,
+                            int& rtpVideoPort,
+                            int& rtcpVideoPort) ;
+
+
+    bool getRelayAddresses( int connectionId,
+                            UtlString& hostIp,
+                            int& rtpAudioPort,
+                            int& rtcpAudioPort,
+                            int& rtpVideoPort,
+                            int& rtcpVideoPort) ;
+
+
+    OsStatus addLocalContacts(  int connectionId, 
+                                int nMaxAddresses,
+                                UtlString rtpHostAddresses[], 
+                                int rtpAudioPorts[],
+                                int rtcpAudioPorts[],
+                                int rtpVideoPorts[],
+                                int rtcpVideoPorts[],
+                                int& nActualAddresses) ;
+
+    OsStatus addNatedContacts(  int connectionId, 
+                                int nMaxAddresses,
+                                UtlString rtpHostAddresses[], 
+                                int rtpAudioPorts[],
+                                int rtcpAudioPorts[],
+                                int rtpVideoPorts[],
+                                int rtcpVideoPorts[],
+                                int& nActualAddresses) ;
+
+    OsStatus addRelayContacts(  int connectionId, 
+                                int nMaxAddresses,
+                                UtlString rtpHostAddresses[], 
+                                int rtpAudioPorts[],
+                                int rtcpAudioPorts[],
+                                int rtpVideoPorts[],
+                                int rtcpVideoPorts[],
+                                int& nActualAddresses) ;
+
+    void applyAlternateDestinations(int connectionId) ;
+
+
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
-    CpPhoneMediaConnection* getMediaConnection(int connecctionId);
-    CpPhoneMediaConnection* removeMediaConnection(int connecctionId);
+    CpPhoneMediaConnection* getMediaConnection(int connectionId);
+    CpPhoneMediaConnection* removeMediaConnection(int connectionId);
     OsStatus doDeleteConnection(CpPhoneMediaConnection* mediaConnection);
 
    UtlString mRtpReceiveHostAddress; // Advertized as place to send RTP/RTCP
@@ -225,10 +372,22 @@ private:
    UtlDList mMediaConnections;
    int mExpeditedIpTos;
    UtlString mStunServer ;
+   int mStunPort;
    int mStunRefreshPeriodSecs ;
+   UtlString mTurnServer ;
+   int mTurnPort ;
+   int mTurnRefreshPeriodSecs ;
+   UtlString mTurnUsername ;
+   UtlString mTurnPassword ;
+   UtlBoolean mbEnableICE ;
+
 
    // Disabled copy constructor
    CpPhoneMediaInterface(const CpPhoneMediaInterface& rCpPhoneMediaInterface);
+
+   // Disabled equals operator
+   CpPhoneMediaInterface& operator=(const CpPhoneMediaInterface& rhs);
+     
 
 };
 

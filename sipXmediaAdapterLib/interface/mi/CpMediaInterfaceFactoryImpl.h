@@ -31,6 +31,23 @@
 // CONSTANTS
 // STRUCTS
 // TYPEDEFS
+
+typedef enum MEDIA_AEC_MODE
+{
+    MEDIA_AEC_DISABLED, 
+    MEDIA_AEC_SUPPRESS,
+    MEDIA_AEC_CANCEL,
+    MEDIA_AEC_CANCEL_AUTO,
+} MEDIA_AEC_MODE ;
+
+typedef enum MEDIA_NOISE_REDUCTION_MODE
+{
+    MEDIA_NOISE_REDUCTION_DISABLED,
+    MEDIA_NOISE_REDUCTION_LOW,
+    MEDIA_NOISE_REDUCTION_MEDIUM,
+    MEDIA_NOISE_REDUCTION_HIGH,
+} MEDIA_NOISE_REDUCTION_MODE ;
+
 // FORWARD DECLARATIONS
 class CpMediaInterface ;
 class SdpCodec ;
@@ -76,8 +93,14 @@ public:
                                                     const char* locale,
                                                     int expeditedIpTos,
                                                     const char* szStunServer,
-                                                    int stunOptions,
-                                                    int iStunKeepAliveSecs 
+                                                    int iStunPort,
+                                                    int iStunKeepAliveSecs,
+                                                    const char* szTurnServer,
+                                                    int iTurnPort,
+                                                    const char* szTurnUsername,
+                                                    const char* szTurnPassword,
+                                                    int iTurnKeepAliveSecs,
+                                                    bool bEnableICE
                                                   ) = 0 ;
 
 
@@ -110,12 +133,56 @@ public:
     /**
      * Enable/Disable echo cancellation
      */
-    virtual OsStatus enableAudioAEC(UtlBoolean enable) = 0;
+    virtual OsStatus setAudioAECMode(const MEDIA_AEC_MODE mode)
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+
+    /**
+     * Enable/Disable Noise Reduction
+     */
+    virtual OsStatus setAudioNoiseReductionMode(const MEDIA_NOISE_REDUCTION_MODE mode)
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+
+    /**
+     * Enable AGC Status
+     */
+    virtual OsStatus enableAGC(UtlBoolean bEnable)
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
 
     /**
      * Enable/Disable sending DTMF tones inband
      */
-    virtual OsStatus enableOutOfBandDTMF(UtlBoolean enable) = 0;
+    virtual OsStatus enableOutOfBandDTMF(UtlBoolean enable) 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+    /**
+  	 * Enable/Disable sending DTMF tones inband
+  	 */
+  	virtual OsStatus enableInBandDTMF(UtlBoolean enable)
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+  	 
+    /**
+     * Enable/Disable RTCP reports
+     */
+    virtual OsStatus enableRTCP(UtlBoolean bEnable)
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+  	 
 
     /**
      * Populate the codec factory, return number of rejected codecs
@@ -123,27 +190,61 @@ public:
     virtual OsStatus buildCodecFactory(SdpCodecFactory *pFactory, 
                                        const UtlString& sAudioPreferences,
                                        const UtlString& sVideoPreferences,
+                                       int videoFormat,
                                        int* iRejected) = 0;
 
     /**
      * Set the global video preview window 
      */ 
-    virtual OsStatus setVideoPreviewDisplay(void* pDisplay) = 0 ;
+    virtual OsStatus setVideoPreviewDisplay(void* pDisplay) 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
 
     /**
      * Set the global video quality 
      */ 
-    virtual OsStatus setVideoQuality(int quality) = 0 ;
+    virtual OsStatus setVideoQuality(int quality) 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
         
     /**
      * Set the global video parameters 
      */ 
-    virtual OsStatus setVideoParameters(int bitRate, int frameRate) = 0 ;
+    virtual OsStatus setVideoParameters(int bitRate, int frameRate) 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+    virtual OsStatus setVideoBitrate(int bitrate)
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+    virtual OsStatus setVideoFramerate(int framerate)
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+    /**
+    * Set the global CPU usage
+    */
+    virtual OsStatus setVideoCpuValue(int cpuValue) 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
 
     /**
      * Update the video preview window given the specified display context.
      */ 
-    virtual OsStatus updateVideoPreviewWindow(void* displayContext) = 0 ;
+    virtual OsStatus updateVideoPreviewWindow(void* displayContext) 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
 
     /**
      * Sets the RTP port range for this factory
@@ -159,6 +260,15 @@ public:
      * Release the rtp port back to the pool of available RTP ports
      */
     virtual OsStatus releaseRtpPort(const int rtpPort) ;
+
+    /*
+     * Set the connection idle timeout
+     */
+    virtual OsStatus setConnectionIdleTimeout(const int idleTimeout) 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
 
 /* ============================ ACCESSORS ================================= */
 
@@ -188,19 +298,77 @@ public:
     virtual OsStatus getCodecNameByType(SdpCodec::SdpCodecTypes codecType, UtlString& codecName) const = 0;
 
     /* 
+     * Get the connection id for the local audio connection
+     */
+    virtual OsStatus getLocalAudioConnectionId(int& connectionId) const = 0;
+
+#ifdef VIDEO
+    /*
+     * Gets a list of UtlStrings representing available video capture devices.
+     */
+    virtual OsStatus getVideoCaptureDevices(UtlSList& videoDevices) const 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+    
+    /*
+     * Gets the current video device string.
+     */
+    virtual OsStatus getVideoCaptureDevice(UtlString& videoDevice) 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+    
+    /* 
+     * Sets the video capture device, given its string name.
+     */
+    virtual OsStatus setVideoCaptureDevice(const UtlString& videoDevice) 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+    
+    /* 
      * Get video quality
      */
-    virtual OsStatus getVideoQuality(int& quality) const = 0;
+    virtual OsStatus getVideoQuality(int& quality) const 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
 
     /* 
      * Get video bit rate
      */
-    virtual OsStatus getVideoBitRate(int& bitRate) const = 0;\
+    virtual OsStatus getVideoBitRate(int& bitRate) const 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
 
     /* 
      * Get video frame rate
      */
-    virtual OsStatus getVideoFrameRate(int& frameRate) const = 0;
+    virtual OsStatus getVideoFrameRate(int& frameRate) const 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+
+    /* 
+     * Get cpu usage
+     */  
+    virtual OsStatus getVideoCpuValue(int& cpuValue) const = 0;
+#endif // VIDEO
+    /*
+     * Get the connection idle timeout
+     */
+    virtual OsStatus getConnectionIdleTimeout(int& idleTimeout) const 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
 
 
 /* ============================ INQUIRY =================================== */
@@ -208,12 +376,47 @@ public:
     /**
      * Return status of echo cancellation
      */
-    virtual OsStatus isAudioAECEnabled(UtlBoolean& enabled) const = 0;
+    virtual OsStatus getAudioAECMode(MEDIA_AEC_MODE& mode) const 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+        
 
     /**
-     * Return status of inband DTMF
+     * Return status of noise reduction
      */
-    virtual OsStatus isOutOfBandDTMFEnabled(UtlBoolean& enabled) const = 0;
+    virtual OsStatus getAudioNoiseReductionMode(MEDIA_NOISE_REDUCTION_MODE& mode) const 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+
+    /**
+     * Return status of AGC
+     */ 
+    virtual OsStatus isAGCEnabled(UtlBoolean& bEnable) const
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+
+    /**
+     * Return status of out-of-band DTMF
+     */
+    virtual OsStatus isOutOfBandDTMFEnabled(UtlBoolean& enabled) const 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
+
+    /**
+  	 * Return status of in band DTMF
+  	 */
+    virtual OsStatus isInBandDTMFEnabled(UtlBoolean& enabled) const 
+    {
+        return OS_NOT_SUPPORTED ;
+    }
+
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
   protected:
@@ -222,9 +425,18 @@ public:
     int      miLastRtpPort ;   /**< Requested ending rtp port */
     int      miNextRtpPort ;   /**< Next available rtp port */
     UtlSList mlistFreePorts ;  /**< List of recently freed ports */
+    UtlSList mlistBusyPorts ;  /**< List of busy ports */
     OsMutex  mlockList ;       /**< Lock for port allocation */
 
 
+    /**
+     * Bind the the specified port and see if any data is ready to read for
+     * the designated check time.
+     *
+     * @param iPort Port number to check
+     * @param checkTimeMS Number of ms to wait for data.
+     */
+    virtual bool isPortBusy(int iPort, int checkTimeMS) ;
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
   private:

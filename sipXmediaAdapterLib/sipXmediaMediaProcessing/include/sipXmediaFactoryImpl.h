@@ -71,8 +71,13 @@ class sipXmediaFactoryImpl : public CpMediaInterfaceFactoryImpl
                                                     int expeditedIpTos,
                                                     const char* szStunServer,
                                                     int stunOptions,
-                                                    int iStunKeepAliveSecs 
-                                                  ) ;
+                                                    int iStunKeepAliveSecs,
+                                                    const char* szTurnServer,
+                                                    int iTurnPort,
+                                                    const char* szTurnUsername,
+                                                    const char* szTurnPassword,
+                                                    int iTurnKeepAlivePeriodSecs,
+                                                    bool bEnableICE) ;
 
     virtual OsStatus setSpeakerVolume(int iVolume) ;
     virtual OsStatus setSpeakerDevice(const UtlString& device) ;
@@ -81,12 +86,10 @@ class sipXmediaFactoryImpl : public CpMediaInterfaceFactoryImpl
     virtual OsStatus setMicrophoneDevice(const UtlString& device) ;
     virtual OsStatus muteMicrophone(UtlBoolean bMute) ;
 
-    virtual OsStatus enableAudioAEC(UtlBoolean bEnable);
-    virtual OsStatus enableOutOfBandDTMF(UtlBoolean bEnable);
-
     virtual OsStatus buildCodecFactory(SdpCodecFactory *pFactory, 
                                        const UtlString& sPreferences,
                                        const UtlString& sVideoPreferences,
+                                       int videoFormat,
                                        int* iRejected);
 
     virtual OsStatus updateVideoPreviewWindow(void* displayContext) ;
@@ -112,14 +115,13 @@ class sipXmediaFactoryImpl : public CpMediaInterfaceFactoryImpl
 
     virtual OsStatus getCodecNameByType(SdpCodec::SdpCodecTypes codecType, UtlString& codecName) const;
 
+    virtual OsStatus getLocalAudioConnectionId(int& connectionId) const ;
+
     virtual OsStatus getVideoQuality(int& quality) const;
     virtual OsStatus getVideoBitRate(int& bitRate) const;
     virtual OsStatus getVideoFrameRate(int& frameRate) const;
 
 /* ============================ INQUIRY =================================== */
-
-    virtual OsStatus isAudioAECEnabled(UtlBoolean& bEnabled) const;
-    virtual OsStatus isOutOfBandDTMFEnabled(UtlBoolean& bEnabled) const;
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
   protected:

@@ -14,6 +14,7 @@
 // APPLICATION INCLUDES
 #include "mi/CpMediaInterfaceFactoryImpl.h"
 #include "os/OsLock.h"
+#include "os/OsDatagramSocket.h"
 
 // EXTERNAL FUNCTIONS
 // EXTERNAL VARIABLES
@@ -39,6 +40,7 @@ CpMediaInterfaceFactoryImpl::~CpMediaInterfaceFactoryImpl()
     OsLock lock(mlockList) ;
     
     mlistFreePorts.destroyAll() ;
+    mlistBusyPorts.destroyAll() ;
 }
 
 /* =========================== DESTRUCTORS ================================ */
@@ -65,31 +67,61 @@ void CpMediaInterfaceFactoryImpl::setRtpPortRange(int startRtpPort, int lastRtpP
     miNextRtpPort = miStartRtpPort ;
 }
 
-
+#define MAX_PORT_CHECK_ATTEMPTS     4
+#define MAX_PORT_CHECK_WAIT_MS      50
 OsStatus CpMediaInterfaceFactoryImpl::getNextRtpPort(int &rtpPort) 
 {
     OsLock lock(mlockList) ;
+    bool bGoodPort = false ;
+    int iAttempts = 0 ;
 
-    // First attempt to get a free port for the free list, if that
-    // fails, return a new one. 
-    if (mlistFreePorts.entries()) 
+    // Re-add busy ports to end of free list
+    while (mlistBusyPorts.entries())
     {
-        UtlInt* pInt = (UtlInt*) mlistFreePorts.first() ;
-        mlistFreePorts.remove(pInt) ;                
-        rtpPort = pInt->getValue() ;
-        delete pInt ;
+        UtlInt* pInt = (UtlInt*) mlistBusyPorts.first() ;
+        mlistBusyPorts.remove(pInt) ;
+
+        mlistFreePorts.append(pInt) ;
     }
-    else
-    {
-        rtpPort = miNextRtpPort ;
 
-        // Only allocate if the nextRtpPort is greater then 0 -- otherwise we
-        // are allowing the system to allocate ports.
-        if (miNextRtpPort > 0)
+    while (!bGoodPort && (iAttempts < MAX_PORT_CHECK_ATTEMPTS))
+    {
+        iAttempts++ ;
+
+        // First attempt to get a free port for the free list, if that
+        // fails, return a new one. 
+        if (mlistFreePorts.entries())
         {
-            miNextRtpPort += 2 ; 
+            UtlInt* pInt = (UtlInt*) mlistFreePorts.first() ;
+            mlistFreePorts.remove(pInt) ;
+            rtpPort = pInt->getValue() ;
+            delete pInt ;
+        }
+        else
+        {
+            rtpPort = miNextRtpPort ;
+
+            // Only allocate if the nextRtpPort is greater then 0 -- otherwise we
+            // are allowing the system to allocate ports.
+            if (miNextRtpPort > 0)
+            {
+                miNextRtpPort += 2 ; 
+            }
+        }
+
+        bGoodPort = !isPortBusy(rtpPort, MAX_PORT_CHECK_WAIT_MS) ;
+        if (!bGoodPort)
+        {
+            mlistBusyPorts.insert(new UtlInt(rtpPort)) ;
         }
     }
+
+    // If unable to find a usable port, let the system pick one.
+    if (!bGoodPort)
+    {
+        rtpPort = 0 ;
+    }
+    
     return OS_SUCCESS ;
 }
 
@@ -102,6 +134,7 @@ OsStatus CpMediaInterfaceFactoryImpl::releaseRtpPort(const int rtpPort)
     // port)
     if (miNextRtpPort != 0)
     {
+        // Release port to head of list (generally want to reuse ports)
         mlistFreePorts.insert(new UtlInt(rtpPort)) ;
     }
 
@@ -113,6 +146,28 @@ OsStatus CpMediaInterfaceFactoryImpl::releaseRtpPort(const int rtpPort)
 /* ============================ INQUIRY =================================== */
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
+
+bool CpMediaInterfaceFactoryImpl::isPortBusy(int iPort, int checkTimeMS) 
+{
+    bool bBusy = false ;
+
+    if (iPort > 0)
+    {
+        OsDatagramSocket* pSocket = new OsDatagramSocket(0, NULL, iPort, NULL) ;
+        if (pSocket != NULL)
+        {
+            if (pSocket->isReadyToRead(checkTimeMS))
+            {
+                bBusy = true ;
+            }
+
+            pSocket->close() ;
+            delete pSocket ;
+        }
+    }
+
+    return bBusy ;
+}
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 

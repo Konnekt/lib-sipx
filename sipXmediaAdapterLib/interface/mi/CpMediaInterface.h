@@ -18,6 +18,7 @@
 #include <os/OsDefs.h>
 #include <os/OsProtectEvent.h>
 #include <os/OsMsgQ.h>
+#include <os/OsDatagramSocket.h>
 #include <net/SipContactDb.h>
 #include <net/SdpBody.h>
 
@@ -28,6 +29,69 @@
 // CONSTANTS
 // STRUCTS
 // TYPEDEFS
+typedef enum SocketPurpose
+{
+    UNKNOWN,
+    RTP_AUDIO,
+    RTCP_AUDIO,
+    RTP_VIDEO,
+    RTCP_VIDEO
+} SocketPurpose;
+
+typedef enum SIPXMI_AUDIO_BANDWIDTH_ID
+{
+    AUDIO_MICODEC_BW_VARIABLE=0,   /**< ID for codecs with variable bandwidth requirements */
+
+    AUDIO_MICODEC_BW_LOW,          /**< ID for codecs with low bandwidth requirements */
+    AUDIO_MICODEC_BW_NORMAL,       /**< ID for codecs with normal bandwidth requirements */
+    AUDIO_MICODEC_BW_HIGH,         /**< ID for codecs with high bandwidth requirements */
+
+    AUDIO_MICODEC_BW_CUSTOM,		 /**< Possible return value for sipxConfigGetAudioCodecPreferences.
+                                      This ID indicates the available list of codecs was
+                                      overriden by a sipxConfigSetAudioCodecByName call. */
+    AUDIO_MICODEC_BW_DEFAULT       /**< Value used to signify the default bandwidth level 
+                                      when calling sipxCallConnect, sipxCallAccept, or 
+                                      sipxConferenceAdd */
+} SIPXMI_AUDIO_BANDWIDTH_ID;
+
+/**
+ * Interface declaration for receiving socket idle notifications.
+ */
+class ISocketIdle
+{
+public:
+    virtual void onIdleNotify(OsDatagramSocket* const pSocket,
+                          SocketPurpose purpose,
+                          const int millisecondsIdle) = 0;
+    virtual ~ISocketIdle() { } ;
+};
+
+typedef enum IMediaEvent_DeviceErrors
+{
+    IError_DeviceUnplugged
+} IMediaEvent_DeviceErrors;
+
+typedef enum IMediaEvent_DeviceTypes
+{
+    IDevice_Audio,
+    IDevice_Video
+} IMediaEvent_DeviceTypes;
+
+/**
+ * Interface declaration for receiving device error notifications/audio events
+ */
+class IMediaEventListener
+{
+public:    
+    virtual void onFileStart(IMediaEvent_DeviceTypes type) = 0 ;
+    virtual void onFileStop(IMediaEvent_DeviceTypes type) = 0 ;
+    virtual void onBufferStart(IMediaEvent_DeviceTypes type) = 0 ;
+    virtual void onBufferStop(IMediaEvent_DeviceTypes type) = 0 ;
+    virtual void onDeviceError(IMediaEvent_DeviceTypes type, IMediaEvent_DeviceErrors errCode) = 0;
+
+    virtual ~IMediaEventListener() { } ;
+};
+
 // FORWARD DECLARATIONS
 class SdpCodec;
 class SdpCodecFactory;
@@ -85,38 +149,25 @@ public:
     * @param connectionId A newly allocated connection id returned via this
     *        call.  The connection passed to many other media processing 
     *        methods in this interface.
+    * @param szLocalConnection Local address (interface) that should be used
+    *        for this connection.
     * @param videoWindowHandle Video Window handle if using video.  Supply 
     *        a window handle of NULL to disable video for this call/
     *        connection.
+    * @param pSecurityAttributes Pointer to a SIPXVE_SECURITY_ATTRIBUTES
+    *        object.  
     */ 
-   virtual OsStatus createConnection(int& connectionId, void* videoWindowHandle) = 0 ;
+   virtual OsStatus createConnection(int& connectionId,
+                                     const char* szLocalAddress,
+                                     void* videoWindowHandle, 
+                                     void* const pSecurityAttributes = NULL,
+                                     ISocketIdle* pSocketIdleSink = NULL,
+                                     IMediaEventListener* pMediaEventListener = NULL
+                                     ) = 0 ;
    
 
-   /**
-    * Get the port, address, and codec capabilities for the specified media 
-    * connection.  The CpMediaInterface implementation is responsible for 
-    * managing port allocations.
-    *  
-    * @param connectionId Connection Id for the call leg obtained from 
-    *        createConnection
-    * @param rtpHostAddress IP address or hostname that should be advertised
-    *        in SDP data.
-    * @param rtpPort RTP port number that should be advertised in SDP.
-    * @param rtcpPort RTCP port number that should be advertised in SDP.
-    * @param supportedCodecs List of supported codecs.
-    */
-   virtual OsStatus getCapabilities(int connectionId, 
-                                    UtlString& rtpHostAddress, 
-                                    int& rtpAudioPort,
-                                    int& rtcpAudioPort,
-                                    int& rtpVideoPort,
-                                    int& rtcpVideoPort,                                                                        
-                                    SdpCodecFactory& supportedCodecs,
-                                    SdpSrtpParameters& srtpParams) = 0;
 
-    /** VIDEO: Include additional RTP ports */
-    
-
+   virtual OsStatus setSrtpParams(SdpSrtpParameters& srtpParameters);
 
    /**
     * Set the connection destination (target) for the designated media
@@ -125,8 +176,10 @@ public:
     * @param connectionId Connection Id for the call leg obtained from 
     *        createConnection
     * @param rtpHostAddress IP (or host) address of remote party.
-    * @param rtpPort RTP port of remote party
-    * @param rtcpPort RTCP port of remote party
+    * @param rtpAudioPort RTP audio port of remote party
+    * @param rtcpAudioPort RTCP audio port of remote party
+    * @param rtpVideoPort RTP video port of remote party
+    * @param rtcpVideoPort RTCP video port of remote party
     */
    virtual OsStatus setConnectionDestination(int connectionId,
                                              const char* rtpHostAddress, 
@@ -134,8 +187,6 @@ public:
                                              int rtcpAudioPort,
                                              int rtpVideoPort,
                                              int rtcpVideoPort) = 0 ;
-
-   /** VIDEO: include payload type */
 
    /**
     * Add an alternate connection destination for this media interface.
@@ -146,18 +197,34 @@ public:
     *
     * @param connectionId Connection Id for the call leg obtained from 
     *        createConnection
-    * @param cPriority Relatively priority of the destination.  Higher
-    *        numbers have greater priority (0..255)
-    * @param rtpHostAddress alternate destination address
-    * @param port Alternative destination port
-    * @param bRtp Boolean that indicates whether this is for the rtp
-    *        stream (true) or the rtcp stream (false).
+    * @param iPriority Relatively priority of the destination.  Higher
+    *        numbers have greater priority 
+    * @param srcIp Source ip (either rtp or rtcp)
+    * @param srcPort Source port (either rtp or rtcp)
+    * @param candidateIp Target/Candidate Ip
+    * @param candidatePort Target/Candidate Port
     */
-   virtual OsStatus addAlternateDestinations(int connectionId,
-                                             unsigned char cPriority,
-                                             const char* rtpHostAddress, 
-                                             int port,
-                                             bool bRtp) = 0 ;
+    virtual OsStatus addAudioRtpConnectionDestination(int         connectionId,
+                                                      int         iPriority,
+                                                      const char* candidateIp, 
+                                                      int         candidatePort) = 0 ;
+
+    virtual OsStatus addAudioRtcpConnectionDestination(int         connectionId,
+                                                       int         iPriority,
+                                                       const char* candidateIp, 
+                                                       int         candidatePort) = 0 ;
+
+    virtual OsStatus addVideoRtpConnectionDestination(int         connectionId,
+                                                      int         iPriority,
+                                                      const char* candidateIp, 
+                                                      int         candidatePort) = 0 ;
+
+    virtual OsStatus addVideoRtcpConnectionDestination(int         connectionId,
+                                                       int         iPriority,
+                                                       const char* candidateIp, 
+                                                       int         candidatePort) = 0 ;
+
+
 
    /**
     * Start sending RTP using the specified codec list.  Generally, this
@@ -170,8 +237,7 @@ public:
     */ 
    virtual OsStatus startRtpSend(int connectionId, 
                                  int numCodecs,
-                                 SdpCodec* sendCodec[],
-                                 SdpSrtpParameters& srtpParams) = 0 ;
+                                 SdpCodec* sendCodec[]) = 0 ;
 
    /**
     * Start receiving RTP using the specified codec list.  Generally, this
@@ -188,8 +254,7 @@ public:
     */  
    virtual OsStatus startRtpReceive(int connectionId,
                                     int numCodecs,
-                                    SdpCodec* sendCodec[],
-                                    SdpSrtpParameters& srtpParams)  = 0 ;
+                                    SdpCodec* sendCodec[]) = 0;
 
 
    /**
@@ -241,6 +306,20 @@ public:
     */
    virtual OsStatus stopTone() = 0 ;
 
+   virtual OsStatus startChannelTone(int connectiondId,
+                                     int toneId, 
+                                     UtlBoolean local, 
+                                     UtlBoolean remote) = 0 ;
+
+   virtual OsStatus stopChannelTone(int connectiondId) = 0 ;
+
+
+   virtual OsStatus recordChannelAudio(int connectionId,
+                                       const char* szFile) = 0 ;
+
+   virtual OsStatus stopRecordChannelAudio(int connectionId) = 0 ;
+
+
    /**
     * Play the specified audio URL to the call.
     *
@@ -251,12 +330,23 @@ public:
     *        speaker (assuming call is in focus).
     * @param remote True indicates that the sound should be played to all 
     *        remote parties.  
-    * 
+    * @param mixWithMic True to mix with microphone or False to replace it.
+    * @param downScaling 100 for no down scaling (range from 0 to 100) 
     */
    virtual OsStatus playAudio(const char* url, 
                               UtlBoolean repeat,
                               UtlBoolean local, 
-                              UtlBoolean remote) = 0 ;
+                              UtlBoolean remote,
+                              UtlBoolean mixWithMic = false,
+                              int downScaling = 100) = 0 ;
+
+   virtual OsStatus playChannelAudio(int connectionId,
+                                     const char* url, 
+                                     UtlBoolean repeat,
+                                     UtlBoolean local, 
+                                     UtlBoolean remote,
+                                     UtlBoolean mixWithMic = false,
+                                     int downScaling = 100) = 0 ;
 
 
    /**
@@ -271,12 +361,16 @@ public:
                                UtlBoolean repeat,
                                UtlBoolean local, 
                                UtlBoolean remote,
-                               OsNotification* event = NULL) = 0;
+                               OsNotification* event = NULL,
+                               UtlBoolean mixWithMic = false,
+                               int downScaling = 100) = 0 ;
 
    /**
     * Stop playing any URLs or buffers
     */
    virtual OsStatus stopAudio()  = 0 ;
+
+   virtual OsStatus stopChannelAudio(int connectionId) = 0 ;
 
 
    /**
@@ -350,12 +444,79 @@ public:
    virtual OsStatus stopRecording() = 0;
 
    //! Set the preferred contact type for this media connection
-   virtual void setContactType(int connectionId, CONTACT_TYPE eType) = 0 ;
+   virtual void setContactType(int connectionId, CONTACT_TYPE eType, CONTACT_ID contactId) = 0 ;
 
-/* ============================ ACCESSORS ================================= */
+   //! Rebuild the codec factory on the fly
+   virtual OsStatus setAudioCodecBandwidth(int connectionId, int bandWidth) = 0;
+
+   //! Rebuild codec factory with one video codec
+   virtual OsStatus rebuildCodecFactory(int connectionId, 
+                                        int audioBandwidth, 
+                                        int videoBandwidth, 
+                                        UtlString& videoCodec) = 0;
+
+
+   //! Set connection bitrate on the fly
+   virtual OsStatus setConnectionBitrate(int connectionId, int bitrate) = 0 ;
+
+   //! Set connection framerate on the fly
+   virtual OsStatus setConnectionFramerate(int connectionId, int framerate) = 0;
 
    //! For internal use only
    virtual void setPremiumSound(UtlBoolean enabled) = 0;
+
+   virtual OsStatus setVideoWindowDisplay(const void* hWnd) = 0;
+
+   virtual OsStatus setSecurityAttributes(const void* security) = 0;
+
+
+
+/* ============================ ACCESSORS ================================= */
+
+   /**
+    * Get the port, address, and codec capabilities for the specified media 
+    * connection.  The CpMediaInterface implementation is responsible for 
+    * managing port allocations.
+    *  
+    * @param connectionId Connection Id for the call leg obtained from 
+    *        createConnection
+    * @param rtpHostAddress IP address or hostname that should be advertised
+    *        in SDP data.
+    * @param rtpPort RTP port number that should be advertised in SDP.
+    * @param rtcpPort RTCP port number that should be advertised in SDP.
+    * @param supportedCodecs List of supported codecs.
+    * @param srtParams supported SRTP parameters
+    * @param bandWidth bandwidth limitation id
+    */
+   virtual OsStatus getCapabilities(int connectionId, 
+                                    UtlString& rtpHostAddress, 
+                                    int& rtpAudioPort,
+                                    int& rtcpAudioPort,
+                                    int& rtpVideoPort,
+                                    int& rtcpVideoPort, 
+                                    SdpCodecFactory& supportedCodecs,
+                                    SdpSrtpParameters& srtpParams,
+                                    int bandWidth,
+                                    int& videoBandwidth,
+                                    int& videoFramerate) = 0;
+    
+   /**
+    * DOCME
+    */
+   virtual OsStatus getCapabilitiesEx(int connectionId, 
+                                      int nMaxAddresses,
+                                      UtlString rtpHostAddresses[], 
+                                      int rtpAudioPorts[],
+                                      int rtcpAudioPorts[],
+                                      int rtpVideoPorts[],
+                                      int rtcpVideoPorts[],
+                                      int& nActualAddresses,
+                                      SdpCodecFactory& supportedCodecs,
+                                      SdpSrtpParameters& srtpParameters,
+                                      int bandWidth,
+                                      int& videoBandwidth,
+                                      int& videoFramerate) = 0 ;
+
 
    //! Calculate the current cost for the current set of 
    //! sending/receiving codecs.
@@ -373,10 +534,28 @@ public:
                                     UtlString& audioCodec,
                                     UtlString& videoCodec,
                                     int* audiopPayloadType,
-                                    int* videoPayloadType) = 0;
-                                    
-   virtual OsStatus setVideoWindowDisplay(const void* hWnd) = 0;
+                                    int* videoPayloadType,
+                                    bool& isEncrypted) = 0;
+
    virtual const void* getVideoWindowDisplay() = 0;
+
+   virtual OsStatus getAudioEnergyLevels(int& iInputEnergyLevel,
+                                         int& iOutputEnergyLevel)
+        { return OS_NOT_SUPPORTED ;} ;
+
+   virtual OsStatus getAudioEnergyLevels(int connectionId,
+                                         int& iInputEnergyLevel,
+                                         int& iOutputEnergyLevel,
+                                         int& nContributors,
+                                         unsigned int* pContributorSRCIds,
+                                         int* pContributorEngeryLevels) 
+        { return OS_NOT_SUPPORTED ;} ;
+
+   virtual OsStatus getAudioRtpSourceIDs(int connectionId,
+                                         unsigned int& uiSendingSSRC,
+                                         unsigned int& uiReceivingSSRC) 
+        { return OS_NOT_SUPPORTED ;} ;
+
 
 /* ============================ INQUIRY =================================== */
 
@@ -403,9 +582,23 @@ public:
    //! Query whether a new party can be added to this media interfaces
    virtual UtlBoolean canAddParty() = 0 ;
 
+   //! Query whether the connection has started sending or receiving video
+   virtual bool isVideoInitialized(int connectionId) = 0 ;
+
+   //! Query whether the connection has started sending or receiving audio
+   virtual bool isAudioInitialized(int connectionId) = 0 ;
+
+   //! Query if the audio device is available.
+   virtual bool isAudioAvailable() = 0;
+
+   //! Query if we are mixing a video conference
+   virtual bool isVideoConferencing() = 0 ;
+
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
     CpMediaInterfaceFactoryImpl *mpFactoryImpl ;
+    SdpSrtpParameters mSrtpParams;
+
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:

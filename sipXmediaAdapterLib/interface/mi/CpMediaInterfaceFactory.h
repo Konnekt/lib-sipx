@@ -76,8 +76,14 @@ class CpMediaInterfaceFactory
                                            const char* locale,
                                            int expeditedIpTos,
                                            const char* szStunServer,
-                                           int stunOptions,
-                                           int iStunKeepAlivePeriodSecs) ;
+                                           int iStunPort,
+                                           int iStunKeepAlivePeriodSecs,
+                                           const char* szTurnServer,
+                                           int iTurnPort,
+                                           const char* szTurnUsername,
+                                           const char* szTurnPassword,
+                                           int iTurnKeepAlivePeriodSecs,
+                                           bool bEnableICE) ;
 
 
 /* ============================ ACCESSORS ================================= */
