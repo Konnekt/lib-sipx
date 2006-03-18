@@ -6,7 +6,8 @@ check_PROGRAMS = testsuite sandbox
 
 testsuite_LDADD = \
     @SIPXUNIT_LIBS@ \
-    ../libsipXmedia.la
+    ../libsipXmedia.la \
+    $(GIPS_OBJS)
 
 # NOTE: Several media releated units tests are located in
 ## sipXcallLib because they made references to CallManager

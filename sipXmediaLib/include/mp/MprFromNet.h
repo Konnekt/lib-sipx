@@ -120,14 +120,14 @@ private:
 
    static int setPacketPad(int value);
 #endif /* TESTING_ODD_LENGTH_PACKETS ] */
-   u_long mPrevIP;
+   unsigned long mPrevIP;
    int mPrevPort;
    int mNumPushed;
    int mNumWarnings;
 
    int mPrefSsrc;  // current "preferred SSRC"
    UtlBoolean mPrefSsrcValid;
-   u_long mRtpDestIp;    // where this connection is sending to
+   unsigned long mRtpDestIp;    // where this connection is sending to
    int mRtpDestPort;
 
    int mNumNonPrefPackets;

@@ -95,14 +95,8 @@ private:
 
    enum { MAX_RTP_FRAMES = 25};
 
-   unsigned int mNextPullTimerCount;
-   int          mWaitTimeInFrames;
-   unsigned int sTimerCountIncrement;
-   int          mMissedFrames;
-   int saveDebug;
-
-   #define MAX_PAYLOAD_TYPES 128
-   MpBufPtr mSavedRtp[MAX_PAYLOAD_TYPES];
+   unsigned int mTimeStampOffset;
+   int          mPreloading;
 
    MprDejitter* mpMyDJ;
 
@@ -127,9 +121,9 @@ private:
       MAX_MARKER_NOTICES = 5, // max messages per MARKER_WAIT_FRAMES interval
       MARKER_WAIT_FRAMES = (1*60*60*100) // 1 hour at 100 frames/second
    };
-   //int   mNumMarkerNotices;
-   //int   mFrameLastMarkerNotice;
-   //int   mFrameCounter;
+   int   mNumMarkerNotices;
+   int   mFrameLastMarkerNotice;
+   int   mFrameCounter;
 
    enum {
       NUM_TRACKED_PACKETS = 128
@@ -168,7 +162,7 @@ private:
 
    MprDejitter* getMyDejitter(void);
 
-   void pushIntoCodecBuffer(MpBufPtr rtp, int packetLen);
+   void pushIntoJitterBuffer(MpBufPtr rtp, int packetLen);
 
 };
 

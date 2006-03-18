@@ -261,10 +261,7 @@ bool inPostUnprep(int n, int discard, DWORD bufLen, bool bFree)
          }
          else
          {
-             if (MpMisc.pMicQ)
-             {
-                MpMisc.pMicQ->send(*pMsg, OsTime::NO_WAIT);
-             }
+             MpMisc.pMicQ->send(*pMsg, OsTime::NO_WAIT);
          }
          if (!pMsg->isMsgReusable()) delete pMsg;
       }
