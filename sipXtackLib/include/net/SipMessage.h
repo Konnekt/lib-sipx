@@ -1,11 +1,16 @@
-//
-// Copyright (C) 2004, 2005 Pingtel Corp.
 // 
+// 
+// Copyright (C) 2005, 2006 SIPez LLC
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
+// Copyright (C) 2005, 2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+// 
+// Copyright (C) 2004, 2005 Pingtel Corp.
+// Licensed to SIPfoundry under a Contributor Agreement.
+// 
 // $$
-////////////////////////////////////////////////////////////////////////
-//////
-
+//////////////////////////////////////////////////////////////////////////////
 // Author: Dan Petrie (dpetrie AT SIPez DOT com)
 
 #ifndef _SipMessage_h_
@@ -167,7 +172,7 @@ class SipUserAgent;
 #define SIP_UNSUPPORTED_URI_SCHEME_TEXT "Unsupported URI Scheme"
 
 #define SIP_BAD_EXTENSION_CODE 420
-#define SIP_BAD_EXTENSION_TEXT "Bad Extension"
+#define SIP_BAD_EXTENSION_TEXT "Extension Not Supported"
 
 #define SIP_TOO_BRIEF_CODE 423
 #define SIP_TOO_BRIEF_TEXT "Registration Too Brief"
@@ -251,6 +256,7 @@ class SipUserAgent;
 #define SIP_EVENT_REFER                     "refer"
 #define SIP_EVENT_CONFIG                    "sip-config"
 #define SIP_EVENT_UA_PROFILE                "ua-profile"
+#define SIP_EVENT_PRESENCE                  "presence"
 
 // NOTIFY Subscription-State values
 #define SIP_SUBSCRIPTION_ACTIVE             "active"
