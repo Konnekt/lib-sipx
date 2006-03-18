@@ -1,12 +1,12 @@
-// 
-// Copyright (C) 2005 SIPfoundry Inc.
+//
+// Copyright (C) 2004-2006 SIPfoundry Inc.
 // Licensed by SIPfoundry under the LGPL license.
-// 
-// Copyright (C) 2005 SIPez LLC.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
 // Licensed to SIPfoundry under a Contributor Agreement.
-// 
+//
 // $$
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 // Author: Daniel Petrie (dpetrie AT SIPez DOT com)
 

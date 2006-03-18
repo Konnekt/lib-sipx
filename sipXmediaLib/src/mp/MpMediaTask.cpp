@@ -1,10 +1,12 @@
 //
-// Copyright (C) 2005 Pingtel Corp.
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
 // Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
-//////
+///////////////////////////////////////////////////////////////////////////////
 
 
 /* There used to be #ifdef's here to do the same thing on WIN32/VXWORKS, but I

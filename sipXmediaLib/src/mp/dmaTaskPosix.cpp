@@ -1,13 +1,12 @@
-// 
-// 
-// Copyright (C) 2004 SIPfoundry Inc.
+//
+// Copyright (C) 2004-2006 SIPfoundry Inc.
 // Licensed by SIPfoundry under the LGPL license.
-// 
-// Copyright (C) 2004 Pingtel Corp.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
 // Licensed to SIPfoundry under a Contributor Agreement.
-// 
+//
 // $$
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 #ifdef __pingtel_on_posix__ /* [ */
 /* OK, so here's how this file is supposed to work as I understand it - To
