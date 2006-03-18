@@ -16,8 +16,9 @@
 //#include <...>
 
 // APPLICATION INCLUDES
-#include <cp/Connection.h>
-#include <net/SipContactDb.h>
+#include "cp/Connection.h"
+#include "cp/CSeqManager.h"
+#include "net/SipContactDb.h"
 
 // DEFINES
 // MACROS
@@ -32,10 +33,9 @@ class SipMessage;
 class SdpCodec;
 class SdpCodecFactory;
 
-
 //:Class short description which may consist of multiple lines (note the ':')
 // Class detailed description which may extend to multiple lines
-class SipConnection : public Connection
+class SipConnection : public Connection, public ISocketIdle, public IMediaEventListener
 {
     /* //////////////////////////// PUBLIC //////////////////////////////////// */
 public:
@@ -81,7 +81,11 @@ public:
         const char* callController = NULL,
         const char* originalCallConnection = NULL,
         UtlBoolean requestQueuedCall = FALSE,
-        const void* pDisplay = NULL);
+        const void* pDisplay = NULL,
+        const void* pSecurity = NULL,
+        const char* locationHeader = NULL,
+        const int bandWidth = AUDIO_MICODEC_BW_DEFAULT,
+        UtlBoolean bOnHold = FALSE);
     //! param: requestQueuedCall - indicates that the caller wishes to have the callee queue the call if busy
 
     virtual UtlBoolean originalCallTransfer(UtlString& transferTargetAddress,
@@ -105,6 +109,8 @@ public:
     // Method to communicate status to target call on transfer
     // controller side
 
+    virtual void outOfFocus() ;
+
     virtual UtlBoolean answer(const void* hWnd = NULL);
 
     virtual UtlBoolean hangUp();
@@ -115,12 +121,18 @@ public:
 
     virtual UtlBoolean renegotiateCodecs();
 
-    virtual UtlBoolean accept(int forwardOnNoAnswerTimeOut);
+    virtual UtlBoolean silentRemoteHold();
+
+    virtual UtlBoolean accept(int forwardOnNoAnswerTimeOut,
+                              const void *pSecurity = NULL,
+                              const char* locationHeader = NULL,
+                              const int bandWidth = AUDIO_MICODEC_BW_DEFAULT);
 
     virtual UtlBoolean reject();
 
     virtual UtlBoolean redirect(const char* forwardAddress);
 
+    virtual UtlBoolean canSendInfo() ;
     virtual UtlBoolean sendInfo(UtlString contentType, UtlString sContent);
 
     virtual UtlBoolean processMessage(OsMsg& eventMessage,
@@ -138,6 +150,18 @@ public:
     void setContactType(CONTACT_TYPE eType) ;
     void setContactId(CONTACT_ID contactId) { mContactId = contactId; }
 
+
+    // ISocketIdle::onIdleNotify method
+    void onIdleNotify(OsDatagramSocket* const pSocket,
+                                 SocketPurpose purpose,
+                                 const int millisecondsIdle);
+
+    // IMediaEventListener::methods
+    virtual void onFileStart(IMediaEvent_DeviceTypes type);
+    virtual void onFileStop(IMediaEvent_DeviceTypes type);
+    virtual void onBufferStart(IMediaEvent_DeviceTypes type);
+    virtual void onBufferStop(IMediaEvent_DeviceTypes type);
+    virtual void onDeviceError(IMediaEvent_DeviceTypes type, IMediaEvent_DeviceErrors errCode);
 
     /* ============================ ACCESSORS ================================= */
 
@@ -166,8 +190,23 @@ public:
     virtual UtlBoolean isSameRemoteAddress(Url& remoteAddress,
         UtlBoolean tagsMustMatch) const;
 
+    void setSecurity(const SIPXTACK_SECURITY_ATTRIBUTES* const pSecurity);
+
+    void getRemoteUserAgent(UtlString* userAgent);
+
+    virtual UtlBoolean isLocallyInitiatedRemoteHold() const ;
+
     /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
+
+    bool prepareInviteSdpForSend(SipMessage* pMsg, int connectionId, const void* pSecurityAttribute) ;
+
+    void setMediaDestination(const char*    hostAddress, 
+                             int            audioRtpPort, 
+                             int            audioRtcpPort, 
+                             int            videoRtpPort, 
+                             int            videoRtcpPort, 
+                             const SdpBody* pRemoteBody) ;
 
     CONTACT_TYPE selectCompatibleContactType(const SipMessage& request) ;
     //: Select a compatible contact given the URI
@@ -191,7 +230,6 @@ protected:
 
     void buildLocalContact(Url fromAddress,
         UtlString& localContact) ;//for outbound call
-    void buildLocalContact(UtlString& localContact) ;//when getting inbound calls
 
     UtlBoolean extendSessionReinvite();
 
@@ -208,20 +246,56 @@ protected:
     // SIP Response handlers
     UtlBoolean processResponse(const SipMessage* response,
         UtlBoolean callInFocus, UtlBoolean onHook);
-    void processInviteResponse(const SipMessage* request);
+    void processInviteResponse(const SipMessage* request);    
     void processReferResponse(const SipMessage* request);
     void processOptionsResponse(const SipMessage* request);
     void processByeResponse(const SipMessage* request);
     void processCancelResponse(const SipMessage* request);
     void processNotifyResponse(const SipMessage* request);
 
+    void processInviteResponseRinging(const SipMessage* response);
+    void processInviteResponseBusy(const SipMessage* response);
+    void processInviteResponseQueued(const SipMessage* response);
+    void processInviteResponseRequestPending(const SipMessage* response);
+    void processInviteResponseFailed(const SipMessage* response);
+    void processInviteResponseHangingUp(const SipMessage* response);
+    void processInviteResponseNormal(const SipMessage* response);
+    void processInviteResponseRedirect(const SipMessage* response);
+    void processInviteResponseUnknown(const SipMessage* response);
+
+    void processInviteRequestBadTransaction(const SipMessage* request, int tag) ;
+    void processInviteRequestLoop(const SipMessage* request, int tag) ;
+    void processInviteRequestBadRefer(const SipMessage* request, int tag) ;
+    void processInviteRequestOffering(const SipMessage* request, 
+                                      int               tag,
+                                      bool              doesReplaceCallLegExist,
+                                      int               replaceCallLegState,
+                                      UtlString&        replaceCallId,
+                                      UtlString&        replaceToTag,
+                                      UtlString&        replaceFromTag);
+
+
+    void processInviteRequestReinvite(const SipMessage* request, int tag) ;
+
+    void fireIncompatibleCodecsEvent(SdpCodecFactory* pSupportedCodecs,
+                                     SdpCodec**       ppMatchedCodecs,
+                                     int              nMatchedCodces) ;
+    void fireAudioStartEvents(SIPX_MEDIA_CAUSE cause = MEDIA_CAUSE_NORMAL) ;
+    void fireAudioStopEvents(SIPX_MEDIA_CAUSE cause = MEDIA_CAUSE_NORMAL) ;
+
     /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
 
+    CSeqManager mCSeqMgr ;
+
+    bool mbByeAttempted;
     SipUserAgent* sipUserAgent;
     UtlString mFromTag;
+    UtlString mLocationHeader;
     SipMessage* inviteMsg;
-    UtlBoolean      mbCancelling;
+    UtlBoolean  mbCancelling;
+    UtlBoolean  mbLocallyInitiatedRemoteHold ;
+    SIPXTACK_SECURITY_ATTRIBUTES* mpSecurity;
 
     SipMessage* mReferMessage;
     UtlBoolean inviteFromThisSide;
@@ -242,11 +316,14 @@ private:
     UtlBoolean mIsReferSent;   // used to determine whether to send ack when sequence number is smaller
     UtlBoolean mIsAcceptSent;   // used to determine whether to accept ack when sequence number is smaller
     int mHoldCompleteAction;
+    int mBandwidthId;
     UtlBoolean mIsEarlyMediaFor180;
     UtlString mLineId; //line identifier for incoming calls.
     UtlString mLocalContact;    ///< The local Contact: field value - a URI in name-addr format.
     CONTACT_TYPE mContactType ;
     CONTACT_ID mContactId;
+    UtlBoolean mDropping ;
+    UtlString mRemoteUserAgent;
 
     UtlBoolean getInitialSdpCodecs(const SipMessage* sdpMessage,
         SdpCodecFactory& supportedCodecsArray,
@@ -254,7 +331,15 @@ private:
         SdpCodec** &codecsInCommon,
         UtlString& remoteAddress,
         int& remotePort,
-        int& remoteRtcpPort) const;
+        int& remoteRtcpPort,
+		int& remoteVideoRtpPort,
+		int& remoteVideoRtcpPort,
+        SdpSrtpParameters& localSrtpParams,
+        SdpSrtpParameters& matchingSrtpParams,
+        int localBandwidth,
+        int& matchingBandwidth,
+        int localVideoFramerate,
+        int& matchingVideoFramerate);
 
     virtual void proceedToRinging(const SipMessage* inviteMessage,
         SipUserAgent* sipUserAgent,
@@ -264,7 +349,6 @@ private:
     UtlBoolean isMethodAllowed(const char* method);
 
     void doBlindRefer();
-
 
 
     SipConnection& operator=(const SipConnection& rhs);

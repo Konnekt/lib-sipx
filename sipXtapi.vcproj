@@ -37,17 +37,31 @@
 				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCCustomBuildTool"
+				CommandLine="copy sipXtapi\Debug\sipXtapid.dll examples\bin\sipXtapid.dll
+copy sipXtapi\Debug\sipXtapid.lib examples\lib\sipXtapid.lib
+copy ..\sipXportLib\Debug\sipXportLib.lib examples\lib\sipXportLibD.lib
+copy ..\sipXtackLib\Debug\sipXtackLib.lib examples\lib\sipXtackLibD.lib
+mkdir examples\include\os
+copy ..\sipXportLib\include\os examples\include\os
+copy ..\sipXportLib\include\os\shared examples\include\os\shared
+copy ..\sipXportLib\include\os\wnt examples\include\os\wnt
+copy ..\sipXportLib\include\utl examples\include\utl
+copy ..\sipXtackLib\include\net examples\include\net
+copy include\tapi\sipXtapi.h examples\include\tapi
+copy include\tapi\sipXtapiEvents.h examples\include\tapi"
+				Outputs="examples\bin\sipXtapid.dll;examples\lib\sipXtapid.lib"/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrtd.lib msvcprtd.lib Ws2_32.lib sipXportLib.lib sipXtackLib.lib sipXcallLib.lib libpcre.a sipXmediaLib.lib winmm.lib sipXmediaMediaProcessing.lib"
 				OutputFile=".\sipXtapi\Debug/sipXtapid.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				AdditionalLibraryDirectories="..\sipXcallLib\Debug,..\sipXportLib\debug,..\sipXtackLib\Debug,..\sipXmediaAdapterLib\sipXmediaMediaProcessing\debug,..\sipXmediaLib\debug"
+				AdditionalLibraryDirectories="..\sipXcallLib\Debug,..\sipXportLib\debug,..\sipXtackLib\Debug,..\sipXmediaAdapterLib\sipXmediaMediaProcessing\debug,..\sipXmediaLib\debug;..\sipXbuild\vendors\Mozilla\wnt\nss-3.9_dbg\lib;..\sipXbuild\vendors\Mozilla\wnt\nspr-4.4.1_dbg\lib"
 				IgnoreAllDefaultLibraries="FALSE"
 				IgnoreDefaultLibraryNames="libc,libc.lib,libcmt.lib,msvcrt.lib,libcmtd.lib"
 				ModuleDefinitionFile=""
+				DelayLoadDLLs=""
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\sipXtapi\Debug/sipXtapid.pdb"
 				GenerateMapFile="TRUE"
@@ -111,14 +125,27 @@
 				DebugInformationFormat="3"
 				CompileAs="0"/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCCustomBuildTool"
+				CommandLine="copy sipXtapi\Release\sipXtapi.dll examples\bin\sipXtapi.dll
+copy sipXtapi\Release\sipXtapi.lib examples\lib\sipXtapi.lib
+copy ..\sipXportLib\Release\sipXportLib.lib examples\lib\sipXportLib.lib
+copy ..\sipXtackLib\Release\sipXtackLib.lib examples\lib\sipXtackLib.lib
+mkdir examples\include\os
+copy ..\sipXportLib\include\os examples\include\os
+copy ..\sipXportLib\include\os\shared examples\include\os\shared
+copy ..\sipXportLib\include\os\wnt examples\include\os\wnt
+copy ..\sipXportLib\include\utl examples\include\utl
+copy ..\sipXtackLib\include\net examples\include\net
+copy include\tapi\sipXtapi.h examples\include\tapi
+copy include\tapi\sipXtapiEvents.h examples\include\tapi"
+				Outputs="examples\bin\sipXtapi.dll;examples\lib\sipXtapi.lib"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib msvcprt.lib Ws2_32.lib sipXportLib.lib sipXtackLib.lib sipXcallLib.lib libpcre.a sipXmediaLib.lib winmm.lib sipXmediaMediaProcessing.lib"
+				AdditionalDependencies="msvcrt.lib MSVCPRT.lib winmm.lib wsock32.lib sipXportLib.lib sipXtackLib.lib sipXcallLib.lib libpcre.a  sipXmediaMediaProcessing.lib"
 				OutputFile=".\sipXtapi\Release/sipXtapi.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				AdditionalLibraryDirectories="..\sipXcallLib\Release,..\sipXportLib\Release,..\sipXtackLib\Release,..\sipXmediaAdapterLib\sipXmediaMediaProcessing\Release,..\sipXmediaLib\Release"
+				AdditionalLibraryDirectories="..\sipXtackLib\Release,..\sipXcallLib\Release,..\gips\sipXmediaVoiceEngine\Release,..\sipXportLib\Release,..\sipXtackLib\Release,..\sipXmediaAdapterLib\sipXmediaMediaProcessing\release;..\sipXbuild\vendors\Mozilla\wnt\nss-3.9\lib;..\sipXbuild\vendors\Mozilla\wnt\nspr-4.4.1\lib"
 				IgnoreDefaultLibraryNames="libcpmt.lib,libcpmtd.lib,libc,libcd,libc.lib,libcd.lib,libcmt.lib,msvcrtd.lib,msvcprtd.lib,libcmtd.lib"
 				ModuleDefinitionFile=""
 				ProgramDatabaseFile=".\sipXtapi\Release/sipXtapi.pdb"
@@ -142,148 +169,6 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
-		</Configuration>
-		<Configuration
-			Name="Release_NoVideo|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="include,..\sipXportLib\include,..\sipXtackLib\include,..\sipXmediaLib\include;..\gips;../gips/sipXmediaVoiceEngine/include/;../sipXmediaAdapterLib/interface"
-				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;"
-				StringPooling="TRUE"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="TRUE"
-				RuntimeTypeInfo="TRUE"
-				UsePrecompiledHeader="2"
-				PrecompiledHeaderFile=".\sipXtapi\Release_NoVideo/sipXtapi.pch"
-				AssemblerListingLocation=".\sipXtapi\Release_NoVideo/"
-				ObjectFile=".\sipXtapi\Release_NoVideo/"
-				ProgramDataBaseFileName=".\sipXtapi\Release_NoVideo/"
-				BrowseInformation="1"
-				WarningLevel="3"
-				SuppressStartupBanner="TRUE"
-				CompileAs="0"/>
-			<Tool
-				Name="VCCustomBuildTool"/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib MSVCPRT.lib winmm.lib wsock32.lib sipXportLib.lib sipXtackLib.lib sipXmediaVoiceEngine.lib sipXcallLib.lib libpcre.a GIPSVoiceEngineLib_MT.lib"
-				OutputFile=".\sipXtapi\Release_NoVideo/sipXtapi.dll"
-				LinkIncremental="1"
-				SuppressStartupBanner="TRUE"
-				AdditionalLibraryDirectories="..\sipXtackLib\Release,..\sipXcallLib\Release_NoVideo,..\gips\sipXmediaVoiceEngine\Release_NoVideo,..\sipXportLib\Release,..\sipXtackLib\Release,..\gips\VoiceEngine\libraries"
-				IgnoreDefaultLibraryNames="libcpmt.lib,libcpmtd.lib,libc,libcd,libc.lib,libcd.lib,libcmt.lib,msvcrtd.lib,msvcprtd.lib,libcmtd.lib"
-				ModuleDefinitionFile="sipXtapi.def"
-				ProgramDatabaseFile=".\sipXtapi\Release_NoVideo/sipXtapi.pdb"
-				GenerateMapFile="TRUE"
-				ImportLibrary=".\sipXtapi\Release_NoVideo/sipXtapi.lib"
-				TargetMachine="1"/>
-			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\sipXtapi\Release/sipXtapi.tlb"
-				HeaderFileName=""/>
-			<Tool
-				Name="VCPostBuildEventTool"/>
-			<Tool
-				Name="VCPreBuildEventTool"/>
-			<Tool
-				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
-		</Configuration>
-		<Configuration
-			Name="Debug_NoVideo|Win32"
-			OutputDirectory="sipXtapi\$(ConfigurationName)"
-			IntermediateDirectory="sipXtapi\$(ConfigurationName)"
-			ConfigurationType="2"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="0"
-				AdditionalIncludeDirectories="include,..\sipXportLib\include,..\sipXtackLib\include,..\sipXmediaLib\include;..\gips;../gips/sipXmediaVoiceEngine/include/;../sipXmediaAdapterLib/interface"
-				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
-				RuntimeTypeInfo="TRUE"
-				UsePrecompiledHeader="2"
-				PrecompiledHeaderFile=".\sipXtapi\Debug/sipXtapi.pch"
-				AssemblerListingLocation=".\sipXtapi\Debug/"
-				ObjectFile=".\sipXtapi\Debug/"
-				ProgramDataBaseFileName=".\sipXtapi\Debug/"
-				WarningLevel="3"
-				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="4"
-				CompileAs="0"/>
-			<Tool
-				Name="VCCustomBuildTool"/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrtd.lib Ws2_32.lib sipXportLib.lib sipXtackLib.lib sipXcallLib.lib libpcre.a sipXmediaVoiceEngine.lib GIPSVoiceEngineLib_MT.LIB"
-				OutputFile=".\sipXtapi\Debug_NoVideo/sipXtapid.dll"
-				LinkIncremental="1"
-				SuppressStartupBanner="TRUE"
-				AdditionalLibraryDirectories="..\sipXcallLib\Debug_NoVideo,..\gips\sipXmediaVoiceEngine\Debug_NoVideo,..\sipXportLib\debug,..\sipXtackLib\Debug,..\gips\VoiceEngine\libraries"
-				IgnoreAllDefaultLibraries="FALSE"
-				IgnoreDefaultLibraryNames="libc,libc.lib,libcmt.lib,msvcrt.lib,libcmtd.lib,msvcprtd.lib"
-				ModuleDefinitionFile="sipXtapi.def"
-				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\sipXtapi\Debug_NoVideo/sipXtapid.pdb"
-				GenerateMapFile="TRUE"
-				ImportLibrary=".\sipXtapi\Debug_NoVideo/sipXtapid.lib"
-				TargetMachine="1"/>
-			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\sipXtapi\Debug/sipXtapi.tlb"
-				HeaderFileName=""/>
-			<Tool
-				Name="VCPostBuildEventTool"/>
-			<Tool
-				Name="VCPreBuildEventTool"/>
-			<Tool
-				Name="VCPreLinkEventTool"/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
 				Culture="1033"/>
 			<Tool
 				Name="VCWebServiceProxyGeneratorTool"/>
@@ -323,24 +208,6 @@
 						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit)"
 						BrowseInformation="1"/>
 				</FileConfiguration>
-				<FileConfiguration
-					Name="Release_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit)"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit)"
-						BasicRuntimeChecks="3"/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="src\tapi\SipXMessageObserver.cpp">
@@ -362,24 +229,6 @@
 						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit)"
 						BrowseInformation="1"/>
 				</FileConfiguration>
-				<FileConfiguration
-					Name="Release_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit)"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit)"
-						BasicRuntimeChecks="3"/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="src\tapi\sipXtapi.cpp">
@@ -400,24 +249,6 @@
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS"
 						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit);VOICE_ENGINE"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit);VOICE_ENGINE"
-						BasicRuntimeChecks="3"/>
 				</FileConfiguration>
 			</File>
 			<File
@@ -443,24 +274,6 @@
 						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;"
 						BrowseInformation="1"/>
 				</FileConfiguration>
-				<FileConfiguration
-					Name="Release_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit)"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit)"
-						BasicRuntimeChecks="3"/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="src\tapi\sipXtapiInternal.cpp">
@@ -481,24 +294,6 @@
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS"
 						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;$(NoInherit);VOICE_ENGINE"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug_NoVideo|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_MBCS;_USRDLL;SIPXTAPI_EXPORTS;DISABLE_MEM_POOLS;VOICE_ENGINE"
-						BasicRuntimeChecks="3"/>
 				</FileConfiguration>
 			</File>
 		</Filter>

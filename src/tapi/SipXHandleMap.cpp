@@ -45,10 +45,12 @@ SipXHandleMap::~SipXHandleMap()
 
 void SipXHandleMap::addHandleRef(SIPXHANDLE hHandle)
 {
-    mLock.acquire();
+    lock() ;    
 
-    mLockCountHash.findValue(&UtlInt(hHandle));
-    UtlInt* count = static_cast<UtlInt*>(mLockCountHash.findValue(&UtlInt(hHandle))) ;
+    UtlInt handle(hHandle) ;
+
+    mLockCountHash.findValue(&handle);
+    UtlInt* count = static_cast<UtlInt*>(mLockCountHash.findValue(&handle)) ;
     if (count == NULL)
     {
         mLockCountHash.insertKeyAndValue(new UtlInt(hHandle), new UtlInt(1));
@@ -57,13 +59,17 @@ void SipXHandleMap::addHandleRef(SIPXHANDLE hHandle)
     {
         count->setValue(count->getValue() + 1);
     }
-    mLock.release();
+    
+    unlock() ;
 }
 
 void SipXHandleMap::releaseHandleRef(SIPXHANDLE hHandle)
 {
     lock();
-    UtlInt* pCount = static_cast<UtlInt*>(mLockCountHash.findValue(&UtlInt(hHandle))) ;
+
+    UtlInt handle(hHandle) ;
+
+    UtlInt* pCount = static_cast<UtlInt*>(mLockCountHash.findValue(&handle)) ;
     if (pCount == NULL)
     {
         mLockCountHash.insertKeyAndValue(new UtlInt(hHandle), new UtlInt(0));
@@ -72,6 +78,7 @@ void SipXHandleMap::releaseHandleRef(SIPXHANDLE hHandle)
     {
         pCount->setValue(pCount->getValue() - 1);
     }
+
     unlock();
 }
 
@@ -90,9 +97,11 @@ void SipXHandleMap::unlock()
 SIPXHANDLE SipXHandleMap::allocHandle(const void* pData) 
 {
     lock() ;
+
     SIPXHANDLE hCall = mNextHandle++ ;
     insertKeyAndValue(new UtlInt(hCall), new UtlVoidPtr((void*) pData)) ;
     addHandleRef(hCall);
+
     unlock() ;
 
     return hCall ;
@@ -120,15 +129,16 @@ const void* SipXHandleMap::findHandle(SIPXHANDLE handle)
 
 const void* SipXHandleMap::removeHandle(SIPXHANDLE handle) 
 {
+    lock() ;
+
     releaseHandleRef(handle);
     const void* pRC = NULL ;
-    
-    lock() ;
-    UtlInt* pCount = static_cast<UtlInt*>(mLockCountHash.findValue(&UtlInt(handle))) ;
+    UtlInt key(handle) ;
+        
+    UtlInt* pCount = static_cast<UtlInt*>(mLockCountHash.findValue(&key)) ;
         
     if (pCount == NULL || pCount->getValue() < 1)
     {
-        UtlInt key(handle) ;
         UtlVoidPtr* pValue ;
             
         pValue = (UtlVoidPtr*) findValue(&key) ;
@@ -140,7 +150,7 @@ const void* SipXHandleMap::removeHandle(SIPXHANDLE handle)
 
         if (pCount)
         {
-            mLockCountHash.destroy(&UtlInt(handle));
+            mLockCountHash.destroy(&key);
         }
     }
     

@@ -180,10 +180,27 @@ public:
         CP_OUTGOING_INFO,
         CP_GET_MEDIA_CONNECTION_ID,
         CP_ENABLE_STUN,
-        CP_GET_CAN_ADD_PARTY, //80
+        CP_ENABLE_TURN,         //80
+        CP_GET_CAN_ADD_PARTY, 
         CP_SPLIT_CONNECTION,
         CP_JOIN_CONNECTION,
-        CP_CONSULT_TRANSFER_ADDRESS
+        CP_CONSULT_TRANSFER_ADDRESS,
+        CP_START_TONE_CONNECTION,
+        CP_STOP_TONE_CONNECTION,
+        CP_PLAY_AUDIO_CONNECTION,
+        CP_STOP_AUDIO_CONNECTION,
+        CP_TRANSFER_OTHER_PARTY_HOLD,
+        CP_TRANSFER_OTHER_PARTY_JOIN,
+        CP_TRANSFER_OTHER_PARTY_UNHOLD,
+        CP_GET_MEDIA_ENERGY_LEVELS,
+        CP_GET_CALL_MEDIA_ENERGY_LEVELS,
+        CP_GET_MEDIA_RTP_SOURCE_IDS,
+        CP_RECORD_AUDIO_CONNECTION_START,
+        CP_RECORD_AUDIO_CONNECTION_STOP,
+        CP_REFIRE_MEDIA_EVENT,
+        CP_LIMIT_CODEC_PREFERENCES,
+        CP_SILENT_REMOTE_HOLD,
+        CP_GET_USERAGENT,
     };
 
 /*
@@ -262,9 +279,6 @@ public:
     //! For internal use only
     virtual void getNewCallId(UtlString* callId);
 
-    //! Generate a new Call-Id with the specified prefix.
-    static void getNewCallId(const char* callIdPrefix, UtlString* callId);
-
     //! For internal use only
     void getNewSessionId(UtlString* sessionId);
 
@@ -312,7 +326,10 @@ public:
                              const char* fromAddress = NULL,
                              const char* desiredConnectionCallId = NULL,
                              CONTACT_ID contactId = 0,
-                             const void* pDisplay = NULL) = 0;
+                             const void* pDisplay = NULL,
+                             const void* pSecurity = NULL,
+                             const char* locationHeader = NULL,
+                             const int bandWidth=AUDIO_CODEC_BW_DEFAULT) = 0;
 
     //! Create a new call and associate it with an existing call.
     /*! This is usually done to create the consultative call as a
@@ -355,6 +372,17 @@ public:
     //! Direct the media subsystem to stop playing a DTMF or progress tone.
     virtual void toneStop(const char* callId) = 0;
 
+    //! Direct the media subsystem to begin playing a DTMF or progress tone.
+    virtual void toneChannelStart(const char* callId,
+                                  const char* szRemoteAddress,
+                                  int toneId,
+                                  UtlBoolean local,
+                                  UtlBoolean remote) = 0;
+
+    //! Direct the media subsystem to stop playing a DTMF or progress tone.
+    virtual void toneChannelStop(const char* callId,
+                                 const char* szRemoteAddress) = 0;
+
     //! Deprecated, use the player controls
     /*! Direct the media subsystem to play audio from an external source
      * accessed via a URL.
@@ -363,7 +391,33 @@ public:
                            const char* audioUrl,
                            UtlBoolean repeat,
                            UtlBoolean local,
-                           UtlBoolean remote) = 0;
+                           UtlBoolean remote,
+                           UtlBoolean mixWithMic = false, 
+                           int downScaling = 100) = 0;
+
+    //! Deprecated, use the player controls
+    /*! Direct the media subsystem to stop playing audio
+     */
+    virtual void audioChannelStop(const char* callId,
+                                  const char* szRemoteAddress) = 0;
+
+    //! Deprecated, use the player controls
+    /*! Direct the media subsystem to play audio from an external source
+     * accessed via a URL.
+     */
+    virtual void audioChannelPlay(const char* callId,
+                                  const char* szRemoteAddress,
+                                  const char* audioUrl,
+                                  UtlBoolean repeat,
+                                  UtlBoolean local,
+                                  UtlBoolean remote,
+                                  UtlBoolean mixWithMic = false, 
+                                  int downScaling = 100) = 0;
+
+    //! Deprecated, use the player controls
+    /*! Direct the media subsystem to stop playing audio.
+     */
+    virtual void audioStop(const char* callId) = 0;
 
     //! Deprecated, use the player controls
     /*! Direct the media subsystem to play audio from a data buffer.
@@ -376,10 +430,6 @@ public:
                             UtlBoolean local,
                             UtlBoolean remote) = 0;
 
-    //! Deprecated, use the player controls
-    /*! Direct the media subsystem to stop playing audio.
-     */
-    virtual void audioStop(const char* callId) = 0;
 
     //! For internal use
     virtual void stopPremiumSound(const char* callId) = 0;
@@ -452,7 +502,10 @@ public:
     virtual void acceptConnection(const char* callId,
                                   const char* address,
                                   CONTACT_TYPE contactType = AUTO,
-                                  const void* hWnd = NULL) = 0;
+                                  const void* hWnd = NULL,
+                                  const void* security = NULL,
+                                  const char* locationHeader = NULL,
+                                  const int bandWidth=AUDIO_CODEC_BW_DEFAULT) = 0;
 
     virtual void setOutboundLineForCall(const char* callId, 
                                         const char* address, 
@@ -526,7 +579,8 @@ public:
     virtual void answerTerminalConnection(const char* callId,
                                           const char* address,
                                           const char* terminalId,
-                                          const void* pDisplay = NULL) = 0;
+                                          const void* pDisplay = NULL,
+                                          const void* pSecurity = NULL) = 0;
 
     //! Put the specified terminal connection on hold
     /*! Change the terminal connection state from TALKING to HELD.
@@ -560,6 +614,14 @@ public:
                                           const char* addresss,
                                           const char* terminalId) = 0;
 
+    //! Rebuild codec factory on the fly with new audio codec requirements
+    //! and one specific video codec
+    virtual void limitCodecPreferences(const char* callId,
+                                       const char* remoteAddr,
+                                       const int audioBandwidth,
+                                       const int videoBandwidth,
+                                       const char* szVideoCodecName) = 0;
+
     //! Renegotiate the codecs to be use for the sepcified terminal connection
     /*! This is typically performed after a capabilities change for the
      * terminal connection (for example, addition or removal of a codec type).
@@ -589,6 +651,7 @@ public:
     virtual UtlBoolean isTerminalConnectionLocal(const char* callId,
                                                 const char* address,
                                                 const char* terminalId) = 0;
+    virtual void doGetFocus(CpCall* call) = 0;
 
     //! Get the SIP session information for the specified terminal connection.
     virtual OsStatus getSession(const char* callId,
@@ -636,11 +699,10 @@ public:
     //! Deprecated
     virtual void setTransferType(int type) = 0;
 
-    virtual void setDelayInDeleteCall(int delayInDeleteCall) = 0;
-    //: Set the number of seconds to delay in deleting the call
-
-    virtual int getDelayInDeleteCall() = 0;
-    //: Get the number of seconds to delay in deleting the call
+    virtual void enableIce(UtlBoolean bEnable) ;
+    virtual void getRemoteUserAgent(const char* callId, 
+                                    const char* remoteAddress,
+                                    UtlString& userAgent) = 0;
 
 /* ============================ ACCESSORS ================================= */
 
@@ -732,14 +794,19 @@ public:
         virtual void addToneListener(const char* callId,
                                  int pListener) = 0;
 
+    virtual UtlBoolean isIceEnabled() const ;
+
 /* ============================ INQUIRY =================================== */
 
     UtlBoolean isCallStateLoggingEnabled();
 
+
+    virtual void onCallDestroy(CpCall* pCall) = 0;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
+    void getNewCallId(const char* callIdPrefix, UtlString* callId);
 
     /*! Note: you better put a lock with the mCallListMutex around what ever
      * you do with call as this method only locks to retrieve.  There is
@@ -801,11 +868,13 @@ private:
     //! Assignment operator
     CpCallManager& operator=(const CpCallManager& rhs);
 
-    UtlString mCallIdPrefix;
+    UtlString mCallIdPrefix;    
     UtlDList mCallList;
     int mLastMetaEventId;
-    // Every CallManager shares the same call counter for generating Call-IDs.
-    static intll mCallNum;
+    UtlBoolean mbEnableICE ;
+
+    static unsigned long mCallNum;
+
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 

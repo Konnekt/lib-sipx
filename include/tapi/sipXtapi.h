@@ -15,6 +15,8 @@
  */ 
 
 /** 
+ * @file sipXtapi.h
+ *
  * sipXtapi main API declarations
  **/
 
@@ -27,15 +29,15 @@
 #include <stddef.h>       // size_t
 
 // SYSTEM INCLUDES
-#ifdef VIDEO
 #ifdef _WIN32
-#if !defined __strmif_h__
-    #include <strmif.h>
-#endif
-#endif
+#include <windows.h>
+#include <Unknwn.h>
+#    if !defined __strmif_h__
+#        include <strmif.h>
+#    endif 
 #endif
 #if !defined (_WIN32) || !defined (VIDEO)
-    typedef void* IBaseFilter;
+    struct IBaseFilter;
 #endif
 
 // APPLICATION INCLUDES
@@ -48,6 +50,8 @@
                                              The user agent will use ports ranging 
                                              from the start port to the start port 
                                              + (default connections * 2). */
+#define DEFAULT_STUN_PORT       3478    /**< Default stun server port */
+
 #define DEFAULT_CONNECTIONS     32      /**< Default number of max sim. conns. */
 #define DEFAULT_IDENTITY        "sipx"  /**< sipx@<IP>:UDP_PORT used as identify if lines
                                              are not defined.  This define only controls
@@ -59,26 +63,22 @@
 #define CODEC_DTMF_RFC2833      "128"   /**< ID for RFC2833 DMTF (out of band DTMF codec) */
 
 #define GAIN_MIN                1       /**< Min acceptable gain value */
-#define GAIN_MAX                100      /**< Max acceptable gain value */
+#define GAIN_MAX                100     /**< Max acceptable gain value */
 #define GAIN_DEFAULT            70      /**< Nominal gain value */
 
 #define VOLUME_MIN              1       /**< Min acceptable volume value */
-#define VOLUME_MAX              100      /**< Max acceptable volume value */
-#define VOLUME_DEFAULT          70       /**< Nominal volume value */
+#define VOLUME_MAX              100     /**< Max acceptable volume value */
+#define VOLUME_DEFAULT          70      /**< Nominal volume value */
 
 #define MAX_AUDIO_DEVICES       16      /**< Max number of input/output audio devices */
+#define MAX_VIDEO_DEVICES       8       /**< Max number of video capture devices. */
+#define MAX_VIDEO_DEVICE_LENGTH 256     /**< Max length of video capture device string. */
 
 #define CONF_MAX_CONNECTIONS    32      /**< Max number of conference participants */
 #define SIPX_MAX_IP_ADDRESSES   32      /**< Maximum number of IP addresses on the host */
+#define SIPX_MAX_CALLS          64      /**< Maximum number of simultaneous calls. */
 
-#define SIPX_STUN_NORMAL            0   /** Default STUN options: Do not request change port 
-                                            or change address. */
-#define SIPX_STUN_CHANGE_PORT       1   /** When sending stun requests for public IP discovery 
-                                            (not ICE), ask the STUN server to send the response
-                                            from a different port. */ 
-#define SIPX_STUN_CHANGE_ADDRESS    2   /** When sending stun requests for for public IP 
-                                            discovery (not ICE), ask the STUN server to send the
-                                            response from a different IP address. */
+
 
 #define SIPX_PORT_DISABLE       -1      /**< Special value that disables the transport 
                                              type (e.g. UDP, TCP, or TLS) when passed 
@@ -99,6 +99,7 @@
                                                   during release process*/
 #define SIPXTAPI_BUILDDATE      "2005-03-23" /**< Default build date -- automatically filled in 
                                                   during release process*/
+#define SIPX_MAX_ADAPTER_NAME_LENGTH 256	 /**< Max length of an adapter name */
 
 #if defined(_WIN32)
 #  ifdef SIPXTAPI_EXPORTS
@@ -118,6 +119,7 @@
 // FORWARD DECLARATIONS
 class UtlString ;
 class Url ;
+class securityHelper;
 
 // STRUCTS
 class SipUserAgent ;
@@ -141,31 +143,88 @@ typedef enum SPEAKER_TYPE
 /**
  * Codec bandwidth ids are used to select a group of codecs with equal or lower
  * bandwidth requirements
+ *
+ * Bandwidth requirements for supported codecs:
+ *
+ * <pre>
+ * High:     IPCMWB  ~ 80 kbps                        
+ * Normal    G711U   64 kpbs                          
+ *           G711A   64 kbps, 20 ms frame size
+ *           PCMU    64 kbps
+ *           PCMA    64 kbps
+ * Low:      iLBC    13.33 kbps, 30 ms frame size and
+ *                   15.2 kbps, 20 ms frame size
+ *           GSM     13 kbps, 20 ms frame size
+ *           G729    8 Kbps, 10ms frame size
+ * Variable: ISAC    variable bitrate
+ * <pre>
  */
 typedef enum SIPX_AUDIO_BANDWIDTH_ID
 {
     AUDIO_CODEC_BW_VARIABLE=0,   /**< ID for codecs with variable bandwidth requirements */
+
     AUDIO_CODEC_BW_LOW,          /**< ID for codecs with low bandwidth requirements */
     AUDIO_CODEC_BW_NORMAL,       /**< ID for codecs with normal bandwidth requirements */
     AUDIO_CODEC_BW_HIGH,         /**< ID for codecs with high bandwidth requirements */
-    AUDIO_CODEC_BW_CUSTOM
+
+    AUDIO_CODEC_BW_CUSTOM,		 /**< Possible return value for sipxConfigGetAudioCodecPreferences.
+                                      This ID indicates the available list of codecs was
+                                      overriden by a sipxConfigSetAudioCodecByName call. */
+    AUDIO_CODEC_BW_DEFAULT       /**< Value used to signify the default bandwidth level 
+                                      when calling sipxCallConnect, sipxCallAccept, or 
+                                      sipxConferenceAdd */
 } SIPX_AUDIO_BANDWIDTH_ID;
 
+
+/**
+ * Video Codec bandwidth ids are used to select a group of codecs with equal 
+ * or lower bandwidth requirements. The codec name is a combination of the
+ * actual codec name and the video resolution.
+ *
+ * Supported codecs are:
+ * 
+ *    VP71, IYUV, I420, and RGB24
+ *
+ * Supported resolutions are
+ * 
+ *    CIF (352x288), QCIF (176x144), SQCIF (128x96), and QVGA (320x240)
+ *
+ * A VP71 codec in QCIF resolution would be named VP71-QCIF.
+ */
 typedef enum SIPX_VIDEO_BANDWIDTH_ID
 {
     VIDEO_CODEC_BW_VARIABLE=0,   /**< ID for codecs with variable bandwidth requirements */
     VIDEO_CODEC_BW_LOW,          /**< ID for codecs with low bandwidth requirements */
     VIDEO_CODEC_BW_NORMAL,       /**< ID for codecs with normal bandwidth requirements */
     VIDEO_CODEC_BW_HIGH,         /**< ID for codecs with high bandwidth requirements */
-    VIDEO_CODEC_BW_CUSTOM
+    VIDEO_CODEC_BW_CUSTOM,       /**< Possible return value for sipxConfigGetVideoCodecPreferences.
+                                      This ID indicates the available list of codecs was
+                                      overriden by a sipxConfigSetVideoCodecByName call. */
+    VIDEO_CODEC_BW_DEFAULT       /**< Value used to signify the default bandwidth level 
+                                      when calling sipxCallLimitCodecPreferences */
 } SIPX_VIDEO_BANDWIDTH_ID;
 
+/**
+ * Video Codec quality definitions.  Quality is used as a trade off between between 
+ * CPU usage and the amount of bandwidth used.
+ */
 typedef enum SIPX_VIDEO_QUALITY_ID
 {
     VIDEO_QUALITY_LOW=1,         /**< Low quality video */
     VIDEO_QUALITY_NORMAL=2,      /**< Normal quality video */
     VIDEO_QUALITY_HIGH=3         /**< High quality video */
 } SIPX_VIDEO_QUALITY_ID;
+
+/**
+ *  Enumeration of possible video sizes.
+ */
+typedef enum SIPX_VIDEO_FORMAT
+{
+    VIDEO_FORMAT_CIF=0,          /**< 352x288   */ 
+    VIDEO_FORMAT_QCIF,           /**< 176x144   */
+    VIDEO_FORMAT_SQCIF,          /**< 128x96    */
+    VIDEO_FORMAT_QVGA            /**< 320x240   */
+} SIPX_VIDEO_FORMAT;
 
 
 /**
@@ -207,6 +266,12 @@ typedef enum SIPX_RESULT
                                           the wrong state.  For example, attempting to split
                                           a call from a conference before that call is 
                                           connected. */
+    SIPX_RESULT_MISSING_RUNTIME_FILES,/**< The operation failed because required runtime dependencies are missing. */
+    SIPX_RESULT_TLS_DATABASE_FAILURE, /**< The operation failed because the certificate database did not initialize. */
+    SIPX_RESULT_TLS_BAD_PASSWORD,     /**< The operation failed because the certificate database did not accept the password.*/
+    SIPX_RESULT_TLS_TCP_IMPORT_FAILURE, /**< The operation failed because a TCP socket could not be imported by the SSL/TLS module. */
+    SIPX_RESULT_NSS_FAILURE,          /**< The operation failed due to an NSS failure. */
+    
 } SIPX_RESULT ;
 
 /**
@@ -227,16 +292,26 @@ typedef enum TONE_ID
     ID_DTMF_STAR           = '*',   /**< DMTF * */
     ID_DTMF_POUND          = '#',   /**< DMTF # */
     ID_DTMF_FLASH          = '!',   /**< DTMF Flash */
-    ID_TONE_DIALTONE  = 512,        /**< Dialtone */
-    ID_TONE_BUSY,                   /**< Call-busy tone */
-    ID_TONE_RINGBACK,               /**< Remote party is ringing feedback tone */
-    ID_TONE_RINGTONE,               /**< Default ring/alert tone */
-    ID_TONE_CALLFAILED,             /**< Fasy Busy / call failed tone */
-    ID_TONE_SILENCE,                /**< Silence */
-    ID_TONE_BACKSPACE,              /**< Backspace tone */
-    ID_TONE_CALLWAITING,            /**< Call waiting alert tone*/
-    ID_TONE_CALLHELD,               /**< Call held feedback tone */
-    ID_TONE_LOUD_FAST_BUSY          /**< Off hook / fast busy tone */
+    ID_TONE_DIALTONE  = 512,        /**< Dialtone 
+                                         (Not supported with GIPS VoiceEngine) */
+    ID_TONE_BUSY,                   /**< Call-busy tone 
+                                         (Not supported with GIPS VoiceEngine) */
+    ID_TONE_RINGBACK,               /**< Remote party is ringing feedback tone 
+                                         (Not supported with GIPS VoiceEngine)*/
+    ID_TONE_RINGTONE,               /**< Default ring/alert tone 
+                                         (Not supported with GIPS VoiceEngine) */
+    ID_TONE_CALLFAILED,             /**< Fasy Busy / call failed tone 
+                                         (Not supported with GIPS VoiceEngine) */
+    ID_TONE_SILENCE,                /**< Silence 
+                                         (Not supported with GIPS VoiceEngine) */
+    ID_TONE_BACKSPACE,              /**< Backspace tone 
+                                         (Not supported with GIPS VoiceEngine) */
+    ID_TONE_CALLWAITING,            /**< Call waiting alert tone 
+                                         (Not supported with GIPS VoiceEngine) */
+    ID_TONE_CALLHELD,               /**< Call held feedback tone 
+                                         (Not supported with GIPS VoiceEngine) */
+    ID_TONE_LOUD_FAST_BUSY          /**< Off hook / fast busy tone 
+                                         (Not supported with GIPS VoiceEngine)*/
 } TONE_ID ;                 
 
 
@@ -263,33 +338,139 @@ typedef enum SIPX_LOG_LEVEL
     LOG_LEVEL_NONE,      /**< disable logging */
 } SIPX_LOG_LEVEL ;
 
+#define MAX_SRTP_KEY_LENGTH   31        /**< srtp key length */
+#define MAX_SMIME_KEY_LENGTH  2048      /**< s/mime key length */
+#define MAX_PKCS12_KEY_LENGTH 4096      /**< pkcs12 key length */
+#define MAX_PASSWORD_LENGTH   32        /**< maximum password length PKI operations */
 
-class SIPX_SECURITY_ATTRIBUTES
+/**
+ * Enumeration of the possible levels of SRTP. 
+ */
+enum SIPX_SRTP_LEVEL
 {
-public:
-    SIPX_SECURITY_ATTRIBUTES()
-    {
-    }
-    
-    SIPX_SECURITY_ATTRIBUTES(const SIPX_SECURITY_ATTRIBUTES& ref)
-    {
-    }
-    
-    SIPX_SECURITY_ATTRIBUTES& operator=(const SIPX_SECURITY_ATTRIBUTES& ref)
-    {
-        // Need to be implemented!!!
-        if (this == &ref)
-            return *this;
-   
-        return *this;
-    }
-    
-private:
+    SRTP_LEVEL_NONE=0,
+    SRTP_LEVEL_ENCRYPTION,
+    SRTP_LEVEL_AUTHENTICATION,
+    SRTP_LEVEL_ENCRYPTION_AND_AUTHENTICATION
 };
 
 /**
- * SIPX_CONTACT_TYPE is an enumeration of possible address type for use with
- * SIP contacts and SDP connection information.
+ * Container class for security attributes.  
+ */
+class SIPX_SECURITY_ATTRIBUTES
+{
+  public:
+    friend class SecurityHelper;    /**< The security help can set private values of this class. */
+    /** Constructor. */
+    SIPX_SECURITY_ATTRIBUTES() 
+    {
+        nSrtpKeyLength = 0 ;
+        nSmimeKeyLength = 0 ;
+        nSrtpLevel = SRTP_LEVEL_NONE ;
+        memset(szSrtpKey, 0, sizeof(szSrtpKey));
+        memset(szSmimeKeyDer, 0, sizeof(szSmimeKeyDer));
+        memset(dbLocation, 0, sizeof(dbLocation));
+        memset(szMyCertNickname, 0, sizeof(szMyCertNickname));
+        memset(szCertDbPassword, 0, sizeof(szCertDbPassword));
+    }    
+    /** Copy constructor. */
+    SIPX_SECURITY_ATTRIBUTES(const SIPX_SECURITY_ATTRIBUTES& ref)
+    {
+        copyData(ref);
+    }    
+    /** Destructor. */
+    virtual ~SIPX_SECURITY_ATTRIBUTES() { }    
+    /** Assignment operator. */
+    SIPX_SECURITY_ATTRIBUTES& operator=(const SIPX_SECURITY_ATTRIBUTES& ref)
+    {
+        if (this == &ref) return *this;
+        copyData(ref);
+        return *this;
+    }    
+    /**
+     * Sets the symmetric srtp key.  If this is not supplied by the user,
+     * sipXtapi will generate a random key.
+     */
+    void setSrtpKey(const char* szKey, const int length)
+    {
+        int safeLen = (length < (int) sizeof(szSrtpKey)) ? length : (int) sizeof(szSrtpKey);
+        memcpy(szSrtpKey, szKey, safeLen);
+        nSrtpKeyLength = safeLen;
+    }    
+    /**
+     * Sets the public key of the remote party, which is used to
+     * encrypt the S/MIME container for the SDP.
+     */
+    void setSmimeKey(const char* szKey, const int length)
+    {
+        int safeLen = (length < (int) sizeof(szSmimeKeyDer)) ? length : (int) sizeof(szSmimeKeyDer);
+        memcpy(szSmimeKeyDer, szKey, safeLen);
+        nSmimeKeyLength = safeLen;
+    }
+    /**
+     * Sets the S/MIME & SRTP security level
+     */
+    void setSecurityLevel(SIPX_SRTP_LEVEL security) { nSrtpLevel = security; }
+    /**
+     * Gets the symmetric srtp key.
+     */
+    const char* getSrtpKey() const  { return szSrtpKey; }    
+    /**
+     * Gets the public key of the remote party, which is used to
+     * encrypt the S/MIME container for the SDP.
+     */
+    const char* getSmimeKey() const { return szSmimeKeyDer; }
+    /**
+     * Gets the symmetric srtp key length.
+     */
+    const int getSrtpKeyLength() const  { return nSrtpKeyLength; }
+    /**
+     * Gets the public key of the remote party, which is used to
+     * encrypt the S/MIME container for the SDP.
+     */
+    const int getSmimeKeyLength() const { return nSmimeKeyLength; }
+    /**
+     * Sets the S/MIME & SRTP security level
+     */
+    const int getSecurityLevel() const {return nSrtpLevel;}
+    /**
+     * Gets the Certificate Database location (set internally to
+     * the location specified in the call to 
+     * sipxConfigSetSecurityParameters() )
+     */
+    const char* getCertDbLocation() const { return dbLocation; }
+  private:
+    SIPX_SRTP_LEVEL nSrtpLevel;
+    char szSrtpKey[MAX_SRTP_KEY_LENGTH];
+    int  nSrtpKeyLength;    
+    char szSmimeKeyDer[MAX_SMIME_KEY_LENGTH];
+    int  nSmimeKeyLength; 
+    // internally set private member, use sipxConfigSetSecurityParameters
+    char dbLocation[256];                         
+    // internally set private member, use sipxConfigSetSecurityParameters
+    char szMyCertNickname[32];   
+    // internally set private member, use sipxConfigSetSecurityParameters
+    char szCertDbPassword[MAX_PASSWORD_LENGTH];   
+    void copyData(const SIPX_SECURITY_ATTRIBUTES& ref)
+    {
+        nSrtpLevel = ref.nSrtpLevel;
+        nSrtpKeyLength = ref.nSrtpKeyLength;
+        nSmimeKeyLength = ref.nSmimeKeyLength;
+        memcpy(szSrtpKey, ref.szSrtpKey, ref.nSrtpKeyLength);
+        memcpy(szSmimeKeyDer, ref.szSmimeKeyDer, ref.nSmimeKeyLength);
+        strncpy(dbLocation, ref.dbLocation, sizeof(dbLocation) - 1);
+        strncpy(szMyCertNickname, ref.szMyCertNickname, sizeof(szMyCertNickname) - 1);
+        strncpy(szCertDbPassword, ref.szCertDbPassword, sizeof(szCertDbPassword) - 1);
+    }
+};
+
+/**
+ * SIPX_CONTACT_TYPE is an enumeration of possible address types for use with
+ * SIP contacts and SDP connection information.  Application developers and 
+ * choose to setup calls with specific contact types (e.g. use my local IP 
+ * address, a stun-derived IP address, turn-derived IP address, etc).  Unless
+ * you have complete knowledge and control of your network environment, you
+ * should likely use CONTACT_AUTO.
  */
 typedef enum
 {
@@ -302,6 +483,12 @@ typedef enum
                              parameters */
 } SIPX_CONTACT_TYPE ;
 
+typedef enum
+{
+    TRANSPORT_UDP = 1,  /**< Indicator for a UDP socket type. */
+    TRANSPORT_TCP = 0,  /**< Indicator for a TCP socket type. */ 
+    TRANSPORT_TLS = 3,  /**< Indicator for a TLS socket type. */
+} SIPX_TRANSPORT_TYPE;
 
 /**
  * Type for storing a "window object handle" - in Windows,
@@ -321,86 +508,120 @@ typedef enum SIPX_VIDEO_DISPLAY_TYPE
                                       handling the remote video display */
 } SIPX_VIDEO_DISPLAY_TYPE;
 
+/**
+ * Structure used to pass window handle/filter interface for video calls.
+ */
 struct SIPX_VIDEO_DISPLAY
 {
+	/** Default constructor */
     SIPX_VIDEO_DISPLAY()
     {
         cbSize = sizeof(SIPX_VIDEO_DISPLAY);
         type = SIPX_WINDOW_HANDLE_TYPE;
         handle = NULL;
     }
+    /** Destructor. */
+    ~SIPX_VIDEO_DISPLAY()
+    {
+        if (type == DIRECT_SHOW_FILTER)
+        {
+#ifdef      _WIN32
+            if (handle) ((IUnknown*)handle)->Release();
+#endif              
+        }
+    }
+    
+	/** Copy constructor */
     SIPX_VIDEO_DISPLAY(const SIPX_VIDEO_DISPLAY& ref)
     {
-        this->cbSize = ref.cbSize;
-        this->type = ref.type;
-        this->handle = ref.handle;
+        copy(ref);
     }
+    /** Assignment operator. */
+    SIPX_VIDEO_DISPLAY& operator=(const SIPX_VIDEO_DISPLAY& ref)
+    {
+        // check for assignment to self
+        if (this == &ref) return *this;
+        copy(ref);
+        return *this;
+    }    
         
-    int cbSize;
-    SIPX_VIDEO_DISPLAY_TYPE type;
+    int cbSize;						/**< Size of structure */
+    SIPX_VIDEO_DISPLAY_TYPE type;	/**< Type of video display */
     union
     {
-    SIPX_WINDOW_HANDLE handle;
-    IBaseFilter* filter;
+		SIPX_WINDOW_HANDLE handle;	/**< Window handle if type SIPX_WINDOW_HANDLE_TYPE */
+		IBaseFilter* filter;		/**< Direct Show filter if type is DIRECT_SHOW_FILTER */
     };
+private:
+    void copy(const SIPX_VIDEO_DISPLAY& ref)
+    {
+        cbSize = ref.cbSize;
+        type = ref.type;
+        handle = ref.handle;
+        if (type == DIRECT_SHOW_FILTER)
+        {
+#ifdef      _WIN32
+            // we should addRef here.
+            if (handle) ((IBaseFilter*)handle)->AddRef();
+#endif            
+        }
+    }
+    
 };
 
-/** Type for storing Contact Record identifiers */
+/** 
+ * Type for storing Contact Record identifiers 
+ * @see sipxConfigGetLocalContacts
+ */
 typedef int SIPX_CONTACT_ID; 
 
 /**
  * The CONTACT_ADDRESS structure includes contact information (ip and port),
  * address source type, and interface.
+ *
+ * @see sipxConfigGetLocalContacts
  */
 struct SIPX_CONTACT_ADDRESS
 {
-    /**
-     * Default constructor for a SIPX_CONTACT_ADDRESS.
-     */
+    /** Contructor. */
     SIPX_CONTACT_ADDRESS()
     {
         memset((void*)cInterface, 0, sizeof(cInterface));
         memset((void*)cIpAddress, 0, sizeof(cIpAddress));
         eContactType = CONTACT_AUTO;
+        eTransportType = TRANSPORT_UDP ;
         id = 0;
         iPort = -1;
     }
-    
-    /** 
-     * Copy constructor for SIPX_CONTACT_ADDRESS (deep copy)
-     */
+    /** Copy constructor. */
     SIPX_CONTACT_ADDRESS(const SIPX_CONTACT_ADDRESS& ref)
     {
         strcpy(cInterface, ref.cInterface);
         strcpy(cIpAddress, ref.cIpAddress);
         eContactType = ref.eContactType;
+        eTransportType = ref.eTransportType;
         id = ref.id;
         iPort = ref.iPort;
     }
-    
-    /**
-     * Assignment operator for SIPX_CONTACT_ADDRESS (deep copy).
-     */
+    /** Assignment operator. */
     SIPX_CONTACT_ADDRESS& operator=(const SIPX_CONTACT_ADDRESS& ref)
     {
         // check for assignment to self
         if (this == &ref) return *this;
-        
-        strcpy(this->cInterface, ref.cInterface);
-        strcpy(this->cIpAddress, ref.cIpAddress);
-        this->eContactType = ref.eContactType;
-        this->id = ref.id;
-        this->iPort = ref.iPort;
-        
+        strcpy(cInterface, ref.cInterface);
+        strcpy(cIpAddress, ref.cIpAddress);
+        eContactType = ref.eContactType;
+        eTransportType = ref.eTransportType;
+        id = ref.id;
+        iPort = ref.iPort;
         return *this;
     }    
-
-
-    SIPX_CONTACT_ID   id;              /**< Contact record Id */
-    SIPX_CONTACT_TYPE eContactType ;   /**< Address type/source */
-    char              cInterface[32] ; /**< Source interface    */
-    char              cIpAddress[32] ; /**< IP Address          */
-    int               iPort ;          /**< Port                */
+    SIPX_CONTACT_ID     id;              /**< Contact record Id      */
+    SIPX_CONTACT_TYPE   eContactType ;   /**< Address type/source    */
+    SIPX_TRANSPORT_TYPE eTransportType ; /**< Contact transport type */
+    char                cInterface[32] ; /**< Source interface       */
+    char                cIpAddress[32] ; /**< IP Address             */
+    int                 iPort ;          /**< Port                   */
 };
 
 
@@ -417,6 +638,24 @@ typedef struct
 
 
 /**
+ * RTCP statistics computed according to RFC 3550
+ */
+typedef struct 
+{
+    int cbSize;						/**< Size of structure */
+
+	unsigned short fraction_lost;   /**< Fraction of lost packets. */
+	unsigned long cum_lost;         /**< Cumulative lost packets. */
+	unsigned long ext_max;          /**< Max size of rtcp extention header. */
+	unsigned long jitter;           /**< Jitter measurement. */
+	int RTT;                        /**< Round trip time. */
+	int bytesSent;                  /**< Number of bytes sent. */
+	int packetsSent;                /**< Number of packets sent. */
+	int bytesReceived;              /**< Number of bytes received. */
+	int packetsReceived;            /**< Number of packets received. */
+} SIPX_RTCP_STATS ;
+
+/**
  * The SIPX_VIDEO_CODEC structure includes codec name and bandwidth info.
  */
 typedef struct 
@@ -429,15 +668,27 @@ typedef struct
 
 
 /**
-* In a CALLSTATE_AUDIO_EVENT the SIPX_CODEC_INFO structure is being passed up 
-* to the event handler and contains information about the negotiated audio
-* and video codec.
-*/
+ * In the MEDIA_LOCAL_START and MEDIA_REMOTE_START events the SIPX_CODEC_INFO 
+ * structure is being passed up to the event handler and contains information 
+ * about the negotiated audio and video codec.
+ */
 typedef struct
 {
-    SIPX_AUDIO_CODEC audioCodec;     /**< Audio codec */
-    SIPX_VIDEO_CODEC videoCodec;     /**< Video codec */
+    SIPX_AUDIO_CODEC audioCodec;     /**< Audio codec  */
+    SIPX_VIDEO_CODEC videoCodec;     /**< Video codec  */
+    bool bIsEncrypted;               /**< SRTP enabled */
 } SIPX_CODEC_INFO;
+
+
+/**
+ * This structure gets passed into sipxCallConnect, sipxCallAccept, and
+ * sipxConferenceAdd calls and sets options on a per call basis.
+ */
+typedef struct {
+    int cbSize;                          /**< Size of structure          */
+    SIPX_AUDIO_BANDWIDTH_ID bandwidthId; /**< Bandwidth range            */
+    bool sendLocation;                   /**< True sends location header */
+} SIPX_CALL_OPTIONS;
 
 
 /** 
@@ -488,25 +739,28 @@ const SIPX_CONF SIPX_CONF_NULL = 0; /**< Represents a null conference handle */
 typedef unsigned int SIPX_INFO;
 
 /**
- * A publisher handle.  Refers to a publishing context.  
+ * The SIPX_PUB handle represent a publisher context.  Publisher are used
+ * to publish application-data to interested parties (Subscribers).  This
+ * maps directly to the SIP SUBSCRIBE, and NOTIFY methods.  The handle is
+ * used to mange the life cycle of the publisher.
+ *
  * SIPX_PUB handles are created by using sipxCreatePublisher.
  * SIPX_PUB handles should be torn down using sipxDestroyPublisher.
  */
 typedef unsigned int SIPX_PUB;
+
 const SIPX_PUB SIPX_PUB_NULL = 0; /**< Represents a null publisher handle */
 
 /**
- * A subscription handle which refers to a notification subscription
- * associated with a call.
+ * A SIPX_SUB handle represent a subscription to a remote publisher.  This
+ * maps directly to the SIP SUBSCRIBE, and NOTIFY methods.  The handle is 
+ * used to mange the life cycle of the subscription.
+ *
  * SIPX_SUB handles are created by using the sipxCallSubscribe function.
  * SIPX_SUB handles should be destroyed using the sipxCallUnsubscribe function.
  */
 typedef unsigned int SIPX_SUB ;
 
-/** 
- * A handle referring to an SIP NOTIFY message.  
- */
-typedef unsigned int SIPX_NOTIFY ;
 
 /** 
  * Typedef for audio source (microphone) hook procedure.  This typedef 
@@ -527,6 +781,81 @@ typedef void (*fnMicAudioHook)(const int nSamples, short* pSamples) ;
  * @param pSamples pointer to array of samples
  */
 typedef void (*fnSpkrAudioHook)(const int nSamples, short* pSamples) ;
+
+
+/**
+ * SIPX_KEEPALIVE_TYPEs define different methods of keeping NAT/firewall
+ * port open.   These approaches are used for the signaling path of a call
+ * and are generally only needed under specific network configurations.
+ * 
+ * Examples: - When not using a proxy
+ *           - When the registration period is longer then NAT bindings 
+ *             timeout
+ */
+typedef enum
+{
+    SIPX_KEEPALIVE_CRLF,        /**<Send a Carriage Return/Line Feed to other side */
+    SIPX_KEEPALIVE_STUN,        /**<Send a Stun request to the other side */
+    SIPX_KEEPALIVE_SIP_PING     /**<Send a SIP PING method request to the other side 
+                                    (not implemented) */
+} SIPX_KEEPALIVE_TYPE ;
+
+
+
+/** 
+ * SIPX_AEC_MODE defines different AEC modes.  Options included DISABLED,
+ * SUPPRESS, CANCEL, and CANCEL_AUTO.
+ *
+ * NOTE: This functionally is only supported when sipXtapi is bundled with
+ * VoiceEngine from Global IP Sound.
+ */
+typedef enum SIPX_AEC_MODE
+{
+    SIPX_AEC_DISABLED,   /**<Disabled AEC; do not attempt to cancel or 
+                             suppress echo */
+    SIPX_AEC_SUPPRESS,   /**<Echo suppression; attempt to suppress echo by
+                             effectively forcing a half-duplex audio channel.
+                             If you are speaking, the speaker will be silenced
+                             to avoid echo.  Echo cancellation is consider a 
+                             better approach/experience, however, requires more
+                             CPU consumption.  */
+    SIPX_AEC_CANCEL,     /**<Full echo cancellation; attempt to cancel echo 
+                             between the the speaker and microphone.  Depending
+                             on the quality of your speaker/microphone, this 
+                             may result in some suppression.  For example, if 
+                             either the speaker or microphone distorts the 
+                             signal (making it non-linear), it is becomes 
+                             increasingly difficult to cancel.  This is 
+                             consider a full-duplex solution. */
+    SIPX_AEC_CANCEL_AUTO,/**<Full echo cancellation; attempt to cancel echo 
+                             between the the speaker and microphone; however,
+                             automatically disable echo cancellation if it
+                             appears not needed.  */
+
+} SIPX_AEC_MODE ;
+
+
+/**
+ * SIPX_NOISE_REDUCTION_MODE defines the various noise reduction options.  
+ * Options include, DISABLED, LOW, MEDIUM, and HIGH.  When selecting a 
+ * noise reduction level, you are trading off reducing back ground noise
+ * with the possibility of suppressing speech.  We recommend selecting the
+ * LOW level.
+ *
+ * NOTE: This functionally is only supported when sipXtapi is bundled with
+ * VoiceEngine from Global IP Sound.
+ */
+typedef enum SIPX_NOISE_REDUCTION_MODE
+{
+    SIPX_NOISE_REDUCTION_DISABLED,  /**< Disable NR; Do not attempt to reduce 
+                                         background noise */
+    SIPX_NOISE_REDUCTION_LOW,       /**< Enable NR with least amount of 
+                                         aggressiveness. */
+    SIPX_NOISE_REDUCTION_MEDIUM,    /**< Enable NR with modest amount of 
+                                         aggressiveness. */
+    SIPX_NOISE_REDUCTION_HIGH,      /**< Enable NR with highest amount of 
+                                         aggressiveness. */
+} SIPX_NOISE_REDUCTION_MODE ;
 
 /* ============================ FUNCTIONS ================================= */
 
@@ -560,7 +889,13 @@ typedef void (*fnSpkrAudioHook)(const int nSamples, short* pSamples) ;
  * @param maxConnections The maximum number of simultaneous connections
  *        that the sipX layer will support.
  * @param szIdentity The default outbound identity used by the SIP stack
- *        if no line appears are defined.
+ *        if no lines are defined. Generally, the szIdentity is only used
+ *        for inbound calls since all of sipXtapi APIs required a line ID
+ *        for outbound calls.  The identity will be used to form the 
+ *        "From" field (caller-id) and the username/URL parameters are 
+ *        may be used as part of the "Contact" header.  In other words,
+ *        this field does not impact any routing aspects of the call
+ *        session.
  * @param szBindToAddr Defines which IP/address the user agent / rtp 
  *        stack will listen on.  The default "0.0.0.0" listens on all
  *        interfaces.  The address must be in dotted decimal form -- 
@@ -569,6 +904,9 @@ typedef void (*fnSpkrAudioHook)(const int nSamples, short* pSamples) ;
  *        or tlsPort, try sequential ports until a successful port is 
  *        found.  If enabled, sipXtapi will try 10 sequential port 
  *        numbers after the initial port.
+ * @param szTLSCertificateNickname Nickname of the certificate to use as an SSL server.
+ * @param szTLSCertificatePassword Password for the SSL server certificate.
+ * @param szDbLocation Path to the certificate database.
  */
 SIPXTAPI_API SIPX_RESULT sipxInitialize(SIPX_INST* phInst,
                                         const int udpPort = DEFAULT_UDP_PORT,
@@ -578,8 +916,73 @@ SIPXTAPI_API SIPX_RESULT sipxInitialize(SIPX_INST* phInst,
                                         const int maxConnections = DEFAULT_CONNECTIONS,
                                         const char* szIdentity = DEFAULT_IDENTITY,
                                         const char* szBindToAddr = DEFAULT_BIND_ADDRESS,
-                                        bool      bUseSequentialPorts = false) ;
+                                        bool      bUseSequentialPorts = false,
+                                        const char* szTLSCertificateNickname = NULL,
+                                        const char* szTLSCertificatePassword = NULL,
+                                        const char* szDbLocation = NULL) ;
 
+
+/** 
+ * Re-initialize the sipX tapi-like API layer.  This method will remove all lines,
+ * conferences, calls, publishers, and subscribers, while events are still enabled.
+ * Before calling this function, the application should un-register all registered
+ * lines.  
+ *
+ * Your listeners are maintained.
+ *
+ * @param phInst A pointer to a SIPX_INST variable.  Your old SIPX_INST
+ *        pointer will be invalid after this call.  Calling any routines
+ *        with the old SIPX_INST variable is undefined and may result in
+ *        an exception.
+ * @param udpPort The default UDP port for the SIP protocol stack.  The
+ *        port cannot be changed after initialization.  Right now, 
+ *        the UDP port and TCP port numbers MUST be equal.  Pass a value of 
+ *        SIPX_PORT_DISABLE (-1) to disable disable UDP or a value of 
+ *        SIPX_PORT_AUTO (-2) to automatically select an open UDP port.
+ * @param tcpPort The default TCP port for the SIP protocol stack.  The
+ *        port cannot be changed after initialization.    Right now, 
+ *        the UDP port and TCP port numbers MUST be equal.  Pass a value of 
+ *        SIPX_PORT_DISABLE (-1) to disable disable TCP or a value of 
+ *        SIPX_PORT_AUTO (-2) to automatically select an open TCP port.
+ * @param tlsPort **NOT YET SUPPORTED**
+ * @param rtpPortStart The starting port for inbound RTP traffic.  The
+ *        sipX layer will use ports starting at rtpPortStart and ending
+ *        at (rtpPortStart + 2 * maxConnections) - 1.  Pass a value of 
+ *        SIPX_PORT_AUTO (-2) to automatically select an open port.
+ * @param maxConnections The maximum number of simultaneous connections
+ *        that the sipX layer will support.
+ * @param szIdentity The default outbound identity used by the SIP stack
+ *        if no lines are defined. Generally, the szIdentity is only used
+ *        for inbound calls since all of sipXtapi APIs required a line ID
+ *        for outbound calls.  The identity will be used to form the 
+ *        "From" field (caller-id) and the username/URL parameters are 
+ *        may be used as part of the "Contact" header.  In other words,
+ *        this field does not impact any routing aspects of the call
+ *        session.
+ * @param szBindToAddr Defines which IP/address the user agent / rtp 
+ *        stack will listen on.  The default "0.0.0.0" listens on all
+ *        interfaces.  The address must be in dotted decimal form -- 
+ *        hostnames will not work.
+ * @param bUseSequentialPorts If unable to bind to the udpPort, tcpPort, 
+ *        or tlsPort, try sequential ports until a successful port is 
+ *        found.  If enabled, sipXtapi will try 10 sequential port 
+ *        numbers after the initial port.
+ * @param szTLSCertificateNickname Nickname of the certificate to use as an SSL server.
+ * @param szTLSCertificatePassword Password for the SSL server certificate.
+ * @param szDbLocation Path to the certificate database.
+ */
+SIPXTAPI_API SIPX_RESULT sipxReInitialize(SIPX_INST* phInst,
+                                        const int udpPort = DEFAULT_UDP_PORT,
+                                        const int tcpPort = DEFAULT_TCP_PORT,
+                                        const int tlsPort = DEFAULT_TLS_PORT,
+                                        const int rtpPortStart = DEFAULT_RTP_START_PORT,
+                                        const int maxConnections = DEFAULT_CONNECTIONS,
+                                        const char* szIdentity = DEFAULT_IDENTITY,
+                                        const char* szBindToAddr = DEFAULT_BIND_ADDRESS,
+                                        bool      bUseSequentialPorts = false,
+                                        const char* szTLSCertificateNickname = NULL,
+                                        const char* szTLSCertificatePassword = NULL,
+                                        const char* szDbLocation = NULL) ;
 
 /** 
  * Un-initialize the sipX tapi-like API layer.  This method tears down the
@@ -590,8 +993,12 @@ SIPXTAPI_API SIPX_RESULT sipxInitialize(SIPX_INST* phInst,
  * SIPX_RESULT_BUSY return code.
  *
  * @param hInst An instance handle obtained from sipxInitialize. 
+ * @param bForceShutdown forces sipXtapi to shutdown regardless of live 
+ *        calls/unregistered lines.  Enabling this in NOT RECOMMENDED,
+ *        please tear down all calls and lines prior to calling 
+ *        sipxUnitialize.
  */
-SIPXTAPI_API SIPX_RESULT sipxUnInitialize(SIPX_INST hInst);
+SIPXTAPI_API SIPX_RESULT sipxUnInitialize(SIPX_INST hInst, bool bForceShutdown = false);
 
 //@}
 /** @name Call Methods */
@@ -606,17 +1013,24 @@ SIPXTAPI_API SIPX_RESULT sipxUnInitialize(SIPX_INST hInst);
  * @param hCall Handle to a call.  Call handles are obtained either by 
  *        invoking sipxCallCreate or passed to your application through
  *        a listener interface.
- * @param pDislay Pointer to an object describing the display object for 
+ * @param pDisplay Pointer to an object describing the display object for 
  *        rendering remote video.
+ * @param pSecurity Pointer to an object describing the security attributes for 
+ *        the call.
+ * @param options Pointer to a SIPX_CALL_OPTIONS structure. 
+ *
+ * @see sipxConfigSetLocationHeader
+ * @see sipxConfigSetAudioCodecPreferences
  */
-SIPXTAPI_API SIPX_RESULT sipxCallAccept(const SIPX_CALL hCall, SIPX_VIDEO_DISPLAY* const pDisplay = NULL);
-
-/** VIDEO: Insert SIPX_WINDOW_HANDLE here */
+SIPXTAPI_API SIPX_RESULT sipxCallAccept(const SIPX_CALL hCall, 
+                                        SIPX_VIDEO_DISPLAY* const pDisplay = NULL,
+                                        SIPX_SECURITY_ATTRIBUTES* const pSecurity = NULL,
+                                        SIPX_CALL_OPTIONS* options = NULL);
 
 
 /**
  * Reject an inbound call (prior to alerting the user).  This method must
- * be invoked before the end user is alerted (before sipXcallAccept).
+ * be invoked before the end user is alerted (before sipxCallAccept).
  * Whenever a new call is received, the application developer should ACCEPT 
  * (proceed to ringing), REJECT (send back busy), or REDIRECT the call.
  *
@@ -633,7 +1047,7 @@ SIPXTAPI_API SIPX_RESULT sipxCallReject(const SIPX_CALL hCall,
 
 /**
  * Redirect an inbound call (prior to alerting the user).  This method must
- * be invoked before the end user is alerted (before sipXcallAccept).
+ * be invoked before the end user is alerted (before sipxCallAccept).
  * Whenever a new call is received, the application developer should ACCEPT 
  * (proceed to ringing), REJECT (send back busy), or REDIRECT the call.
  *
@@ -651,8 +1065,13 @@ SIPXTAPI_API SIPX_RESULT sipxCallRedirect(const SIPX_CALL hCall,
  * @param hCall Handle to a call.  Call handles are obtained either by 
  *        invoking sipxCallCreate or passed to your application through
  *        a listener interface.
+ * @param bTakeFocus Should SIPxua place the newly answered call in focus
+ *        (engage local microphone and speaker).  In some cases, application
+ *        developer may want to answer the call in the background and play
+ *        audio while the user finishes up with their active (in focus) call.
  */
-SIPXTAPI_API SIPX_RESULT sipxCallAnswer(const SIPX_CALL hCall) ;
+SIPXTAPI_API SIPX_RESULT sipxCallAnswer(const SIPX_CALL hCall, 
+                                        bool  bTakeFocus = true) ;
 
 
 /**
@@ -688,26 +1107,92 @@ SIPXTAPI_API SIPX_RESULT sipxCallCreate(const SIPX_INST hInst,
  *         (e.g. LOCAL contact of 10.1.1.x or 
  *        192.168.x.x), the NAT-derived address to the target party,
  *        or, local contact addresses of other types.
- * @param pDislay Pointer to an object describing the display object for 
+ * @param pDisplay Pointer to an object describing the display object for 
  *        rendering remote video.
+ * @param pSecurity Pointer to an object describing the security attributes for 
+ *        the call.
+ * @param bTakeFocus Should SIPxua place the this call in focus (engage 
+ *        local microphone and speaker).  In some cases, application developer
+ *        may want to place the call in the background and play audio while 
+ *        the user finishes up with their active (in focus) call. 
+ * @param options Pointer to a SIPX_CALL_OPTIONS structure.
+ * @param szCallId A call-id for the session, if NULL, one is generated.
+ *
+ * @see sipxConfigSetLocationHeader
+ * @see sipxConfigSetAudioCodecPreferences
  */
 SIPXTAPI_API SIPX_RESULT sipxCallConnect(const SIPX_CALL hCall,
                                          const char* szAddress,
                                          SIPX_CONTACT_ID contactId = 0,
-                                         SIPX_VIDEO_DISPLAY* const pDisplay = NULL) ;
+                                         SIPX_VIDEO_DISPLAY* const pDisplay = NULL,
+                                         SIPX_SECURITY_ATTRIBUTES* const pSecurity = NULL,
+                                         bool bTakeFocus = true,
+                                         SIPX_CALL_OPTIONS* options = NULL,
+                                         const char* szCallId = NULL);
 
 /**
- * Placed the specified call on hold.
+ * Place the specified call on hold.  When placing calls on hold or
+ * having a remote party place you on hold the event sequeneces will
+ * differ.  In this documentation, we refer to "local" hold and/or 
+ * "focus" and "remote" and/or "full" hold.  A call is on local hold 
+ * when that call is taken out of focus and is no longer connected to
+ * the local microphone and speaker.  Remote hold is used to indicate 
+ * that RTP is no longer flowing between parties.  The "bRemoteStopAudio" 
+ * flags to this method controls whether the party is placed on local 
+ * hold or full hold.  See the table below for expected events:
+ *
+ *<pre>
+ *                   RTP Flowing  RTP Stopped
+ *                   ---------    -----------
+ *       In Focus    CONNECTED    REMOTE_HELD
+ *   Out of Focus     BRIDGED        HELD
+ *</pre>
+ *
+ * CONNECTED indicates that both RTP is flowing and the call is attached
+ *    to the local.  This is the normal state for a connected call.
+ *
+ * BRIDGED indicates that RTP is flowing, but the call is out of focus.
+ *    This event is generally caused by holding a conference (conference 
+ *    will bridge by default) or if you accept/place a new call without
+ *    explicitly holding the active call.
+ *
+ * REMOTE_HELD indicates that RTP has stopped flowing.  This is generally
+ *    caused when the remote side places you on hold.  The call is still
+ *    locally in focus and audio will automatically resume once your are 
+ *    take off remote hold.
+ *
+ * HELD indicates that both RTP has stopped flowing and the call is out
+ *    of focus.
+ *
+ * Developers can also expect media events (e.g. MEDIA_LOCAL_STOP) 
+ * whenever RTP is stopped (REMOTE_HELD and HELD).  Since media is still 
+ * flowing for CONNECTED and BRIDGED, no media stop events are sent.
+ *
+ * NOTE: If this call is part of a conference, sipxCallHold will only
+ *       change the remote held state (RTP).  You must use 
+ *       sipxConferenceHold to change call focus.
  *
  * @param hCall Handle to a call.  Call handles are obtained either by 
  *        invoking sipxCallCreate or passed to your application through
  *        a listener interface.
+ * @param bStopRemoteAudio Flag which controls whether sipXtapi takes
+ *        the call out of focus (stops engaging local audio microphone
+ *        and speaker) or stops sending/receiving audio.  Specify true
+ *        to stop audio (default) or false to take the call out of 
+ *        focus.  To play audio or generate tones to a remote connection
+ *        while on hold, please specify false.  This parameter is 
+ *        ignored (and assumed true) if the call is part of a conference.
  */ 
-SIPXTAPI_API SIPX_RESULT sipxCallHold(const SIPX_CALL hCall) ;
+SIPXTAPI_API SIPX_RESULT sipxCallHold(const SIPX_CALL hCall, 
+                                      bool bStopRemoteAudio = true) ;
 
 
 /**
- * Take the specified call off hold.
+ * Take the specified call off hold.  This API will take the call off
+ * both local hold and remote/full hold.
+ * 
+ * @see sipxCallHold for a description of expected events 
+ *      associated with hold events.
  *
  * @param hCall Handle to a call.  Call handles are obtained either by 
  *        invoking sipxCallCreate or passed to your application through
@@ -816,6 +1301,21 @@ SIPXTAPI_API SIPX_RESULT sipxCallGetRemoteContact(const SIPX_CALL hCall,
 
                                                            
 /**
+ * Get the remote user agent of the call represented by the specified call handle.
+ *
+ * @param hCall Handle to a call.  Call handles are obtained either by 
+ *        invoking sipxCallCreate or passed to your application through
+ *        a listener interface.
+ * @param szAgent Buffer to store the user agent name.  A zero-terminated string will be 
+ *        copied into this buffer on success.
+ * @param iMaxLength Max length of the buffer
+ */
+SIPXTAPI_API SIPX_RESULT sipxCallGetRemoteUserAgent(const SIPX_CALL hCall,
+                                                    char* szAgent, 
+                                                    const size_t iMaxLength) ;
+
+
+/**
  * Play a tone (DTMF, dialtone, ring back, etc) to the local and/or
  * remote party.  See the DTMF_ constants for built-in tones.
  *
@@ -833,7 +1333,9 @@ SIPXTAPI_API SIPX_RESULT sipxCallStartTone(const SIPX_CALL hCall,
 
 /**
  * Stop playing a tone (DTMF, dialtone, ring back, etc). to local
- * and remote parties.
+ * and remote parties.  Under a GIPS VoiceEngine build, this method 
+ * is a NOP -- VoiceEngine only plays tones for a specific time 
+ * interval.
  *
  * @param hCall Handle to a call.  Call handles are obtained either by 
  *        invoking sipxCallCreate or passed to your application through
@@ -843,29 +1345,7 @@ SIPXTAPI_API SIPX_RESULT sipxCallStopTone(const SIPX_CALL hCall) ;
 
 
 /**
- * Play the designed file.  The file may be a raw 16 bit signed PCM at
- * 8000 samples/sec, mono, little endian or a .WAV file.
- * 
- * @param hCall Handle to a call.  Call handles are obtained either by 
- *        invoking sipxCallCreate or passed to your application through
- *        a listener interface.  Audio files can only be played in the
- *        context of a call.
- * @param szFile Filename for the audio file to be played.
- * @param bLocal True if the audio file is to be rendered locally.
- * @param bRemote True if the audio file is to be rendered by the remote
- *                endpoint.
- * For backward compatibility.
- * @deprecated Use sipxCallPlayFileStart instead
- */
-SIPXTAPI_API SIPX_RESULT sipxCallPlayFile(const SIPX_CALL hCall, 
-                                          const char* szFile,
-                                          const bool bLocal,
-                                          const bool bRemote) ;
-
-/** VIDEO: sipxCallPlay APIs MUST be renamed to sipxCallAudioPlay */
-
-/**
- * Play the designed file.  The file may be a raw 16 bit signed PCM at
+ * Play the designated file.  The file may be a raw 16 bit signed PCM at
  * 8000 samples/sec, mono, little endian or a .WAV file.
  * 
  * @param hCall Handle to a call.  Call handles are obtained either by 
@@ -877,12 +1357,21 @@ SIPXTAPI_API SIPX_RESULT sipxCallPlayFile(const SIPX_CALL hCall,
  * @param bLocal True if the audio file is to be rendered locally.
  * @param bRemote True if the audio file is to be rendered by the remote
  *                endpoint.
+ * @param bMixWithMicrophone True to mix the audio with the microphone
+ *        data or false to replace it.  This option is only supported 
+ *        when sipXtapi is bundled with GIPS VoiceEngine.
+ * @param fVolumeScaling Volume down scaling for the audio file.  Valid 
+ *        values are between 0 and 1.0, where 1.0 is the no down-scaling.
+ *        This option is only supported when sipXtapi is bundled with GIPS
+ *        VoiceEngine.
  */
-SIPXTAPI_API SIPX_RESULT sipxCallPlayFileStart(const SIPX_CALL hCall, 
-                                               const char* szFile,
-                                               const bool bRepeat,
-                                               const bool bLocal,
-                                               const bool bRemote) ;
+SIPXTAPI_API SIPX_RESULT sipxCallAudioPlayFileStart(const SIPX_CALL hCall, 
+                                                    const char* szFile,
+                                                    const bool bRepeat,
+                                                    const bool bLocal,
+                                                    const bool bRemote,
+                                                    const bool bMixWithMicrophone = false,
+                                                    const float fVolumeScaling = 1.0) ;
 
 /**
  * Stop playing a file started with sipxCallPlayFileStart
@@ -892,7 +1381,35 @@ SIPXTAPI_API SIPX_RESULT sipxCallPlayFileStart(const SIPX_CALL hCall,
  *        a listener interface.  Audio files can only be played and stopped
  *        in the context of a call.
  */
-SIPXTAPI_API SIPX_RESULT sipxCallPlayFileStop(const SIPX_CALL hCall) ; 
+SIPXTAPI_API SIPX_RESULT sipxCallAudioPlayFileStop(const SIPX_CALL hCall) ; 
+
+
+/**
+ * Record a call session (including other parties if this is a multi-party 
+ * call / conference) to a file.  The resulting file will be a .WAV file
+ * with L16 encoding (16000 samples/per second).
+ *
+ * This API is only supported when sipXtapi is bundled with VoiceEngine from 
+ * GIPS. 
+ *
+ * @param hCall Handle to a call.  Call handles are obtained either by 
+ *        invoking sipxCallCreate or passed to your application through
+ *        a listener interface.  Audio files can only be played and stopped
+ *        in the context of a call.
+ * @param szFile Filename for the resulting audio file.
+ */
+SIPXTAPI_API SIPX_RESULT sipxCallAudioRecordFileStart(const SIPX_CALL hCall,
+                                                      const char* szFile) ;
+
+/**
+ * Stop recording a call to file.
+ *
+ * @param hCall Handle to a call.  Call handles are obtained either by 
+ *        invoking sipxCallCreate or passed to your application through
+ *        a listener interface.  Audio files can only be played and stopped
+ *        in the context of a call.
+ */
+SIPXTAPI_API SIPX_RESULT sipxCallAudioRecordFileStop(const SIPX_CALL hCall) ;
 
 
 /**
@@ -934,12 +1451,28 @@ SIPXTAPI_API SIPX_RESULT sipxCallPlayBufferStop(const SIPX_CALL hCall) ;
 
 
 /**
- * Subscribe for NOTIFY events which may be published by the other end-point of the Call.
+ * Subscribe for NOTIFY events which may be published by the other end-point 
+ * of the call.  This API differs from sipxConfigSubscribe in that it allows
+ * you to use the contact address from the remote party as the subscription
+ * target (see the bRemoteContactIsGruu parameter).
+ *
+ * sipXtapi will automatically refresh subscriptions until sipxCallUnsubscribe
+ * is called.  Please make sure you call sipxCallUnsubscribe before tearing 
+ * down your call.
  *
  * @param hCall The call handle of the call associated with the subscription.
- * @param szEventType A string representing the type of event that can be published.
- * @param szAcceptType A string representing the types of NOTIFY events that this client will accept.
- * @param phSub Pointer to a subscription handle whose value is set by this funtion.
+ * @param szEventType A string representing the type of event that can be 
+ *        published.  This string is used to populate the "Event" header in
+ *        the SIP SUBSCRIBE request.  For example, if checking voicemail 
+ *        status, your would use "message-summary".
+ * @param szAcceptType A string representing the types of NOTIFY events that 
+ *        this client will accept.  This string is used to populate the 
+ *        "Accept" header in the SIP SUBSCRIBE request.  For example, if
+ *        checking voicemail status, you would use 
+ *        "application/simple-message-summary"
+ * @param phSub Pointer to a subscription handle whose value is set by this 
+ *        funtion.  This handle allows you to cancel the subscription and
+ *        differeniate between NOTIFY events.
  * @param bRemoteContactIsGruu indicates whether the Contact for the remote 
  *        side of the call can be assumed to be a Globally Routable Unique URI
  *        (GRUU).  Normally one cannot assume that a contact is a GRUU and the
@@ -953,17 +1486,25 @@ SIPXTAPI_API SIPX_RESULT sipxCallSubscribe(const SIPX_CALL hCall,
                                            bool bRemoteContactIsGruu = false);
 
 /**
- * Unsubscribe from previously subscribed NOTIFY events.
+ * Unsubscribe from previously subscribed NOTIFY events.  This method will
+ * send another subscription request with an expires time of 0 (zero) to end
+ * your subscription.  
  *
- * @param hSub The subscription handle obtained from the call to sipXCallSubscribe.
+ * @param hSub The subscription handle obtained from the call to 
+ *             sipxCallSubscribe.
  */                                          
 SIPXTAPI_API SIPX_RESULT sipxCallUnsubscribe(const SIPX_SUB hSub) ;
 
 
 /**
- * Sends an INFO event to the other end-point(s) on a Call.
+ * Sends an INFO event to the specified call.  
+ *
+ * This method will fail with an SIPX_RESULT_INVALID_STATE return code 
+ * if an existing INFO message transaction is still outstanding (sipXtapi 
+ * has not received a final response to the initial request).
  * 
- * @param phInfo Pointer to an INFO message handle, whose value is set by this method.
+ * @param phInfo Pointer to an INFO message handle, whose value is set by 
+ *        this method.
  * @param hCall Handle to a call.  Call handles are obtained either by 
  *        invoking sipxCallCreate or passed to your application through
  *        a listener interface.
@@ -982,6 +1523,78 @@ SIPXTAPI_API SIPX_RESULT sipxCallSendInfo(SIPX_INFO* phInfo,
  * TRANSFER state events for details on the transfer attempt.  If the
  * call is not already on hold, the party will be placed on hold.
  *
+ * Assuming that all parties are using sipXtapi, all of the calls
+ * are active (not held), and the transfer works, you should expect the 
+ * following event sequence:
+ *
+ * <h3>Transferee (party being transfered):</h3>
+ *
+ * The transferee's original call will be placed on remote hold from the 
+ * transfer controller and will then put itself on full hold before starting
+ * the transfer.  The transfer is implemented as a new call -- this allows
+ * the developer to reclaim the original call if the transfer fails.  The 
+ * NEWCALL event will include a cause for of CALLSTATE_CAUSE_TRANSFER and
+ * the hAssociatedCall member of the SIPX_CALLSTATE_INFO structure will
+ * include the handle of the original call.
+ *
+ * <pre>
+ * Original Call: MEDIA_LOCAL_STOP
+ * Original Call: MEDIA_REMOTE_STOP
+ * Original Call: CALLSTATE_REMOTE_HELD
+ * Original Call: CALLSTATE_HELD
+ *
+ * New Call: CALLSTATE_NEWCALL
+ * New Call: CALLSTATE_REMOTE_OFFERING
+ * New Call: CALLSTATE_REMOTE_ALERTING
+ * New Call: CALLSTATE_CONNECTED
+ * New Call: MEDIA_LOCAL_START
+ * New Call: MEDIA_REMOTE_START
+ * </pre>
+ *
+ * After the transfer completes, the application developer must destroy 
+ * the original call using sipxCallDestroy.  If the new call fails for
+ * any reason, the application layer should resume the original call by
+ * taking it off hold.
+ *
+ * <h3>Transfer Controller (this user agent):</h3>
+ *
+ * The transfer controller will automatically take the call out of 
+ * focus and place it on hold.  Afterwards, the transfer controller
+ * will receive CALLSTATE_TRANSFER_EVENTs indicating the status of
+ * the transfer.
+ *
+ * <pre>
+ * Source Call: CALLSTATE_TRANSFER_EVENT::CALLSTATE_CAUSE_TRANSFER_INITIATED
+ * Source Call: CALLSTATE_BRIDGED
+ * Source Call: CALLSTATE_HELD
+ * Source Call: MEDIA_CAUSE_HOLD
+ * Source Call: MEDIA_CAUSE_HOLD
+ * Source Call: CALLSTATE_TRANSFER_EVENT::CALLSTATE_CAUSE_TRANSFER_ACCEPTED
+ * Source Call: CALLSTATE_TRANSFER_EVENT::CALLSTATE_CAUSE_TRANSFER_RINGING
+ * Source Call: CALLSTATE_TRANSFER_EVENT::CALLSTATE_CAUSE_TRANSFER_SUCCESS
+ * Source Call: CALLSTATE_DISCONNECTED
+ * </pre>
+ *
+ * Upon success, the call will automatically be disconnected, however,
+ * the application layer needs to call sipXcallDestroy to free the handle
+ * and call processing resources.
+ *
+ * <h3>Transfer Target (identified by szAddress):</h3>
+ *
+ * The transferee will go through the normal event progression for an incoming
+ * call:
+ *
+ * <pre>
+ * New Call: CALLSTATE_NEWCALL
+ * New Call: CALLSTATE_OFFERING
+ * New Call: CALLSTATE_ALERTING
+ * New Call: CALLSTATE_CONNECTED
+ * </pre>
+ *
+ * If the transfer target rejects the call or fails to answer, the transfer 
+ * will fail.
+ *
+ *
  * @param hCall Handle to a call.  Call handles are obtained either by 
  *        invoking sipxCallCreate or passed to your application through
  *        a listener interface.
@@ -997,14 +1610,95 @@ SIPXTAPI_API SIPX_RESULT sipxCallBlindTransfer(const SIPX_CALL hCall,
 /**
  * Transfer the source call to the target call.  This method can be used
  * to implement consultative transfer (transfer initiator can speak with 
- * the transfer target prior to transferring.  If you wish to consult 
+ * the transfer target prior to transferring).  If you wish to consult 
  * privately, create a new call to the transfer target.  If you wish 
  * consult and allow the source (transferee) to participant in the 
  * converstation, create a conference and then transfer one leg to 
  * another.
  *
- * If not already on hold, parties are placed on hold as part of the
- * transfer operation.
+ * If not already on hold, the transferee (hSourceCall) is placed on 
+ * hold as part of the transfer operation.
+ *
+ * The event sequence may differ slightly depending on whether the calls
+ * are part of a conference (attended transfer) or individual calls (semi-
+ * attended transfer).
+ *
+ * Assuming the calls are part of a conference and not on hold, the event
+ * sequences are as follows:
+ *
+ * <h3>Transfer Controller (this user agent):</h3>
+ *
+ * <pre>
+ * Source Call: CALLSTATE_TRANSFER_EVENT::CALLSTATE_CAUSE_TRANSFER_INITIATED
+ * Source Call: CALLSTATE_REMOTE_HELD
+ * Source Call: MEDIA_LOCAL_STOP
+ * Source Call: MEDIA_REMOTE_STOP
+ * Source Call: CALLSTATE_TRANSFER_EVENT::CALLSTATE_CAUSE_TRANSFER_ACCEPTED
+ * Source Call: CALLSTATE_TRANSFER_EVENT::CALLSTATE_CAUSE_TRANSFER_SUCCESS
+ * Source Call: CALLSTATE_TRANSFER_EVENT::CALLSTATE_DISCONNECTED
+ * Source Call: CALLSTATE_TRANSFER_EVENT::CALLSTATE_DESTROYED
+ * </pre>
+ *
+ * The source call will automatically be disconnected if the transfer is 
+ * successful.  Also, if the source call is part of a conference, the call 
+ * will automatically be destroyed.  If not part of a conference, the 
+ * application must destroy the call using sipxCallDestroy.
+ *
+ * <pre>
+ * Target Call: CALLSTATE_REMOTE_HELD
+ * Target Call: MEDIA_LOCAL_STOP
+ * Target Call: MEDIA_REMOTE_STOP
+ * Target Call: CALLSTATE_DISCONNECTED
+ * Target Call: CALLSTATE_DESTROYED
+ * </pre>
+ * 
+ * The target call is remote held as part of the transfer operation.  If the
+ * target call is part of a conference, it will automatically be destroyed.
+ * Otherwise, the application layer is responsible for calling 
+ * sipxCallDestroy.
+ *
+ * <h3>Transferee (user agent on other side of hSourceCall):</h3>
+ *
+ * The transferee will create a new call to the transfer target and 
+ * automatically disconnect the original call upon success.  The new call
+ * will be created with a cause of CALLSTATE_CAUSE_TRANSFER in the
+ * SIPX_CALLSTATE_INFO event data.  The application layer can look at
+ * the hAssociatedCall member to connect the new call to the original
+ * call. 
+ *
+ * <pre>
+ * Original Call: MEDIA_LOCAL_STOP
+ * Original Call: MEDIA_REMOTE_STOP
+ * Original Call: CALLSTATE_REMOTE_HELD
+ * Original Call: CALLSTATE_HELD
+ * Original Call: CALLSTATE_DISCONNECTED
+ *
+ * New Call: CALLSTATE_NEWCALL::CALLSTATE_CAUSE_TRANSFER
+ * New Call: CALLSTATE_REMOTE_OFFERING
+ * New Call: CALLSTATE_CONNECTED
+ * New Call: MEDIA_LOCAL_START
+ * New Call: MEDIA_REMOTE_START
+ * </pre>
+ *
+ * The application is responsible for calling sipxCallDestroy on the original
+ * call after the CALLSTATE_DISCONNECT event.
+ *
+ * <h3>Transfer Target (user agent on other side of hTargetCall):</h3>
+ *
+ * The transfer target will automatically receive and answer the inbound call 
+ * from the transferee.  After this completes, the original call is 
+ * disconnected.
+ *
+ * <pre>
+ * CALLSTATE_NEWCALL::CALLSTATE_CAUSE_TRANSFERRED
+ * CALLSTATE_CONNECTED
+ * MEDIA_LOCAL_START
+ * MEDIA_REMOTE_START
+ * </pre>
+ *
+ * Please note that no offering event was fired.  The target does not have
+ * the option to accept or reject the call.  If this call was part of a 
+ * conference, the new call is automatically added to the same conference.
  *
  * @param hSourceCall Handle to the source call (transferee).
  * @param hTargetCall Handle to the target call (transfer target).
@@ -1014,6 +1708,129 @@ SIPXTAPI_API SIPX_RESULT sipxCallBlindTransfer(const SIPX_CALL hCall,
  */
 SIPXTAPI_API SIPX_RESULT sipxCallTransfer(const SIPX_CALL hSourceCall,
                                           const SIPX_CALL hTargetCall) ;
+
+#ifdef VIDEO
+
+/**
+ * Updates the Video window with a new frame buffer.  Should be called
+ * when the window receives a PAINT message.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param hWnd Window handle of the video preview window.
+ */
+SIPXTAPI_API SIPX_RESULT sipxCallUpdateVideoWindow(const SIPX_CALL hCall, const SIPX_WINDOW_HANDLE hWnd);
+
+
+/**
+ * Resizes the video window.  Should be called when the window receives a SIZE message.
+ *
+ * @param hCall Handle to a call.  Call handles are obtained either by 
+ *        invoking sipxCallCreate or passed to your application through
+ *        a listener interface.
+ * @param hWnd Window handle of the video window.
+ */
+SIPXTAPI_API SIPX_RESULT sipxCallResizeWindow(const SIPX_CALL hCall, const SIPX_WINDOW_HANDLE hWnd);
+
+#endif
+
+
+/**
+ * Gets energy levels for a call.  The call must be in the connected state
+ * for this request to succeed.
+ *
+ * This API is only supported when sipXtapi is bundled with VoiceEngine from 
+ * GIPS.
+ *
+ * @param hCall Handle to a call.  Call handles are obtained either by 
+ *        invoking sipxCallCreate or passed to your application through
+ *        a listener interface.
+ * @param iInputEnergyLevel Input/Microphone energy level ranging from 0 to 9.
+ * @param iOutputEnergyLevel Output/Speaker energy level ranging from 0 to 9. 
+ *        The output energy level is pre-mixed (before mixing any files/tones or
+ *        other parties).  sipxConferenceGetEnergyLevels provides an API to
+ *        obtain post-mixed energy levels.
+ * @param nMaxContributors Max number of contributors/energy levels.  
+ *        Contributors are derived by looking at the contributing RTP source
+ *        IDs from the RTP stream.
+ * @param CCSRCs Array of contributing source ids.  This array will be filled 
+ *        in up to a max of nMaxContributors.  See nActualContributors for
+ *        the actual number of elements returned.
+ * @param iEnergyLevels Energy level for each contributing source id ranging 
+ *        from 0 to 9.  This array in up to a max of nMaxContributors.  See 
+ *        nActualContributors for the actual number of elements returned.
+ * @param nActualContributors The actual number of contributing source ids and
+ *        energy levels returned.
+ */
+SIPXTAPI_API SIPX_RESULT sipxCallGetEnergyLevels(const SIPX_CALL hCall,
+                                                 int&            iInputEnergyLevel,
+                                                 int&            iOutputEnergyLevel,
+                                                 const size_t    nMaxContributors,
+                                                 unsigned int    CCSRCs[],
+                                                 int             iEnergyLevels[],
+                                                 size_t&         nActualContributors) ;
+
+/** 
+ * Gets the sending and receiving Audio RTP SSRC IDs.  The SSRC ID is used to 
+ * identify the RTP/audio stream.  The call must be in the connected state
+ * for this request to succeed.
+ *
+ * This API is only supported when sipXtapi is bundled with VoiceEngine from 
+ * GIPS.
+ *
+ * @param hCall Handle to a call.  Call handles are obtained either by 
+ *        invoking sipxCallCreate or passed to your application through
+ *        a listener interface.
+ * @param iSendSSRC The RTP SSRC used when sending audio
+ * @param iReceiveSSRC The RTP SSRC used by the remote party to sending audio
+ */
+SIPXTAPI_API SIPX_RESULT sipxCallGetAudioRtpSourceIds(const SIPX_CALL hCall,
+                                                      unsigned int& iSendSSRC,
+                                                      unsigned int& iReceiveSSRC)  ;
+
+/**
+ * Obtain RTCP stats for the specified call.
+ *
+ * This API is only supported when sipXtapi is bundled with VoiceEngine from 
+ * GIPS.
+ *
+ * @param hCall Handle to a call.  Call handles are obtained either by 
+ *        invoking sipxCallCreate or passed to your application through
+ *        a listener interface.
+ *
+ * @param pStats Structure to place call stats, the structure's cbSize 
+ *        member must be filled out prior to calling this API.  For example:
+ *        myStats.cbSize = sizeof(SIPX_RTCP_STATS);
+ */
+SIPXTAPI_API SIPX_RESULT sipxCallGetAudioRtcpStats(const SIPX_CALL hCall,
+                                                   SIPX_RTCP_STATS* pStats) ;
+
+/**
+ * Limits the codec preferences on a per-call basis.  This API will force a 
+ * codec renegotiation with the specified call regardless if the codecs 
+ * changed.  A renegotiation includes sending a new INVITE with an updated SDP
+ * list.  Local audio will be stopped and restarted during this process, 
+ * however, hold events are not sent to the application.
+ *
+ * NOTE: If a call is on remote hold, it will be taken off remote hold.
+ *
+ * @param hCall Handle to a call.  Call handles are obtained either by 
+ *        invoking sipxCallCreate or passed to your application through
+ *        a listener interface.
+ * @param audioBandwidth A bandwidth id to limit audio codecs. Pass in
+ *        AUDIO_CODEC_BW_DEFAULT to leave audio codecs unchanged.
+ * @param videoBandwidth A bandwidth id to limit video bitrate and framerate.
+ *        (see sipxConfigSetVideoBandwidth for an explanation on how 
+ *        bandwidth ids affect bitrate and framerate). Pass in AUDIO_CODEC_BW_DEFAULT
+ *        to leave these parameters unchanged.
+ * @param szVideoCodecName Codec name that limits the supported video codecs
+ *        to this one video codec.
+ *        
+ * @see sipxConfigSetVideoBandwidth
+ */
+SIPXTAPI_API SIPX_RESULT sipxCallLimitCodecPreferences(const SIPX_CALL hCall,
+                                                       const SIPX_AUDIO_BANDWIDTH_ID audioBandwidth,
+                                                       const SIPX_VIDEO_BANDWIDTH_ID videoBandwidth,
+                                                       const char* szVideoCodecName);
 
 //@}
 
@@ -1161,15 +1978,30 @@ SIPXTAPI_API SIPX_RESULT sipxConferenceSplit(const SIPX_CONF hConf,
  *         (e.g. LOCAL contact of 10.1.1.x or 
  *        192.168.x.x), the NAT-derived address to the target party,
  *        or, local contact addresses of other types.
- * @param pDislay Pointer to an object describing the display object for 
+ * @param pDisplay Pointer to an object describing the display object for 
  *        rendering remote video.
+ * @param pSecurity Pointer to an object describing the security attributes 
+ *        for the call.
+ * @param bTakeFocus Should SIPxua place the newly answered call in focus
+ *        (engage local microphone and speaker).  In some cases, application
+ *        developer may want to answer the call in the background and play
+ *        audio while the user finishes up with their active (in focus) call.
+ * @param options Pointer to a SIPX_CALL_OPTIONS structure.
+ *
+ * @see sipxConferenceCreate
+ * @see sipxConfigSetLocationHeader
+ * @see sipxConfigGetLocalContacts
+ * @see sipxConfigSetAudioCodecPreferences
  */
 SIPXTAPI_API SIPX_RESULT sipxConferenceAdd(const SIPX_CONF hConf,
                                            const SIPX_LINE hLine,
                                            const char* szAddress,
                                            SIPX_CALL* phNewCall,
                                            SIPX_CONTACT_ID contactId = 0,
-                                           SIPX_VIDEO_DISPLAY* const pDisplay = NULL);
+                                           SIPX_VIDEO_DISPLAY* const pDisplay = NULL,
+                                           SIPX_SECURITY_ATTRIBUTES* const pSecurity = NULL,
+                                           bool bTakeFocus = true,
+                                           SIPX_CALL_OPTIONS* options = NULL);
 
 /**
  * Removes a participant from conference by hanging up on them.
@@ -1198,10 +2030,19 @@ SIPXTAPI_API SIPX_RESULT sipxConferenceGetCalls(const SIPX_CONF hConf,
                                                 size_t& nActual) ;
 
 /**
- * Puts conference members on hold.  Either a bridging conference hold
- * (conference members can talk to each other while on hold), or
- * a non-bridging conference hold (conference members cannot talk to 
- * anyone while on hold).
+ * Places a conference on hold.  This API can be used to place a 
+ * conference on local hold (continue to bridge participants) or full hold
+ * (remaining participants cannot talk to each other).   The default is
+ * local hold/bridged.  The bBridged flag can be used to change this
+ * behavior (false for full hold).
+ *
+ * Developers may also hold/unhold individual conference participants by
+ * calling sipxCallHold and sipxCallUnhold on individual call handles.  The
+ * sipxConferenceGetCalls API can be used to enumerate conference 
+ * participants.
+ *
+ * @see sipxCallHold for a description of the expected
+ *      events.
  *
  * @param hConf Handle to a conference.  Conference handles are obtained 
  *        by invoking sipxConferenceCreate.
@@ -1212,14 +2053,47 @@ SIPXTAPI_API SIPX_RESULT sipxConferenceHold(const SIPX_CONF hConf,
                                             bool bBridging = true);
                                             
 /**
- * Removes conference members from a held state.
+ * Removes conference members from a held state.  This method will take a call
+ * off either local or remote/full hold.
  *
- * @deprecated Still under development
+ * @see sipxConferenceHold for details on holding 
+ *      conferences.
+ * @see sipxCallHold for a description of the expected
+ *      events.
  *
  * @param hConf Handle to a conference.  Conference handles are obtained 
  *        by invoking sipxConferenceCreate.
  */
 SIPXTAPI_API SIPX_RESULT sipxConferenceUnhold(const SIPX_CONF hConf);
+
+
+/**
+ * Play the designated audio file to all conference partipants and/or the 
+ * local speaker.  The file may be a raw 16 bit signed PCM at 8000 
+ * samples/sec, mono, little endian or a .WAV file.
+ * 
+ * @param hConf Conference handle obtained by calling sipxConferenceCreate.
+ * @param szFile Filename for the audio file to be played.
+ * @param bRepeat True if the file is supposed to be played repeatedly
+ * @param bLocal True if the audio file is to be rendered locally.
+ * @param bRemote True if the audio file is to be rendered by the remote
+ *                endpoint.
+ */
+
+SIPXTAPI_API SIPX_RESULT sipxConferencePlayAudioFileStart(const SIPX_CONF hConf, 
+                                                          const char* szFile,
+                                                          const bool bRepeat,
+                                                          const bool bLocal,
+                                                          const bool bRemote) ;
+
+
+/*
+ * Stop playing a file started with sipxConferencePlayAudioFileStart
+ * 
+ * @param hConf Conference handle obtained by calling sipxConferenceCreate.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConferencePlayAudioFileStop(const SIPX_CONF hConf) ;
+
 
 /**
  * Destroys a conference.  All participants within a conference are
@@ -1230,6 +2104,54 @@ SIPXTAPI_API SIPX_RESULT sipxConferenceUnhold(const SIPX_CONF hConf);
  */ 
 SIPXTAPI_API SIPX_RESULT sipxConferenceDestroy(SIPX_CONF hConf) ;
 
+
+/**
+ * Gets energy levels for a conference.  The conference must be in the 
+ * connected state (not held or bridged) for this request to succeed.
+ *
+ * This API is only supported when sipXtapi is bundled with VoiceEngine from 
+ * GIPS.
+ *
+ * @param hConf Handle to a conference.  Conference handles are obtained 
+ *        by invoking sipxConferenceCreate.
+ * @param iInputEnergyLevel Input/Microphone energy level ranging from 0 to 9.
+ * @param iOutputEnergyLevel Output/Speaker energy level ranging from 0 to 9. 
+ *        The output energy level is post-mixed (after mixing all files/tones
+ *        and other parties.  sipxCallGetEnergyLevel provides an API to obtain
+ *        pre-mixed energy levels.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConferenceGetEnergyLevels(const SIPX_CONF hConf,
+                                                       int&            iInputEnergyLevel,
+                                                       int&            iOutputEnergyLevel) ;
+
+
+
+/**
+ * Limits the codec preferences on a conference.  This API will force a 
+ * codec renegotiation with the specified calls regardless if the codecs 
+ * changed.  A renegotiation includes sending a new INVITE with an updated SDP
+ * list.  Local audio will be stopped and restarted during this process, 
+ * however, hold events are not sent to the application.
+ *
+ * NOTE: If any calls are on remote hold, they will be taken off hold.
+ *
+ * @param hConf Handle to a conference.  Conference handles are obtained 
+ *        by invoking sipxConferenceCreate.
+ * @param audioBandwidth A bandwidth id to limit audio codecs. Pass in
+ *        AUDIO_CODEC_BW_DEFAULT to leave audio codecs unchanged.
+ * @param videoBandwidth A bandwidth id to limit video bitrate and framerate.
+ *        (see sipxConfigSetVideoBandwidth for an explanation on how 
+ *        bandwidth ids affect bitrate and framerate). Pass in AUDIO_CODEC_BW_DEFAULT
+ *        to leave these parameters unchanged.
+ * @param szVideoCodecName Codec name that limits the supported video codecs
+ *        to this one video codec.
+ *        
+ * @see sipxConfigSetVideoBandwidth
+ */
+SIPXTAPI_API SIPX_RESULT sipxConferenceLimitCodecPreferences(const SIPX_CONF hConf,
+                                                             const SIPX_AUDIO_BANDWIDTH_ID audioBandwidth,
+                                                             const SIPX_VIDEO_BANDWIDTH_ID videoBandwidth,
+                                                             const char* szVideoCodecName) ;
 //@}
 
 /** @name Audio Methods */
@@ -1333,24 +2255,83 @@ SIPXTAPI_API SIPX_RESULT sipxAudioGetVolume(const SIPX_INST hInst,
 
 
 /**
- * Enables or disables Acoustic Echo Cancellation (AEC).
+ * Enables or disables Acoustic Echo Cancellation (AEC).  By default, sipXtapi
+ * assumes SIPX_AEC_CANCEL_AUTO.  Change this parameter will modify the policy 
+ * for both existing and new calls.
+ *
+ * Note: This API is only supported when bundled with VoiceEngine from 
+ * Global IP Sound.
  *
  * @param hInst Instance pointer obtained by sipxInitialize.
- * @param enable True if AEC is to be enabled and false if 
- *        AEC is to be disabled.
+ * @param mode AEC mode.
+ *
+ * @see SIPX_AEC_MODE
  */
-SIPXTAPI_API SIPX_RESULT sipxAudioEnableAEC(const SIPX_INST hInst,
-                                            const bool enable) ;
+SIPXTAPI_API SIPX_RESULT sipxAudioSetAECMode(const SIPX_INST hInst,
+                                             const SIPX_AEC_MODE mode) ;
 
 
 /**
- * Gets the enabled or disabled state of Acoustic Echo Cancellation (AEC).
+ * Get the mode of Acoustic Echo Cancellation (AEC).
+ *
+ * Note: This API is only supported when bundled with GIPS VoiceEngine.
  *
  * @param hInst Instance pointer obtained by sipxInitialize.
- * @param enabled True if AEC is enabled and false if AEC is disabled.
+ * @param mode AEC mode.
  */
-SIPXTAPI_API SIPX_RESULT sipxAudioIsAECEnabled(const SIPX_INST hInst,
-                                               bool& enabled) ;
+SIPXTAPI_API SIPX_RESULT sipxAudioGetAECMode(const SIPX_INST hInst,
+                                             SIPX_AEC_MODE&  mode) ;
+
+
+/**
+ * Enable/Disable Automatic Gain Control (AGC).  By default, AGC is disabled.
+ *
+ * Note: This API is only supported when bundled with GIPS VoiceEngine.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize.
+ * @param bEnable true to enable AGC or false to disable
+ */
+SIPXTAPI_API SIPX_RESULT sipxAudioSetAGCMode(const SIPX_INST hInst,
+                                             const bool bEnable) ;
+
+/**
+ * Get the enable/disable state of Automatic Gain Control (AGC).
+ * Note: This API is only supported when bundled with GIPS VoiceEngine.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize.
+ * @param bEnabled true if AGC is enabled; otherwise false.
+ */
+SIPXTAPI_API SIPX_RESULT sipxAudioGetAGCMode(const SIPX_INST hInst,
+                                             bool& bEnabled) ;
+
+
+/**
+ * Set the noise reduction mode/policy for suppressing background noise.  By
+ * default sipXtapi assumes SIPX_NOISE_REDUCTION_LOW.  Change this parameter
+ * will modify the policy for both existing and new calls.
+ *
+ * Note: This API is only supported when bundled with VoiceEngine from 
+ * Global IP Sound.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize.
+ * @param mode noise reduction mode.
+ *
+ * @see SIPX_NOISE_REDUCTION_MODE
+ */
+SIPXTAPI_API SIPX_RESULT sipxAudioSetNoiseReductionMode(const SIPX_INST hInst,
+                                                        const SIPX_NOISE_REDUCTION_MODE mode) ;
+
+
+/**
+ * Get the mode/policy for Noise Reduction (NR).
+ *
+ * Note: This API is only supported when bundled with GIPS VoiceEngine.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize.
+ * @param mode noise reduction mode.
+ */
+SIPXTAPI_API SIPX_RESULT sipxAudioGetNoiseReductionMode(const SIPX_INST hInst,
+                                                        SIPX_NOISE_REDUCTION_MODE& mode) ;
  
 /**
  * Get the number of input devices available on this system.
@@ -1423,8 +2404,6 @@ SIPXTAPI_API SIPX_RESULT sipxAudioSetCallOutputDevice(const SIPX_INST hInst,
                                                       const char* szDevice) ;
 
 
-/** VIDEO: Add Video config stuff here */
-
 //@}
 /** @name Line / Identity Methods*/
 //@{
@@ -1451,6 +2430,8 @@ SIPXTAPI_API SIPX_RESULT sipxAudioSetCallOutputDevice(const SIPX_INST hInst,
  *         (e.g. LOCAL contact of 10.1.1.x or 
  *        192.168.x.x), the NAT-derived address to the target party,
  *        or, local contact addresses of other types.
+ *
+ * @see sipxConfigGetLocalContacts
  */
 SIPXTAPI_API SIPX_RESULT sipxLineAdd(const SIPX_INST hInst,
                                      const char* szLineURL,
@@ -1472,15 +2453,21 @@ SIPXTAPI_API SIPX_RESULT sipxLineAdd(const SIPX_INST hInst,
  * callbacks.
  *
  * Line aliases are not used for outbound calls.
+ *
+ * @see sipxConfigGetLocalContacts
  */
 SIPXTAPI_API SIPX_RESULT sipxLineAddAlias(const SIPX_LINE hLine, const char* szLineURL) ;
 
 /**
- *  Registers a line with the proxy server.  Registrations will be re-registered
- *  automatically, before they expire.  
- *  Unless your user agent is designated a static IP 
- *        address or DNS name and that routing information is provisioned
- *        into a SIP server, you should register the line by calling this function.
+ * Registers a line with the proxy server.  Registrations will be re-registered
+ * automatically, before they expire.
+ *
+ * Unless your user agent is designated a static IP address or DNS name and 
+ * that routing information is provisioned into a SIP server, you should 
+ * register the line by calling this function.
+ *
+ * Please unregister your line before calling sipxLineRemove.
+ *
  * @param hLine Handle to a line appearance.  Line handles are obtained by
  *        creating a line using the sipxLineAdd function or by receiving
  *        a line event notification.
@@ -1489,14 +2476,16 @@ SIPXTAPI_API SIPX_RESULT sipxLineAddAlias(const SIPX_LINE hLine, const char* szL
 SIPXTAPI_API SIPX_RESULT sipxLineRegister(const SIPX_LINE hLine, const bool bRegister);
 
 /**
- * Remove the designated line appearence.
+ * Remove the designated line appearence.  If the line was previous registered 
+ * using the sipxLineRegister API, please unregister the line and wait for the
+ * unregistered event before calling sipxLineRemove.  Otherwise, the line will
+ * be removed without unregistering.  
  *
  * @param hLine Handle to a line appearance.  Line handles are obtained by
  *        creating a line using the sipxLineAdd function or by receiving
  *        a line event notification.
  */ 
 SIPXTAPI_API SIPX_RESULT sipxLineRemove(SIPX_LINE hLine) ;
-
 
 /**
  * Adds authentication credentials to the designated line appearance.  
@@ -1593,6 +2582,19 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetLogCallback(sipxLogCallback pCallback);
 
 
 /**
+ * Enables GIPS tracing in sipXtapi (if bundled with sipXtapi).  Log entries
+ * are under the facility "VIDEOENGINE" and "VOICEENGINE" and are Base64 
+ * encoded (to avoid issues with binary data.
+ *
+ * NOTE: Tracing must be enabled prior to setting up a call.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize.
+ * @param bEnable true to enable GIPS tracing or false to disable.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableGIPSTracing(SIPX_INST hInst, 
+                                                     bool bEnable) ;
+
+/**
  * Designate a callback routine as a microphone replacement or supplement.  
  * The callback is invoked with microphone data and the data can be reviewed,
  * modified, replaced, or discarded.
@@ -1667,6 +2669,18 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetOutboundProxy(const SIPX_INST hInst,
 SIPXTAPI_API SIPX_RESULT sipxConfigSetDnsSrvTimeouts(const int initialTimeoutInSecs, 
                                                      const int retries) ;
 
+
+/**
+ * Specifies the time to wait for a REGISTER response before sending a 
+ * LINESTATE_REGISTER_FAILED (or LINESTATE_UNREGISTER_FAILED) message.
+ * If not set, the user-agent will use a 4 second timeout.
+ * 
+ * @param hInst Instance pointer obtained by sipxInitialize.
+ * @param seconds The number of seconds to wait for a REGISTER response,
+                  before it is considered a failure.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetRegisterResponseWaitSeconds(const SIPX_INST hInst,
+                                                                  const int seconds);   
 /**
  * Specifies the time to wait before trying the next DNS SRV record.  The user
  * agent will attempt to obtain DNS SRV resolutions for the child DNS SRV 
@@ -1726,60 +2740,195 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetSubscribeExpiration(const SIPX_INST hInst,
  * setup should not effect the media path of existing calls.  The "contact"
  * address uses for UDP signaling may change on the next request.
  *
+ * TODO :: STUN conforms to IETF RFC/DRAFT XXXX with the following exceptions:
+ *
  * @param hInst Instance pointer obtained by sipxInitialize
  * @param szServer The stun server that should be used for discovery.
- * @param iKeepAliveSecs This setting controls how often to refresh the stun
+ * @param iServerPort The port of the stun server that should be used for 
+ *        discovery.
+ * @param iKeepAliveInSecs This setting controls how often to refresh the stun
  *        binding.  The most aggressive NAT/Firewall solutions free port 
  *        mappings after 30 seconds of non-use.  We recommend a value of 28 
  *        seconds to be safe.
- * @param stunOptions This setting is used to modify the bahavior the STUN
- *        client when using STUN to discover its public IP address.  See
- *        the SIPX_STUN defines for details.  Multiple options can be 
- *        combined using "|".  For example: 
- *        SIPX_STUN_CHANGE_PORT | SIPX_STUN_CHANGE_ADDRESS
  *         
- * @see SIPX_STUN_NORMAL
- * @see SIPX_STUN_CHANGE_PORT
- * @see SIPX_STUN_CHANGE_ADDRESS 
  */
 SIPXTAPI_API SIPX_RESULT sipxConfigEnableStun(const SIPX_INST hInst,
                                               const char* szServer, 
-                                              int iKeepAliveSecs,
-                                              int stunOptions = SIPX_STUN_NORMAL) ;
+                                              int iServerPort,
+                                              int iKeepAliveInSecs) ;
 
 /**
  * Disable the use of STUN.  See sipxConfigEnableStun for details on STUN.
  *
- * @param hInst Instance pointer obtained by sipxInitialize
+ * @param hInst Instance pointer obtained by sipxInitialize.
  */
 SIPXTAPI_API SIPX_RESULT sipxConfigDisableStun(const SIPX_INST hInst) ;
 
 
 /**
- * Enable/disable sending of out-of-band DTMF tones. If disabled the tones
- * will be sent inband.
+ * Enable TURN for support for UDP audio/video (RTP).  TURN allows VoIP
+ * communications while operating behind a symmetric NAT or firewall (cannot 
+ * only receive data from the same IP/port that you have sent to).
+ *
+ * This implementation is based on draft-rosenberg-midcom-turn-04.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize.
+ * @param szServer The TURN server that should be used for relaying.
+ * @param iServerPort The TURN sever port that should be used for relaying
+ * @param szUsername TURN username for authentication
+ * @param szPassword TURN password for authentication
+ * @param iKeepAliveInSecs This setting controls how often to refresh the TURN
+ *        binding.  The recommended value is 28 seconds.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableTurn(const SIPX_INST hInst,
+                                              const char*     szServer,
+                                              const int       iServerPort,
+                                              const char*     szUsername,
+                                              const char*     szPassword,
+                                              const int       iKeepAliveInSecs) ;
+
+/**
+ * Disable the use of TURN.  See sipxConfigEnableTurn for details TURN.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigDisableTurn(const SIPX_INST hInst) ;
+
+
+/**
+ * Enables an ICE-like mechanism for determining connecticity of remote 
+ * parties dynamically.  By default, ICE is disabled.
+ * 
+ * The current sipXtapi implementation is a bastardization of 
+ * draft-ietf-mmusic-ice-04.  In subsequent release, this will
+ * conform to draft-ietf-mmusic-ice-05 or the latest draft.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableIce(const SIPX_INST hInst) ;
+
+
+/**
+ * Disable the use of ICE.  See sipxConfigEnableICE for details.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigDisableIce(const SIPX_INST hInst) ;
+
+
+/**
+ * Add a signaling keep alive to a remote ip address.  
  *
  * @param hInst Instance pointer obtained by sipxInitialize
- * @param enable Enable or disable out-of-band DTMF tones.
+ * @param contactId Contact ID used for the keep alive.  sipXtapi will
+ *        send keep alives from the interface identified by the 
+ *        contactId.  Specify a contactId of -1 to send keep alives from
+ *        all interfaces.
+ * @param type Designates the method of keep alives.
+ * @param remoteIp Remote IP address used to send keep alives.  The caller is
+ *        responsible for coverting hostnames to IP address.
+ * @param remotePort Remote port used to send keep alives.
+ * @param keepAliveSecs The number of seconds to wait before resending.  If 
+ *        the value is <= 0, only one keep alive will be sent (calling 
+ *        sipxConfigKeepAliveRemove will fail).
+ *
+ * @see sipxConfigGetLocalContacts
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigKeepAliveAdd(const SIPX_INST     hInst,
+                                                SIPX_CONTACT_ID     contactId,
+                                                SIPX_KEEPALIVE_TYPE type,
+                                                const char*         remoteIp,
+                                                int                 remotePort,
+                                                int                 keepAliveSecs) ;
+
+
+/**
+ * Remove a signaling keepalive.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param contactId Contact ID used for the keep alive.  sipXtapi will
+ *        remove keep alives from the interface identified by the 
+ *        contactId.  Specify a contactId of -1 to remove keep alives from
+ *        all interfaces.
+ * @param type Designates the method of keep alives.
+ * @param remoteIp Remote IP address used to send keep alives.  The caller is
+ *        responsible for coverting hostnames to IP address.  This value must
+ *        match what was specified in sipxConfigKeepAliveAdd.
+ * @param remotePort Remote port used to send keep alives.
+ *
+ * @see sipxConfigGetLocalContacts
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigKeepAliveRemove(const SIPX_INST     hInst,
+                                                   SIPX_CONTACT_ID     contactId,
+                                                   SIPX_KEEPALIVE_TYPE type,
+                                                   const char*         remoteIp,
+                                                   int                 remotePort) ;
+
+
+/**
+ * Enable/disable sending of out-of-band DTMF tones. If disabled the tones
+ * will be sent inband (if in-band dtmf is enabled).  Out-of-band DTMF
+ * is enabled by default.
+ *
+ * Generally, out-of-band DTMF should always be enabled.  In-band DTMF
+ * can be distorted and unrecognized by gateways/IVRs/ACDs when using
+ * compressed codecs such as G729.  By nature, many compressed codecs
+ * are lossy and cannot regenerate DTMF signals.  If you find that you 
+ * need to disable out-of-band DTMF (due to duplicate DTMF signals) on 
+ * another device, please consider reconfiguring that other device.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param bEnable Enable or disable out-of-band DTMF tones.
  */
 SIPXTAPI_API SIPX_RESULT sipxConfigEnableOutOfBandDTMF(const SIPX_INST hInst,
-                                                       const bool enable) ;
+                                                       const bool bEnable) ;
+
+/**
+ * Enable/disable sending of in-band DTMF tones.  If disabled, the tones
+ * will be sent out of band (if out-of-band is enabled).  In-band DTMF
+ * is enabled by default.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param bEnable Enable or disable in-band DTMF tones.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableInBandDTMF(const SIPX_INST hInst,
+                                                    const bool bEnable) ;
+  	 
+  	 
+/**
+ * Enable or disable sending RTCP reports.  By default, RTCP is enabled and
+ * sends reports every ~5 seconds.  RTCP is enabled by default.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param bEnable Enable or disable sending of RTCP reports.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableRTCP(const SIPX_INST hInst,
+                                              const bool bEnable) ;
+  	 
 
 /**
  * Enables/disables sending of DNS SRV request for all sipXtapi instances. 
+ * DNS SRV is enabled by default.
  *
- * @param enable Enable or disable DNS SRV resolution.
+ * @param bEnable Enable or disable DNS SRV resolution.
  */
-SIPXTAPI_API SIPX_RESULT sipxConfigEnableDnsSrv(const bool enable);
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableDnsSrv(const bool bEnable);
 
 /**
- * Returns if sending of out-of-band DTMF tones is enabled or disabled.
+ * Determines if sending of out-of-band DTMF tones is enabled or disabled.
  *
  * @param hInst Instance pointer obtained by sipxInitialize
- * @param enabled Out-of-band DTMF tones enabled or disabled.
+ * @param bEnable Out-of-band DTMF tones enabled or disabled.
  */
 SIPXTAPI_API SIPX_RESULT sipxConfigIsOutOfBandDTMFEnabled(const SIPX_INST hInst,
-                                                          bool& enabled) ;
+                                                          bool& bEnable) ;
+
+/**
+ * Determines if sending of in-band DTMF tones is enabled or disabled.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param bEnable in-band DTMF tones enabled or disabled.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigIsInBandDTMFEnabled(const SIPX_INST hInst,
+                                                       bool& bEnable) ;
 
 
 /**
@@ -1903,9 +3052,17 @@ SIPXTAPI_API SIPX_RESULT sipxConfigGetAudioCodec(const SIPX_INST hInst,
                                                  const int index, 
                                                  SIPX_AUDIO_CODEC* pCodec) ;
 
+#ifdef VIDEO
 /**
- * Set the preferred bandwidth requirement for codec selection. Whenever 
- * possible a codec matching that requirement will be selected for a call.
+ * Set the bandwidth parameters for video codecs.Depending on the bandwidth
+ * parameter that is passed in the settings will be set to:
+ *
+ * VIDEO_CODEC_BW_LOW     bitrate 5 kbps, framerate 10 fps
+ * VIDEO_CODEC_BW_NORMAL  bitrate 70 kbps, framerate is what it was set to
+ *                        with sipxConfigSetVideoParameters or 30 if not set.
+ * VIDEO_CODEC_BW_HIGH    bitrate 400 kbps, framerate is what it was set to
+ *                        with sipxConfigSetVideoParameters or 30 if not set.
+ *
  * This method will return SIPX_RESULT_SUCCESS if able to set the audio codec
  * preferences.  SIPX_RESULT_FAILURE is returned if the preference is not set.
  * 
@@ -1913,14 +3070,50 @@ SIPXTAPI_API SIPX_RESULT sipxConfigGetAudioCodec(const SIPX_INST hInst,
  * @param bandWidth Valid bandwidth requirements  are VIDEO_CODEC_BW_LOW, 
  *        VIDEO_CODEC_BW_NORMAL, and VIDEO_CODEC_BW_HIGH.
  *
+ * @see sipxConfigSetVideoParameters
  */
-SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoCodecPreferences(const SIPX_INST hInst, 
-                                                            SIPX_VIDEO_BANDWIDTH_ID bandWidth) ;
+SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoBandwidth(const SIPX_INST hInst, 
+                                                     SIPX_VIDEO_BANDWIDTH_ID bandWidth);
 
+/**
+ * Gets the list of video capture devices.
+ * 
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param arrSzCaptureDevices Array of character arrays to be populated
+ *        by this function call.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigGetVideoCaptureDevices(const SIPX_INST hInst,
+                                                          char **arrSzCaptureDevices,
+                                                          int nDeviceStringLength,
+                                                          int nArrayLength);
+                                                          
+
+/**
+ * Gets the current video capture device.
+ * 
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param szCaptureDevice Character array to be populated
+ *        by this function call.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigGetVideoCaptureDevice(const SIPX_INST hInst,
+                                                          char* szCaptureDevices,
+                                                          int nLength);
+                                                          
+/**
+ * Sets the video capture device.
+ * 
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param szCaptureDevice Pointer to a character array containing the
+ *        name of the desired video capture device.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoCaptureDevice(const SIPX_INST hInst,
+                                                         const char* szCaptureDevice);
+                                                          
+                            
 /**
  * Set the codec by name. The name must match one of the supported codecs
  * otherwise this functon will fail.
- * This method will return SIPX_RESULT_SUCCESS if able to set the audio codec.
+ * This method will return SIPX_RESULT_SUCCESS if able to set the video codec.
  * SIPX_RESULT_FAILURE is returned if the codec is not set.
  * 
  * @param hInst Instance pointer obtained by sipxInitialize
@@ -1931,19 +3124,30 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoCodecByName(const SIPX_INST hInst,
                                                        const char* szCodecName) ;
 
 /**
+ * Reset the codec list if it was modified by sipxConfigSetVideoCodecByName. This
+ * resets the selection to a full codec list.
+ * This method will return SIPX_RESULT_SUCCESS if able to set the audio codec.
+ * SIPX_RESULT_FAILURE is returned if the codec is not set.
+ * 
+ * @param hInst Instance pointer obtained by sipxInitialize
+ *
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigResetVideoCodecs(const SIPX_INST hInst);
+
+/**
  * Get the current codec preference.
  *
  * @param hInst Instance pointer obtained by sipxInitialize
  * @param pBandWidth pointer to an integer that will contain AUDIO_CODEC_BW_LOW, 
  *        AUDIO_CODEC_BW_NORMAL, or AUDIO_CODEC_BW_HIGH. AUDIO_CODEC_BW_CUSTOM
- *        will be returned if a specific codec was et using the 
- *        sipxConfigSetAudioCodecByName function.
+ *        will be returned if a specific codec was set using the 
+ *        sipxConfigSetVideoCodecByName function.
  */
 SIPXTAPI_API SIPX_RESULT sipxConfigGetVideoCodecPreferences(const SIPX_INST hInst, 
                                                             SIPX_VIDEO_BANDWIDTH_ID *pBandWidth);
 
 /**
- * Get the number of audio codecs. 
+ * Get the number of video codecs. 
  * This method will return SIPX_RESULT_SUCCESS if able to set the audio codec
  * preferences.  SIPX_RESULT_FAILURE is returned if the number of codecs can
  * no be retrieved.
@@ -1957,16 +3161,27 @@ SIPXTAPI_API SIPX_RESULT sipxConfigGetNumVideoCodecs(const SIPX_INST hInst,
 
 
 /**
- * Get the audio codec at a certain index in the list of codecs. Use this 
- * function in conjunction with sipxConfigGetNumAudioCodecs to enumerate
- * the list of audio codecs.
- * This method will return SIPX_RESULT_SUCCESS if able to set the audio codec
- * preferences.  SIPX_RESULT_FAILURE is returned if the audio codec can not
+ * Set the supported video format
+ * This method will limit the supported video format to either VIDEO_FORMAT_CIF (352x288),
+ * VIDEO_FORMAT_QCIF (176x144), VIDEO_FORMAT_SQCIF (128x92), or VIDEO_FORMAT_QVGA (320x240).
+ * The method will return SIPX_RESULT_SUCCESS if it is able to set the video format,
+ * SIPX_RESULT_FAILURE is returned if the video format can not be set.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoFormat(const SIPX_INST hInst,
+                                                  SIPX_VIDEO_FORMAT videoFormat);
+
+
+/**
+ * Get the video codec at a certain index in the list of codecs. Use this 
+ * function in conjunction with sipxConfigGetNumVideoCodecs to enumerate
+ * the list of video codecs.
+ * This method will return SIPX_RESULT_SUCCESS if able to set the video codec
+ * preferences.  SIPX_RESULT_FAILURE is returned if the video codec can not
  * be retrieved.
  * 
  * @param hInst Instance pointer obtained by sipxInitialize
  * @param index Index in the list of codecs
- * @param pCodec SIPX_AUDIO_CODEC structure that holds information
+ * @param pCodec SIPX_VIDEO_CODEC structure that holds information
  *        (name, bandwidth requirement) about the codec.
  *
  */
@@ -1974,26 +3189,22 @@ SIPXTAPI_API SIPX_RESULT sipxConfigGetVideoCodec(const SIPX_INST hInst,
                                                  const int index, 
                                                  SIPX_VIDEO_CODEC* pCodec) ;
 
-/**
- * Set the codec by name. The name must match one of the supported codecs
- * otherwise this functon will fail.
- * This method will return SIPX_RESULT_SUCCESS if able to set the audio codec.
- * SIPX_RESULT_FAILURE is returned if the codec is not set.
- * 
- * @param hInst Instance pointer obtained by sipxInitialize
- * @param szCodecName codec name
- *
- */
-SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoCodecByName(const SIPX_INST hInst, 
-                                                       const char* szCodecName) ;
-
+#endif // VIDEO
 
 /**
  * Get the local contact address available for outbound/inbound signaling and
  * audio.  The local contact addresses will always include the local IP 
  * addresses.  The local contact addresses may also include external NAT-
  * derived addresses (e.g. STUN).  See the definition of SIPX_CONTACT_ADDRESS
- * for more details.
+ * for more details on the structure.
+ *
+ * Determining which contact address to use depends on your network topology.  
+ * If you have a proxy/edge proxy within the same firewall/NAT space, you can 
+ * use the LOCAL UDP, TCP, or TLS contact type for your calls.  If your 
+ * proxy resides outside of the firewall/NAT space, you should use the 
+ * NAT_MAPPED or RELAY contact type (UDP only).  Both NAT_MAPPED and RELAY 
+ * use your STUN-derived IP address, however RELAY requests TURN for media 
+ * paths. 
  *
  * @param hInst Instance pointer obtained by sipxInitialize
  * @param addresses A pre-allocated list of SIPX_CONTACT_ADDRESS 
@@ -2022,6 +3233,87 @@ SIPXTAPI_API SIPX_RESULT sipxConfigGetLocalContacts(const SIPX_INST hInst,
 SIPXTAPI_API SIPX_RESULT sipxConfigGetAllLocalNetworkIps(const char* arrAddresses[], 
                                                          const char* arrAddressAdapter[],
                                                          int &numAddresses);
+                                                         
+/**
+ * Set security parameters for an instance of sipXtapi.
+ * @deprecated These should be set using sipxInitialize.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param szDbLocation The directory in which the certificate database resides.
+ * @param szMyCertNickname The local user's certificate nickname, for database lookup.
+ * @param szDbPassword The password for the certificated database.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetSecurityParameters(const SIPX_INST hInst,
+                                                         const char* szDbLocation,
+                                                         const char* szMyCertNickname,
+                                                         const char* szDbPassword);                                        
+
+/**
+ * Enables/Disables use of short field names in sip messages.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param bEnabled True if short names, false if long names
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableSipShortNames(const SIPX_INST hInst, 
+                                                       const bool bEnabled);
+
+/**
+ * Enables/Disables use of date header in sip messages.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param bEnabled True if date header, false if no date header
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableSipDateHeader(const SIPX_INST hInst, 
+                                                       const bool bEnabled);
+/**
+ * Enables/Disables use of allow header in sip messages.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param bEnabled True if allow header, false if no allow header
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableSipAllowHeader(const SIPX_INST hInst, 
+                                                       const bool bEnabled);
+/**
+ * Sets the Accept Language used in sip messages. e.g. - "EN"
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param szLanguage - Accept Language string
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetSipAcceptLanguage(const SIPX_INST hInst, 
+                                                        const char* szLanguage);
+/**
+ * Sets the location header for SIP messages.  The location header will be
+ * included in SIP requests and responses.  You can disable the location 
+ * header on a call-by-call basis in the by changing the bEnableLocationHeader
+ * flag on sipxCallAccept, sipxCallConnect, and sipxConferenceAdd methods.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param szHeader - Location header
+ *
+ * @see sipxCallAccept
+ * @see sipxCallConnect
+ * @see sipxConferenceAdd
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetLocationHeader(const SIPX_INST hInst, 
+                                                     const char* szHeader);
+
+/**
+ * Set the connection idle timeout.  If a media connection is idle for this
+ * threshold, a SILENCE event will be fired to the application layer.  
+ * 
+ * Applications may decide to tear down the call after receiving this event 
+ * under the assumption that the remote party is gone away.  Be careful when 
+ * using codecs that support silence suppression -- Some implementations 
+ * continue to send RTP heartbeats, however, others will not send any data 
+ * and may appear to be dead.
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param idleTimeout The time in seconds that a socket is idle before a
+ *        MEDIA_REMOTE_SILENT event is fired.        
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetConnectionIdleTimeout(const SIPX_INST hInst, 
+                                                            const int idleTimeout);
+
 #ifdef VIDEO
 
 /**
@@ -2029,9 +3321,10 @@ SIPXTAPI_API SIPX_RESULT sipxConfigGetAllLocalNetworkIps(const char* arrAddresse
  *
  * @param pDisplay Pointer to a video preview display object.
  */
-SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoPreviewDisplay(const SIPX_INST hInst, SIPX_VIDEO_DISPLAY* const pDisplay);
+SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoPreviewDisplay(const SIPX_INST hInst, 
+                                                          SIPX_VIDEO_DISPLAY* const pDisplay);
 
-#ifdef VIDEO
+
 /**
  * Updates the Preview window with a new frame buffer.  Should be called
  * when the window receives a PAINT message.
@@ -2040,17 +3333,7 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoPreviewDisplay(const SIPX_INST hInst,
  * @param hWnd Window handle of the video preview window.
  */
 SIPXTAPI_API SIPX_RESULT sipxConfigUpdatePreviewWindow(const SIPX_INST hInst, const SIPX_WINDOW_HANDLE hWnd);
-#endif
 
-
-/**
- * Updates the Video window with a new frame buffer.  Should be called
- * when the window receives a PAINT message.
- *
- * @param hInst Instance pointer obtained by sipxInitialize
- * @param hWnd Window handle of the video preview window.
- */
-SIPXTAPI_API SIPX_RESULT sipxCallUpdateVideoWindow(const SIPX_CALL hCall, const SIPX_WINDOW_HANDLE hWnd);
 
 /**
  * Sets the video quality.
@@ -2064,15 +3347,94 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoQuality(const SIPX_INST hInst, const 
  * Sets the bit rate and frame rate parameters for video.
  *
  * @param hInst Instance pointer obtained by sipxInitialize
- * @param bitRate Bit rate parameter
- * @param frameRate Frame rate parameter
+ * @param bitRate Bit rate parameter in kbps
+ * @param frameRate Frame rate parameter frames per second
  */
 SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoParameters(const SIPX_INST hInst, 
                                                       const int bitRate,
                                                       const int frameRate);
 
+/**
+ * Sets the video bitrate
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param bitRate Bit rate parameter 
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoBitrate(const SIPX_INST hInst, 
+                                                   const int bitRate);
+
+/**
+ * Sets the video framerate
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param bitRate Bit rate parameter 
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoFramerate(const SIPX_INST hInst, 
+                                                     const int frameRate);
+
+/**
+ * Set the cpu usage
+ *
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param cpuUsage CPU usage in percent
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigSetVideoCpuUsage(const SIPX_INST hInst, 
+                                                    const int cpuUsage);
 
 #endif
+
+
+/** 
+ * Subscribe for NOTIFY events which may be published by another end-point or
+ * server.
+ *
+ * sipXtapi will automatically refresh subscriptions until 
+ * sipxConfigUnsubscribe is called.  Please make sure you call 
+ * sipxCallUnsubscribe before tearing down your instance of sipXtapi.
+ * 
+ * @param hInst Instance pointer obtained by sipxInitialize
+ * @param hLine Line Identity for the outbound call.  The line identity 
+ *        helps defines the "From" caller-id.
+ * @param szTargetUrl The Url of the publishing end-point. 
+ * @param szEventType A string representing the type of event that can be 
+ *        published.  This string is used to populate the "Event" header in
+ *        the SIP SUBSCRIBE request.  For example, if checking voicemail 
+ *        status, your would use "message-summary".
+ * @param szAcceptType A string representing the types of NOTIFY events that 
+ *        this client will accept.  This string is used to populate the 
+ *        "Accept" header in the SIP SUBSCRIBE request.  For example, if
+ *        checking voicemail status, you would use 
+ *        "application/simple-message-summary"
+ * @param contactId Id of the desired contact record to use for this call.
+ *        The id refers to a Contact Record obtained by a call to
+ *        sipxConfigGetLocalContacts.  The application can choose a 
+ *        contact record of type LOCAL, NAT_MAPPED, CONFIG, or RELAY.
+ *        The Contact Type allows you to control whether the
+ *        user agent and  media processing advertises the local address
+ *         (e.g. LOCAL contact of 10.1.1.x or 
+ *        192.168.x.x), the NAT-derived address to the target party,
+ *        or, local contact addresses of other types.
+ * @param phSub Pointer to a subscription handle whose value is set by this 
+ *        funtion.  This handle allows you to cancel the subscription and
+ *        differeniate between NOTIFY events.
+ */ 
+SIPXTAPI_API SIPX_RESULT sipxConfigSubscribe(const SIPX_INST hInst, 
+                                             const SIPX_LINE hLine, 
+                                             const char* szTargetUrl, 
+                                             const char* szEventType, 
+                                             const char* szAcceptType, 
+                                             const SIPX_CONTACT_ID contactId, 
+                                             SIPX_SUB* phSub); 
+/*
+ * Unsubscribe from previously subscribed NOTIFY events.  This method will
+ * send another subscription request with an expires time of 0 (zero) to end
+ * your subscription.
+ *
+ * @param hSub The subscription handle obtained from the call to 
+ *             sipxConfigSubscribe.
+ */
+SIPXTAPI_API SIPX_RESULT sipxConfigUnsubscribe(const SIPX_SUB hSub); 
+
 
 //@}
 

@@ -67,12 +67,16 @@ UtlBoolean CpGhostConnection::dequeue(UtlBoolean callInFocus)
     return(FALSE);
 }
 UtlBoolean CpGhostConnection::dial(const char* dialString,
-                                          const char* callerId,
-                                          const char* callId,
-                      const char* callController,
-                      const char* originalCallConnection,
-                      UtlBoolean requestQueuedCall,
-                      const void* pDisplay)
+                                   const char* callerId,
+                                   const char* callId,
+                                   const char* callController,
+                                   const char* originalCallConnection,
+                                   UtlBoolean requestQueuedCall,
+                                   const void* pDisplay,
+                                   const void* pSecurity,
+                                   const char* locationHeader,
+                                   const int bandWidth,
+                                   UtlBoolean bOnHold)
 {
     unimplemented("CpGhostConnection::dial");
     return(FALSE);
@@ -129,6 +133,13 @@ UtlBoolean CpGhostConnection::answer(const void* hWnd)
     unimplemented("CpGhostConnection::answer");
     return(FALSE);
 }
+
+void CpGhostConnection::outOfFocus()
+{
+    unimplemented("CpGhostConnection::outOfFocus");
+}
+
+
 UtlBoolean CpGhostConnection::hangUp()
 {
     setState(CONNECTION_DISCONNECTED, CONNECTION_REMOTE, CONNECTION_CAUSE_TRANSFER);
@@ -164,7 +175,16 @@ UtlBoolean CpGhostConnection::renegotiateCodecs()
     return(FALSE);
 }
 
-UtlBoolean CpGhostConnection::accept(int forwardOnNoAnswerSeconds)
+UtlBoolean CpGhostConnection::silentRemoteHold() 
+{
+    unimplemented("CpGhostConnection::silentRemoteHold");
+    return(FALSE);
+}
+
+UtlBoolean CpGhostConnection::accept(int forwardOnNoAnswerSeconds, 
+                                     const void* pSecurity,
+                                     const char * locationHeader,
+                                     const int bandWidth)
 {
     unimplemented("CpGhostConnection::accept");
     return(FALSE);
@@ -203,6 +223,11 @@ void CpGhostConnection::getLocalContactAddresses( CONTACT_ADDRESS contacts[],
                                                   size_t& nActualContacts)
 {
     unimplemented("CpGhostConnection::getLocalContactAddresses");
+}
+
+void CpGhostConnection::getRemoteUserAgent(UtlString* pUserAgent)
+{
+    unimplemented("CpGhostConnection::getRemoteUserAgent");
 }
 
 

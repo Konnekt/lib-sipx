@@ -34,11 +34,6 @@
 #define CP_CALL_HISTORY_LENGTH 50
 
 #define CP_MAXIMUM_RINGING_EXPIRE_SECONDS 180
-
-#define CALL_DELETE_DELAY_SECS  10    // Number of seconds between a drop
-                                      // request (call) and call deletion
-                                      // (call manager)
-
 // MACROS
 // EXTERNAL FUNCTIONS
 // EXTERNAL VARIABLES
@@ -132,7 +127,10 @@ public:
                              const char* fromAddress = NULL,
                              const char* desiredConnectionCallId = NULL,
                              CONTACT_ID contactId = 0,
-                             const void* pDisplay = NULL) ;
+                             const void* pDisplay = NULL,
+                             const void* pSecurity = NULL,
+                             const char* locationHeader = NULL,
+                             const int bandWidth=AUDIO_CODEC_BW_DEFAULT) ;
 
     virtual PtStatus consult(const char* idleTargetCallId,
         const char* activeOriginalCallId, const char* originalCallControllerAddress,
@@ -168,10 +166,17 @@ public:
 
     virtual void toneStart(const char* callId, int toneId, UtlBoolean local, UtlBoolean remote);
     virtual void toneStop(const char* callId);
-    virtual void audioPlay(const char* callId, const char* audioUrl, UtlBoolean repeat, UtlBoolean local, UtlBoolean remote);
-    virtual void bufferPlay(const char* callId, int audiobuf, int bufSize, int type, UtlBoolean repeat, UtlBoolean local, UtlBoolean remote);
+    virtual void toneChannelStart(const char* callId, const char* szRemoteAddress, int toneId, UtlBoolean local, UtlBoolean remote);
+    virtual void toneChannelStop(const char* callId, const char* szRemoteAddress);    
+    virtual void audioPlay(const char* callId, const char* audioUrl, UtlBoolean repeat, UtlBoolean local, UtlBoolean remote, UtlBoolean mixWithMic = false, int downScaling = 100);
     virtual void audioStop(const char* callId);
+    virtual void audioChannelPlay(const char* callId, const char* szRemoteAddress, const char* audioUrl, UtlBoolean repeat, UtlBoolean local, UtlBoolean remote, UtlBoolean mixWithMic = false, int downScaling = 100);
+    virtual void audioChannelStop(const char* callId, const char* szRemoteAddress);
+    virtual OsStatus audioChannelRecordStart(const char* callId, const char* szRemoteAddress, const char* szFile) ;
+    virtual OsStatus audioChannelRecordStop(const char* callId, const char* szRemoteAddress) ;
+    virtual void bufferPlay(const char* callId, int audiobuf, int bufSize, int type, UtlBoolean repeat, UtlBoolean local, UtlBoolean remote);
     virtual void stopPremiumSound(const char* callId);
+
 #ifndef EXCLUDE_STREAMING
     virtual void createPlayer(const char* callid, MpStreamPlaylistPlayer** ppPlayer) ;
     virtual void createPlayer(int type, const char* callid, const char* szStream, int flags, MpStreamPlayer** ppPlayer) ;
@@ -184,7 +189,10 @@ public:
     virtual void acceptConnection(const char* callId,
                                   const char* address,
                                   CONTACT_TYPE contactType = AUTO,
-                                  const void* hWnd = NULL);
+                                  const void* hWnd = NULL,
+                                  const void* security = NULL,
+                                  const char* locationHeader = NULL,
+                                  const int bandWidth=AUDIO_CODEC_BW_DEFAULT);
                                   
     virtual void rejectConnection(const char* callId, const char* address);
     virtual PtStatus redirectConnection(const char* callId, const char* address, const char* forwardAddressUrl);
@@ -199,19 +207,24 @@ public:
 
     // Operations for calls & terminal connections
     virtual void answerTerminalConnection(const char* callId, const char* address, const char* terminalId, 
-                                          const void* pDisplay = NULL);
+                                          const void* pDisplay = NULL, const void* pSecurity = NULL);
     virtual void holdTerminalConnection(const char* callId, const char* address, const char* terminalId);
     virtual void holdAllTerminalConnections(const char* callId);
     virtual void holdLocalTerminalConnection(const char* callId);
     virtual void unholdLocalTerminalConnection(const char* callId);
     virtual void unholdAllTerminalConnections(const char* callId);
     virtual void unholdTerminalConnection(const char* callId, const char* addresss, const char* terminalId);
+    virtual void limitCodecPreferences(const char* callId, const char* remoteAddr, const int audioBandwidth, const int videoBandwidth, const char* szVideoCodecName);
+    virtual void limitCodecPreferences(const char* callId, const int audioBandwidth, const int videoBandwidth, const char* szVideoCodecName);
+    virtual void silentRemoteHold(const char* callId) ;
     virtual void renegotiateCodecsTerminalConnection(const char* callId, const char* addresss, const char* terminalId);
     virtual void renegotiateCodecsAllTerminalConnections(const char* callId);
          virtual void getNumTerminalConnections(const char* callId, const char* address, int& numTerminalConnections);
          virtual OsStatus getTerminalConnections(const char* callId, const char* address,
                 int maxTerminalConnections, int& numTerminalConnections, UtlString terminalNames[]);
     virtual UtlBoolean isTerminalConnectionLocal(const char* callId, const char* address, const char* terminalId);
+    virtual void doGetFocus(CpCall* call);
+    
     virtual OsStatus getSession(const char* callId,
                                 const char* address,
                                 SipSession& session);
@@ -279,15 +292,23 @@ public:
     //:Set the maximum number of calls to admit to the system.
 
     virtual void enableStun(const char* szStunServer, 
-                            int iKeepAlivePeriodSecs, 
-                            int stunOptions,
+                            int iStunPort,
+                            int iKeepAlivePeriodSecs,
                             OsNotification *pNotification = NULL) ;
     //:Enable STUN for NAT/Firewall traversal
+
+    virtual void enableTurn(const char* szTurnServer,
+                            int iTurnPort,
+                            const char* szUsername,
+                            const char* szPassword,
+                            int iKeepAlivePeriodSecs) ;
+
     
-    virtual void sendInfo(const char* callId, 
-                           const char* szContentType,
-                           const size_t nContenLength,
-                           const char*  szContent);
+    virtual bool sendInfo(const char* callId, 
+                          const char* szRemoteAddress,
+                          const char* szContentType,
+                          const size_t nContenLength,
+                          const char*  szContent);
    //: Sends an INFO message to the other party(s) on the call
 
 /* ============================ ACCESSORS ================================= */
@@ -380,21 +401,40 @@ public:
    //: Gets the Media Connection ID
    //: @param szCallId The call-id string of the call with which the connection id is associated
    //: @param remoteAddress The remote address of the call's connection, with which the connection id is associated
-   //: @param ppInstData Reserved for future use.
+   //: @param ppInstData Pointer to the media interface
+
+   virtual UtlBoolean getAudioEnergyLevels(const char*   szCallId, 
+                                           const char*   szRemoteAddress,
+                                           int&          iInputEnergyLevel,
+                                           int&          iOutputEnergyLevel,
+                                           int&          nContributors,
+                                           unsigned int* pContributorSRCIds,
+                                           int*          pContributorEngeryLevels) ;
+
+   virtual UtlBoolean getAudioEnergyLevels(const char*   szCallId,                                            
+                                           int&          iInputEnergyLevel,
+                                           int&          iOutputEnergyLevel) ;
+
+    virtual UtlBoolean getAudioRtpSourceIDs(const char*   szCallId, 
+                                            const char*   szRemoteAddress,
+                                            unsigned int& uiSendingSSRC,
+                                            unsigned int& uiReceivingSSRC) ;
+
+    virtual void getRemoteUserAgent(const char* callId, 
+                                    const char* remoteAddress,
+                                    UtlString& userAgent);
+
+
 
    virtual UtlBoolean canAddConnection(const char* szCallId);
    //: Can a new connection be added to the specified call?  This method is 
    //: delegated to the media interface.
    
-   virtual void setDelayInDeleteCall(int delayInDeleteCall);
-   //: Set the number of seconds to delay in deleting the call
-
-   virtual int getDelayInDeleteCall();
-   //: Get the number of seconds to delay in deleting the call
-   
 /* ============================ INQUIRY =================================== */
    int getTotalNumberOutgoingCalls() { return mnTotalOutgoingCalls;}
    int getTotalNumberIncomingCalls() { return mnTotalIncomingCalls;}
+
+   virtual void onCallDestroy(CpCall* pCall);
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
@@ -445,14 +485,16 @@ private:
     UtlBoolean mIsRequredUserIdMatch;
     // mMaxCalls can be changed by code running in other threads.
     volatile int mMaxCalls;    
-
     UtlString mStunServer ;
-    int mStunOptions ;
+    int mStunPort ;
     int mStunKeepAlivePeriodSecs ;
+    UtlString mTurnServer ;
+    int mTurnPort ;
+    UtlString mTurnUsername; 
+    UtlString mTurnPassword;
+    int mTurnKeepAlivePeriodSecs ;
+
     CpMediaInterfaceFactory* mpMediaFactory;
-    
-    // Delay in deleting the call
-    int mDelayInDeleteCall;
 
     // Private accessors
     void pushCall(CpCall* call);
@@ -480,18 +522,23 @@ private:
                    const char* addressUrl,
                    const char* szDesiredConnectionCallId,
                    CONTACT_ID contactId = 0,
-                   const void* pDisplay = NULL) ;
-    void doSendInfo(const char* callId, 
-                           const char* szContentType,
-                           UtlString   sContent);
-    //:Called by the handleMessage method, this method posts a message to the Call object's
-    //:message handler, passing along the content type and content.  
+                   const void* pDisplay = NULL,
+                   const void* pSecurity = NULL,
+                   const char* locationHeader = NULL,
+                   const int bandWidth = AUDIO_CODEC_BW_DEFAULT) ;
 
-    void doEnableStun(const char* szStunServer, 
-                      int iKeepAlivePeriodSecs, 
-                      int stunOptions,
-                      OsNotification* pNotification) ;
+    void doEnableStun(const UtlString& szStunServer, 
+                      int              iServerPort,
+                      int              iKeepAlivePeriodSecs, 
+                      OsNotification*  pNotification) ;
     //:Enable STUN for NAT/Firewall traversal                           
+
+    void doEnableTurn(const UtlString& turnServer, 
+                      int              iTurnPort,
+                      const UtlString& turnUsername,
+                      const UtlString& szTurnPassword,
+                      int              iKeepAlivePeriodSecs) ;
+    //:Enable TURN for NAT/Firewall traversal                           
 
     void releaseEvent(const char* callId, 
                      OsProtectEventMgr* eventMgr, 
