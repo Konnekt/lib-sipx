@@ -95,8 +95,6 @@ public:
      */
     UtlContainableType UtlSortedList::getContainableType() const;
     
-    static const UtlContainableType TYPE; ///< constant for class type comparisons.
-
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
@@ -111,6 +109,8 @@ protected:
      * The caller must hold the mContainerLock
      */
     UtlLink* findNode(UtlLink* starting, MatchType match, const UtlContainable* obj) const;
+
+    static const UtlContainableType TYPE;
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:

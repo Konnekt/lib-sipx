@@ -124,8 +124,6 @@ public:
      */
     virtual UtlContainableType getContainableType() const;
 
-    static const UtlContainableType TYPE; ///< constant for class type comparison.
-
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
     friend class UtlSListIterator;
@@ -136,6 +134,8 @@ protected:
      */
     virtual UtlContainable* insertAfter(UtlLink* afterNode, UtlContainable* object);
     
+
+    static const UtlContainableType TYPE;
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:

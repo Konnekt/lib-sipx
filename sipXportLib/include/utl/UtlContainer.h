@@ -104,7 +104,6 @@ public:
      */
     virtual UtlContainableType getContainableType() const;
 
-    static UtlContainableType TYPE ;    /** < Class type used for runtime checking */ 
 
 /* ============================ INQUIRY =================================== */
 
@@ -197,6 +196,8 @@ protected:
      * see sIteratorConnectionLock
      */
     UtlChain mIteratorList; 
+
+    static UtlContainableType TYPE ;    /** < Class type used for runtime checking */ 
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:

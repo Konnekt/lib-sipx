@@ -8,7 +8,6 @@
 // $$
 ///////////////////////////////////////////////////////////////////////////////
 
-
 #ifndef _OsDirBase_h_
 #define _OsDirBase_h_
 
@@ -29,7 +28,6 @@
 // FORWARD DECLARATIONS
 class OsFileInfoBase;
 class OsPathBase;
-
 //:Abstraction class to hande directory manipulations
 class OsDirBase
 {

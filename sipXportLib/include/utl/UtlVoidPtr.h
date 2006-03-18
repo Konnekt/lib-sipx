@@ -78,8 +78,6 @@ public:
      */
     virtual UtlContainableType getContainableType() const;
 
-    static UtlContainableType TYPE ;   /**< Class type used for runtime checking */ 
-
 /* ============================ INQUIRY =================================== */
 
     /**
@@ -93,6 +91,7 @@ public:
   
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
+    static UtlContainableType TYPE ;   /** < Class type used for runtime checking */ 
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:

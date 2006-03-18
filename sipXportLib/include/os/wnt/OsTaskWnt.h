@@ -148,26 +148,6 @@ public:
      // rescheduling, but it is also useful when waiting for some external
      // condition that does not have an interrupt associated with it.
 
-   static OsStatus lock(void);
-     //:Disable rescheduling for the currently executing task
-     // This routine disables task context switching. The task that calls
-     // this routine will be the only task that is allowed to execute,
-     // unless the task explicitly gives up the CPU by making itself no
-     // longer ready. Typically this call is paired with unlock();
-     // together they surround a critical section of code. These
-     // preemption locks are implemented with a counting variable that
-     // allows nested preemption locks. Preemption will not be unlocked
-     // until unlock() has been called as many times as lock().
-
-   static OsStatus unlock(void);
-     //:Enable rescheduling for the currently executing task
-     // This routine decrements the preemption lock count. Typically
-     // this call is paired with lock() and concludes a critical
-     // section of code. Preemption will not be unlocked until
-     // unlock() has been called as many times as lock(). When
-     // the lock count is decremented to zero, any tasks that were
-     // eligible to preempt the current task will execute.
-
    static OsStatus safe(void);
      //:Make the calling task safe from deletion
      // This routine protects the calling task from deletion. Tasks that

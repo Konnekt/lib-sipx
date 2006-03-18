@@ -80,7 +80,7 @@ public:
    virtual int read(char* buffer, int bufferLength);
 
 /* ============================ ACCESSORS ================================= */
-   virtual OsSocket::IpProtocolSocketType getIpProtocol() const;
+   virtual int getIpProtocol() const;
    //: Returns the protocol type of this socket
 
 
@@ -90,7 +90,7 @@ public:
    // Returns the ip address for the host on which the socket on the
    // other end of this socket is bound.
 
-   virtual UtlBoolean getExternalIp(UtlString* ip, int* port) ;
+   virtual UtlBoolean getMappedIp(UtlString* ip, int* port) ;
      //:Return the external IP address for this socket.
      // OsStunDatagramSocket will return the NATted address if available,
 

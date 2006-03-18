@@ -55,6 +55,8 @@ nobase_include_HEADERS = \
     os/OsMulticastSocket.h \
     os/OsMutex.h \
     os/OsNameDb.h \
+    os/OsNatAgentTask.h \
+    os/OsNatDatagramSocket.h \
     os/OsNotification.h \
     os/OsPathBase.h \
     os/OsProcess.h \
@@ -87,18 +89,21 @@ nobase_include_HEADERS = \
     os/OsTimer.h \
     os/OsTimerMsg.h \
     os/OsTimerTask.h \
+    os/OsTLSServerSocket.h \
+    os/OsTLSConnectionSocket.h \
+    os/OsTLSClientConnectionSocket.h \
     os/OsTokenizer.h \
+	os/OsTLS.h \
     os/ostream \
     os/OsUtil.h \
     os/OsWriteLock.h \
     os/shared/OsMsgQShared.h \
     os/shared/OsSysSoftTimer.h \
     os/shared/OsTimerMessage.h \
-    os/OsStunAgentTask.h \
-    os/OsStunQueryAgent.h \
-    os/OsStunAgentTask.h \
-    os/OsStunDatagramSocket.h \
     os/qsTypes.h \
+    os/StunMessage.h \
+    os/StunUtils.h \
+    os/TurnMessage.h \
     xmlparser/tinystr.h \
     xmlparser/tinyxml.h \
     xmlparser/TiXmlIterator.h \
@@ -119,7 +124,6 @@ nobase_include_HEADERS = \
     utl/UtlIterator.h \
     utl/UtlList.h \
     utl/UtlListIterator.h \
-    utl/UtlLongLongInt.h \
     utl/UtlRegex.h \
     utl/UtlRscStore.h \
     utl/UtlRscTrace.h \
@@ -153,5 +157,3 @@ EXTRA_DIST= \
     os/wnt/OsTaskWnt.h \
     os/wnt/OsUtilWnt.h \
     os/wnt/WIndowsAdapterInfo.h 
-
-DISTCLEANFILES = Makefile.in

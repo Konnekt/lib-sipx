@@ -46,19 +46,6 @@ public:
      */
     virtual ~UtlInt();
 
-/* ============================ OPERATORS ============================== */
-
-    // Declare prefix and postfix increment operators.
-    UtlInt& operator++();       // Prefix increment operator
-    UtlInt operator++(int);     // Postfix increment operator
-
-    // Declare prefix and postfix decrement operators.
-    UtlInt& operator--();       // Prefix decrement operator
-    UtlInt operator--(int);     // Postfix decrement operator
-
-    // Conversion to int
-    operator int() { return mValue; }
-
 /* ============================ MANIPULATORS ============================== */
 
     /**
@@ -86,14 +73,12 @@ public:
      * Get the ContainableType for a UtlContainable derived class.
      */
     virtual UtlContainableType getContainableType() const;
-
-    static UtlContainableType TYPE ;    /**< Class type used for runtime checking */ 
-
+         
 /* ============================ INQUIRY =================================== */
 
     /**
-     * Compare this object to another like-object.  Results for 
-     * comparing to a non-like object are undefined.
+     * Compare the this object to another like-objects.  Results for 
+     * designating a non-like object are undefined.
      *
      * @returns 0 if equal, < 0 if less then and >0 if greater.
      */
@@ -107,6 +92,7 @@ public:
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
+    static UtlContainableType TYPE ;    /** < Class type used for runtime checking */ 
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:

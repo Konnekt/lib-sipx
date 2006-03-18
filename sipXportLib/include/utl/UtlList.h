@@ -113,6 +113,11 @@ public:
      */
     void removeAll();
 
+    /**
+     * Re-calculates hashes for all items
+     */
+    void rehash();
+
 /* ============================ ACCESSORS ================================= */
 
     /**
@@ -177,8 +182,6 @@ public:
     */
    virtual UtlContainableType getContainableType() const;
 
-   static UtlContainableType TYPE ;    /**< Class type used for runtime checking */ 
-
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
 
@@ -216,7 +219,7 @@ protected:
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
-
+    static UtlContainableType TYPE ;    /** < Class type used for runtime checking */
 } ;
 
 /* ============================ INLINE METHODS ============================ */

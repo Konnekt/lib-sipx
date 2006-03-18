@@ -40,7 +40,8 @@ public:
 
    OsServerSocket(int connectionQueueSize,
                   int serverPort=PORT_DEFAULT,
-                  const char* szBindAddr = NULL);
+                  const char* szBindAddr = NULL,
+                  const bool bPerformBind = true);
 
    //:Constructor to set up TCP socket server
    // Sets the socket connection queue and starts listening on the
@@ -68,7 +69,7 @@ public:
    //!returns: Returns a socket connected to the client requesting the
    //!returns: connection.  If an error occurs returns NULL.
 
-   void close();
+   virtual void close();
    //: Close down the server
 
 /* ============================ ACCESSORS ================================= */

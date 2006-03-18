@@ -19,7 +19,6 @@
 #include "os/OsBSem.h"
 #include "os/OsMutex.h"
 #include "os/OsConfigDb.h"
-#include <utl/UtlString.h>
 
 // APPLICATION INCLUDES
 
@@ -74,12 +73,6 @@ public:
 
 /* ============================ MANIPULATORS ============================== */
 
-
-   //! Opens and reads the contents of the named file into the given UtlString
-   static long openAndRead(const char* filename, UtlString& fileContentsRead);
-
-   //! Opens and write the given UtlString to the named file 
-   static long openAndWrite(const char* filename, UtlString& fileContentsToWrite);
 
    virtual OsStatus open(const int mode = READ_WRITE);
      //: Opens the specified file using the specified  mode

@@ -24,6 +24,7 @@
 #define MAX_HOSTNAME_LEN                128 // arb.
 #define MAX_DOMAIN_NAME_LEN             128 // arb.
 #define MAX_SCOPE_ID_LEN                256 // arb.
+#define MAX_ADAPTER_NAME 128
 
 //
 // types
@@ -55,6 +56,7 @@ typedef enum {
     IfOperStatusNotPresent,
     IfOperStatusLowerLayerDown
 } IF_OPER_STATUS;
+
 
 
 //
@@ -257,15 +259,25 @@ typedef struct _IP_ADAPTER_ADDRESSES {
     PIP_ADAPTER_PREFIX FirstPrefix;
 } IP_ADAPTER_ADDRESSES, *PIP_ADAPTER_ADDRESSES;
 
+typedef struct _IP_ADAPTER_INDEX_MAP {
+    ULONG   Index;
+    WCHAR   Name[MAX_ADAPTER_NAME];
+} IP_ADAPTER_INDEX_MAP, *PIP_ADAPTER_INDEX_MAP;
+
+typedef struct _IP_INTERFACE_INFO {
+    LONG    NumAdapters;
+    IP_ADAPTER_INDEX_MAP Adapter[1];
+} IP_INTERFACE_INFO,*PIP_INTERFACE_INFO;
+
 #ifdef __cplusplus
-    extern "C" int getWindowsDNSServers(char DNSServers[][MAXIPLEN], int max);
+    extern "C" int getWindowsDNSServers(char DNSServers[][MAXIPLEN], int max, const char* szLocalIp);
     extern "C" bool getAllLocalHostIps(const class HostAdapterAddress* localHostAddresses[], int &numAddresses);
     //: Return this host's ip addresses, as an array of UtlString references
 
-    extern "C" bool getContactAdapterName(char* szAdapter, const char* szIp);
+    extern "C" bool getContactAdapterName(char* szAdapter, const char* szIp, bool trueName);
     //: Returns a generated adapter name associated with the IP address
 #else
-    int getWindowsDNSServers(char DNSServers[][MAXIPLEN], int max);
+    int getWindowsDNSServers(char DNSServers[][MAXIPLEN], int max, const char* szLocalIp);
 #endif
 
 

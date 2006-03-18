@@ -9,10 +9,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef _OsSSLServerSocket_h_
-#define _OsSSLServerSocket_h_
+#ifndef _OsTLSServerSocket_h_
+#define _OsTLSServerSocket_h_
 
-#ifdef HAVE_SSL
+#ifdef SIP_TLS
+#ifdef SIP_TLS_NSS
 
 // SYSTEM INCLUDES
 //#include <...>
@@ -20,7 +21,7 @@
 // APPLICATION INCLUDES
 #include <os/OsConnectionSocket.h>
 #include <os/OsServerSocket.h>
-#include <os/OsSSLConnectionSocket.h>
+#include <os/OsTLSConnectionSocket.h>
 #include <os/OsFS.h>
 
 // DEFINES
@@ -31,12 +32,16 @@
 // STRUCTS
 // TYPEDEFS
 // FORWARD DECLARATIONS
+enum TlsInitCodes
+{
+    TLS_INIT_SUCCESS,
+    TLS_INIT_DATABASE_FAILURE,
+    TLS_INIT_BAD_PASSWORD,
+    TLS_INIT_TCP_IMPORT_FAILURE,
+    TLS_INIT_NSS_FAILURE,
+};
 
-//: Implements TCP server for accepting TCP connections
-// This class provides the implementation of the UDP datagram-based 
-// socket class which may be instantiated. 
-
-class OsSSLServerSocket : public OsServerSocket
+class OsTLSServerSocket : public OsServerSocket
 {
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
 public:
@@ -44,12 +49,16 @@ public:
 /* ============================ CREATORS ================================== */
 
    /// Constructor to set up TCP socket server
-   OsSSLServerSocket(int connectionQueueSize, /**< The maximum number of outstanding connection
+   OsTLSServerSocket(int connectionQueueSize, /**< The maximum number of outstanding connection
                                                *   requests which are allowed before subsequent
                                                *   requests are turned away.*/ 
-                     int serverPort=PORT_DEFAULT /**< The port on which the server will listen to
+                     int serverPort=PORT_DEFAULT, /**< The port on which the server will listen to
                                                   *   accept connection requests.
                                                   *   PORT_DEFAULT means let OS pick port. */
+                     UtlString certNickname = "",
+                     UtlString certPassword = "",
+                     UtlString dbLocation = "",
+                     const UtlString bindAddress = ""                                               
                      );
    /**
     * Sets the socket connection queue and starts listening on the
@@ -57,10 +66,10 @@ public:
     */
 
    /// Assignment operator
-   OsSSLServerSocket& operator=(const OsSSLServerSocket& rhs);
+   OsTLSServerSocket& operator=(const OsTLSServerSocket& rhs);
 
   virtual
-   ~OsSSLServerSocket();
+   ~OsTLSServerSocket();
      //:Destructor
 
 
@@ -73,7 +82,7 @@ public:
    //!returns: connection.  If an error occurs returns NULL.
 
 
-   void close();
+   virtual void close();
    //: Close down the server
 
 /* ============================ ACCESSORS ================================= */
@@ -95,6 +104,7 @@ public:
    //!returns: 1 if one or call to accept() will not block <br>
    //!returns: 0 if no connections are ready (i.e. accept() will block).
 
+   TlsInitCodes getTlsInitCode() { return mTlsInitCode; }
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
 
@@ -106,17 +116,27 @@ private:
     //:buf is the buffer to fill with a password
     //:size is the maximum size of the buffer 
 
-   OsSSLServerSocket(const OsSSLServerSocket& rOsSSLServerSocket);
+   OsTLSServerSocket(const OsTLSServerSocket& rOsTLSServerSocket);
      //:Disable copy constructor
 
-   OsSSLServerSocket();
+   OsTLSServerSocket();
      //:Disable default constructor
 
+   UtlString mCertNickname;
+   UtlString mCertPassword;
+   UtlString mDbLocation;
+   
+   PRFileDesc* mpMozillaSSLSocket;
+   SECKEYPrivateKey *  mpPrivKey;
+   CERTCertificate *   mpCert;
+   TlsInitCodes mTlsInitCode;
+   
 };
 
 /* ============================ INLINE METHODS ============================ */
 
-#endif // HAVE_SSL
+#endif // SIP_TLS
+#endif // SIP_TLS_NSS
 
-#endif  // _OsSSLServerSocket_h_
+#endif  // _OsTLSServerSocket_h_
 

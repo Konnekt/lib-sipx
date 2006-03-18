@@ -15,9 +15,9 @@
 // SYSTEM INCLUDES
 
 // APPLICATION INCLUDES
-#include <os/OsDefs.h>
-#include <os/OsStatus.h>
-#include <os/OsPathBase.h>
+#include "os/OsDefs.h"
+#include "os/OsStatus.h"
+#include "os/OsPathBase.h"
 #include <utl/UtlRegex.h>
 
 // DEFINES
@@ -29,7 +29,7 @@
 // TYPEDEFS
 // FORWARD DECLARATIONS
 class OsFileInfoBase;
-class OsFileBase;
+class OsPathBase;
 
 //:Abstraction class to iterate through files and/or directories
 class OsFileIteratorBase

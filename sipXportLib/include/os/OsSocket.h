@@ -23,9 +23,10 @@
 
 // DEFINES
 #define MAX_IP_ADDRESSES 32
+#define MAX_ADAPTER_NAME_LENGTH 256
 
 //: constant indentifier indicating the maximum number of IP addresses on this host.
-#define OS_INVALID_SOCKET_DESCRIPTOR (-1)
+#define OS_INVALID_SOCKET_DESCRIPTOR -1
 
 #if defined(_WIN32)
 #   include <os/wnt/getWindowsDNSServers.h>
@@ -74,52 +75,7 @@ typedef enum
 /** Type for storing Contact Record identifiers */
 typedef int CONTACT_ID; 
 
-/**
- * The CONTACT_ADDRESS struct includes contact information (ip and port),
- * address source type, and interface.
- */
-struct CONTACT_ADDRESS
-{
-    CONTACT_ADDRESS()
-    {
-        memset((void*)cInterface, 0, sizeof(cInterface));
-        memset((void*)cIpAddress, 0, sizeof(cIpAddress));
-        eContactType = AUTO;
-        id = 0;
-        iPort = -1;
-    }
-    
-    // copy contstructor
-    CONTACT_ADDRESS(const CONTACT_ADDRESS& ref)
-    {
-        strcpy(this->cInterface, ref.cInterface);
-        strcpy(this->cIpAddress, ref.cIpAddress);
-        this->eContactType = ref.eContactType;
-        this->id = ref.id;
-        this->iPort = ref.iPort;
-    }
-    
-    // assignment operator
-    CONTACT_ADDRESS& operator=(const CONTACT_ADDRESS& ref)
-    {
-        // check for assignment to self
-        if (this == &ref) return *this;
 
-        strcpy(this->cInterface, ref.cInterface);
-        strcpy(this->cIpAddress, ref.cIpAddress);
-        this->eContactType = ref.eContactType;
-        this->id = ref.id;
-        this->iPort = ref.iPort;
-        
-        return *this;
-    }
-        
-    CONTACT_ID   id;              /**< Contact record Id */
-    CONTACT_TYPE eContactType ;   /**< Address type/source */
-    char              cInterface[32] ; /**< Source interface    */
-    char              cIpAddress[32] ; /**< IP Address          */
-    int               iPort ;          /**< Port                */
-};
 
 // TYPEDEFS
 
@@ -139,16 +95,15 @@ public:
 
    static UtlBoolean socketInitialized;
 
-   typedef enum 
+   enum SocketProtocolTypes
    {
       UNKNOWN = -1,
       TCP = 0,
       UDP = 1,
       MULTICAST = 2,
       SSL_SOCKET = 3
-   } IpProtocolSocketType;
+   };
    //: Protocol Types
-   //  Note: If you add a value to this enum, add a case in OsSocket::isFramed.
    
 /* ============================ CREATORS ================================== */
    OsSocket();
@@ -177,7 +132,7 @@ public:
    //:Non-blocking or limited blocking write to socket
    // Same as blocking version except that this write will block
    // for no more than the specified length of time.
-   //!param: waitMilliseconds - The maximum number of milliseconds to block.  This may be set to zero, in which case it does not block.
+   //!param: waitMilliseconds - The maximum number of milliseconds to block. This may be set to zero, in which case it does not block.
 
    virtual int read(char* buffer, int bufferLength);
    //:Blocking read from the socket
@@ -231,11 +186,11 @@ public:
 
 /* ============================ ACCESSORS ================================= */
 
-   virtual OsSocket::IpProtocolSocketType getIpProtocol() const = 0;
+   virtual int getIpProtocol() const = 0;
    //:Return the protocol type of this socket
 
    /// return the string representation of the SocketProtocolType 
-   static const char* ipProtocolString(OsSocket::IpProtocolSocketType);
+   const char* ipProtocolString() const;
    
    virtual UtlBoolean reconnect() = 0;
    //:Set up the connection again, assuming the connection failed
@@ -322,7 +277,7 @@ public:
 
    virtual UtlBoolean isReadyToRead(long waitMilliseconds = 0) const;
    //:Poll if there are bytes to read
-   // Returns TRUE if socket is ready to read.
+   // Returns TRUE if socket is read to read.
    // Returns FALSE if wait expires or socket error.
 
    virtual UtlBoolean isReadyToWrite(long waitMilliseconds = 0) const;
@@ -343,11 +298,6 @@ public:
 
    static void inet_ntoa_pt(struct in_addr input_address, UtlString& output_address);
    //:Convert in_addr input_address to dot ip address to avoid memory leak
-
-   static UtlBoolean isFramed(IpProtocolSocketType type);
-   //:Returns TRUE if the given IpProtocolSocketType is a framed message protocol
-   // (that is, every read returns exactly one message), and so the Content-Length
-   // header may be omitted.
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
@@ -382,4 +332,55 @@ private:
 
 /* ============================ INLINE METHODS ============================ */
 
+
+/**
+ * The CONTACT_ADDRESS struct includes contact information (ip and port),
+ * address source type, and interface.
+ */
+struct CONTACT_ADDRESS
+{
+    CONTACT_ADDRESS()
+    {
+        memset((void*)cInterface, 0, sizeof(cInterface));
+        memset((void*)cIpAddress, 0, sizeof(cIpAddress));
+        eContactType = AUTO;
+        id = 0;
+        iPort = -1;
+        transportType = OsSocket::UNKNOWN;
+    }
+    
+    // copy contstructor
+    CONTACT_ADDRESS(const CONTACT_ADDRESS& ref)
+    {
+        strcpy(this->cInterface, ref.cInterface);
+        strcpy(this->cIpAddress, ref.cIpAddress);
+        this->eContactType = ref.eContactType;
+        this->id = ref.id;
+        this->iPort = ref.iPort;
+        this->transportType = ref.transportType;
+    }
+    
+    // assignment operator
+    CONTACT_ADDRESS& operator=(const CONTACT_ADDRESS& ref)
+    {
+        // check for assignment to self
+        if (this == &ref) return *this;
+
+        strcpy(this->cInterface, ref.cInterface);
+        strcpy(this->cIpAddress, ref.cIpAddress);
+        this->eContactType = ref.eContactType;
+        this->id = ref.id;
+        this->iPort = ref.iPort;
+        this->transportType = ref.transportType;
+        
+        return *this;
+    }
+        
+    CONTACT_ID   id;              /**< Contact record Id */
+    CONTACT_TYPE eContactType ;   /**< Address type/source */
+    char              cInterface[MAX_ADAPTER_NAME_LENGTH + 4] ; /**< Source interface    */
+    char              cIpAddress[MAX_IP_ADDRESSES] ; /**< IP Address          */
+    int               iPort ;                         /**< Port                */
+    OsSocket::SocketProtocolTypes   transportType;    /**< UDP, TCP, or TLS */
+};
 #endif  // _OsSocket_h_

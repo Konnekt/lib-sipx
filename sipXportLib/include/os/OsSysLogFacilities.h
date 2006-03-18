@@ -70,6 +70,8 @@ enum tagOsSysLogFacility
    FAC_SIPXTAPI,           // sipXtapi related
    FAC_AUDIO,              // audio related
    FAC_CONFERENCE,         // Conference bridge
+   FAC_VOICEENGINE,        // GIPS VoiceEngine-specific logging
+   FAC_VIDEOENGINE,        // GIPS VideoEngine-specific logging
    FAC_MAX_FACILITY        // Last Facility (used to for length)
 
    //
@@ -114,6 +116,8 @@ enum tagOsSysLogFacility
   //!enumcode: FAC_REPLICATION_CGI - replication cgi( replicates databases across components )
   //!enumcode: FAC_PROCESSMGR - os processmanager related
   //!enumcode: FAC_PROCESS - process related
+  //!enumcode: FAC_VOICEENGINE - GIPS VoiceEngine related
+  //!enumcode: FAC_VIDEOENGINE - GIPS VideoEngine related
 
 // TYPEDEFS
 typedef enum tagOsSysLogFacility OsSysLogFacility ;

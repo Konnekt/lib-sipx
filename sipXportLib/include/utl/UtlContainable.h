@@ -25,10 +25,10 @@
 // FORWARD DECLARATIONS
 
 /**
- * An UtlContainable object is an abstract object that serves as the base 
- * class for anything that can be contained in one of the UtlContainer- 
- * derived classes.  One of the largest values of a UtlContainable-derived 
- * object is the ability for any UtlContainer to destroy objects, sort 
+ * An UtlContainable object is an abstract objected that serves as base 
+ * class for anything that can be contained in one of the UtlContainer 
+ * derived classes.  One of the largest values of a UtlContainable derived 
+ * object is ability for any of UtlContainers to destroy objects, sort 
  * objects, etc.
  */
 class UtlContainable 
@@ -44,11 +44,9 @@ public:
     virtual ~UtlContainable();
 
     /**
-     * Get the ContainableType for a UtlContainable-derived class.
+     * Get the ContainableType for a UtlContainable derived class.
      */
     virtual UtlContainableType getContainableType() const = 0 ;
-
-    static const UtlContainableType TYPE ;    /** < Class type used for runtime checking */
 
     /// Calculate a hash code for this object.
     virtual unsigned hash() const = 0 ;
@@ -107,7 +105,7 @@ public:
      * </pre>
      */
 
-    /// Compare this object to another object. 
+    /// Compare the this object to another object. 
     virtual int compareTo(UtlContainable const *) const = 0  ;    
     /**<
      * Results of comparison to an object not of the same UtlContainableType
@@ -152,6 +150,7 @@ public:
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
+    static const UtlContainableType TYPE ;    /** < Class type used for runtime checking */
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:

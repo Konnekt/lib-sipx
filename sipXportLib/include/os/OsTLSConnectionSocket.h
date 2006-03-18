@@ -8,22 +8,24 @@
 // $$
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef _OsSSLConnectionSocket_h_
-#define _OsSSLConnectionSocket_h_
 
-#ifdef HAVE_SSL
+#ifndef _OsTLSConnectionSocket_h_
+#define _OsTLSConnectionSocket_h_
+
+#ifdef SIP_TLS
+#ifdef SIP_TLS_NSS
 
 // SYSTEM INCLUDES
-//#include <...>
+#include <prio.h>
+#include <nspr.h>
+#include <seccomon.h>
+#include <secmod.h>
+#include <ssl.h>
 
 // APPLICATION INCLUDES                      
 #include <os/OsConnectionSocket.h>
 
-#include <openssl/crypto.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include <os/OsMutex.h>
 
 // DEFINES
 // MACROS
@@ -35,24 +37,30 @@
 // FORWARD DECLARATIONS
 
 /// Implements TLS version of OsSocket
-class OsSSLConnectionSocket : public OsConnectionSocket
+class OsTLSConnectionSocket : public OsConnectionSocket
 {
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
 public:
 
 /* ============================ CREATORS ================================== */
 
-   OsSSLConnectionSocket(int         remoteHostPort,
+   OsTLSConnectionSocket(int         remoteHostPort,
                          const char* remoteHostName,
-                         long        timeoutInSecs = 0
+                         const UtlString   certNickname,
+                         const UtlString   password,
+                         const UtlString   dbLocation,
+                         long        timeoutInSecs,
+                         const char* localIp
                          );
 
-   OsSSLConnectionSocket(int connectedSocketDescriptor, long timeoutInSecs = 0); 
-
-   OsSSLConnectionSocket(SSL *s, int connectedSocketDescriptor);
+   OsTLSConnectionSocket(int socketDescriptor,
+                         const UtlString certNickname,
+                         const UtlString password,
+                         const UtlString dbLocation,
+                         long timeoutInSecs = 0); 
 
   virtual
-   ~OsSSLConnectionSocket();
+   ~OsTLSConnectionSocket();
      //:Destructor
 
 /* ============================ MANIPULATORS ============================== */
@@ -103,10 +111,26 @@ public:
    // for no more than the specified length of time.
    //!param: waitMilliseconds - The maximum number of milliseconds to block. This may be set to zero in which case it does not block.
 
+   virtual UtlBoolean isReadyToReadEx(long waitMilliseconds, UtlBoolean &rSocketError) const;
+   //:Poll if there are bytes to read
+   // Returns TRUE if socket is read to read.
+   // Returns FALSE if wait expires or socket error.
+   // rSocketError returns TRUE is socket error occurred.
+
+   virtual UtlBoolean isReadyToRead(long waitMilliseconds = 0) const;
+   //:Poll if there are bytes to read
+   // Returns TRUE if socket is read to read.
+   // Returns FALSE if wait expires or socket error.
+
+   virtual UtlBoolean isReadyToWrite(long timeoutMilliSec) const;
+
+   void setHandshakeComplete() { mbHandshakeComplete = true; }
+   bool waitForHandshake(long milliseconds) const;
+
 /* ============================ ACCESSORS ================================= */
 
    virtual void close();
-   //: Closes the SSL socket
+   //: Closes the TLS socket
 
 /* ============================ INQUIRY =================================== */
 
@@ -115,30 +139,36 @@ public:
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
+   virtual void NSSInitSocket(int socket, long timeoutInSecs, const char* szPassword) = 0;
 
-/* //////////////////////////// PRIVATE /////////////////////////////////// */
-private:
-   SSL*     mSSL;
+   UtlBoolean mbExternalTLSSocket;
 
-   UtlBoolean mbExternalSSLSocket;
-     //:Should this object clean up SSL when shutdown.
-     //:It shouldn't if SSL is managed by a parent class
-   void SSLInitSocket(int socket, long timeoutInSecs);
-
-   OsSSLConnectionSocket(const OsSSLConnectionSocket& rOsSSLConnectionSocket);
+   OsTLSConnectionSocket(const OsTLSConnectionSocket& rOsTLSConnectionSocket);
      //:Disable copy constructor
 
-   OsSSLConnectionSocket();
+   OsTLSConnectionSocket();
      //:Disable default constructor
 
-   OsSSLConnectionSocket& operator=(const OsSSLConnectionSocket& rhs);
+   OsTLSConnectionSocket& operator=(const OsTLSConnectionSocket& rhs);
      //:Assignment operator
+
+   PRFileDesc* mpPRfd;
+   UtlString mCertNickname;
+   UtlString mCertPassword;
+   UtlString mDbLocation;
+   SECKEYPrivateKey *  mpPrivKey;
+   CERTCertificate *   mpCert;
+   mutable OsMutex mSocketGuard;
+   bool mbHandshakeComplete;
+
+/* //////////////////////////// PRIVATE /////////////////////////////////// */
 
 };
 
 /* ============================ INLINE METHODS ============================ */
 
-#endif // HAVE_SSL
+#endif // SIP_TLS
+#endif // SIP_TLS_NSS
 
-#endif  // _OsSSLConnectionSocket_h_
+#endif  // _OsTLSConnectionSocket_h_
 

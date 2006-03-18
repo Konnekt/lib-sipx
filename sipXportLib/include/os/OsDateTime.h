@@ -110,7 +110,7 @@ public:
    static void getDayOfWeek(int year, int  month, int dayOfMonth, int& dayOfWeek);
      //:Get the day of the week given the date
      //!param: (in) year - 4 digit year
-     //!param: (in) month - 1-12
+     //!param: (in) month - 0-11
      //!param: (in) dayOfMonth - the day of the month 1-31
      //!param: (out) dayOfWeek - the day of the week 0-6
 
@@ -167,13 +167,13 @@ protected:
    OsDateTimeBase();
      //:Default constructor
 
-   OsDateTimeBase(const unsigned short year,
-                const unsigned char  month,
-                const unsigned char  day,
-                const unsigned char  hour,
-                const unsigned char  minute,
-                const unsigned char  second,
-                const unsigned int   microsecond);
+   OsDateTimeBase(const unsigned short year,        /**< XXXX year */
+                const unsigned char  month,         /**< 0-based month; 0=JAN, 1=FEB */
+                const unsigned char  day,           /**< 1-based day (1..31) */
+                const unsigned char  hour,          /**< Hour is 24-hour format (0..23) */
+                const unsigned char  minute,        /**< Minute (0..59) */
+                const unsigned char  second,        /**< Second (0..59) */
+                const unsigned int   microsecond);  /**< Microseconds  (0 - 999999) */
      //:Constructor
 
    OsDateTimeBase(const OsDateTimeBase& rOsDateTime);
@@ -193,7 +193,7 @@ protected:
         //:4 digit year
 
    unsigned char  mMonth;
-        //:January = 1, February = 2, and so on
+        //:January = 0, February = 1, and so on
 
    unsigned char  mDay;
         //:Day of month, valid range: 1-31

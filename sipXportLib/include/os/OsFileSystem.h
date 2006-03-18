@@ -60,7 +60,7 @@ public:
    static OsStatus change(const OsPath& rOsPath);
      //: Change the current working directory to the specified location 
 
-   static OsStatus createDir(const OsPath& rOsPath, const UtlBoolean createParent = FALSE);
+   static OsStatus createDir(const OsPath& rOsPath);
      //: Creates the specified directory 
      //: Fails if a file by the same name already exists in the directory
 
@@ -100,13 +100,13 @@ private:
      //: Removes a directory, files and all sub-dirs
      //: Specify bForce = TRUE to remove files and directories 
      //: even if read-only
-     
-   static OsStatus createDirRecursive(const OsPath& rOsPath);
-     //: Recursively creates a directory and its parents if non-existant
-     
 
 };
 
 /* ============================ INLINE METHODS ============================ */
 
+
+
 #endif  // _OsFileSystem_h_
+
+

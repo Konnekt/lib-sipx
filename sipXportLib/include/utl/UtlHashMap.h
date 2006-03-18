@@ -159,8 +159,6 @@ public:
      */
     virtual UtlContainableType getContainableType() const;
 
-    static const UtlContainableType TYPE;///< the type constant for this class
-
     /**
      * Make a copy of all of the items BY POINTER in (*this) instance
      * into the given map. It does not clear the given map. IF USING
@@ -207,6 +205,8 @@ protected:
 
     static    UtlChainPool* spPairPool; ///< pool of available UtlPair objects.
     
+    static const UtlContainableType TYPE;
+
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
 

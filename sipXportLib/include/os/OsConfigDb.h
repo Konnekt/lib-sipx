@@ -267,6 +267,11 @@ public:
      */
     int getPort(const char* szKey) ;
 
+    /**
+     * Delete all entries from the configuration database
+     */
+    void clear() ;
+
  protected:
 
     /** reader/writer lock for synchronization */

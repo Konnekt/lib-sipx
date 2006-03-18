@@ -18,7 +18,7 @@ bool getAllLocalHostIps(const class HostAdapterAddress* localHostAddresses[],
 //: Return this host's ip addresses, as an array of UtlString references
 //  Does not include the "loopback" address.
 
-extern "C" bool getContactAdapterName(char* szAdapter, const char* szIp);
+extern "C" bool getContactAdapterName(char* szAdapter, const char* szIp, bool unusedHere);
 //: Returns a generated adapter name associated with the IP address
 
 #endif

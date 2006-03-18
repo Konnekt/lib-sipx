@@ -429,6 +429,9 @@ class UtlLink : public UtlChain
    /// Return a UtlLink to the pool.
    void release();
 
+   /// Recalculate the hash for this item
+   void rehash();
+
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
   private:
 

@@ -36,11 +36,6 @@
 // STRUCTS
 // TYPEDEFS
 typedef int UtlBoolean ;
-#ifdef DONT_USE_LONG_LONG
-typedef long int intll;
-#else
-typedef long long intll;
-#endif
 typedef const char* const UtlContainableType ;
 
 // FORWARD DECLARATIONS
