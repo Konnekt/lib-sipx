@@ -17,6 +17,7 @@
 #include "sipXezPhoneApp.h"
 #include "sipXezPhoneSettings.h"
 #include "AddContactDlg.h"
+#include "utl/UtlDListIterator.h"
 
 // EXTERNAL FUNCTIONS
 // EXTERNAL VARIABLES
@@ -64,14 +65,39 @@ ContactListPanel::ContactListPanel(wxWindow* parent, const wxPoint& pos, const w
     
     itemCol.m_mask = wxLIST_MASK_TEXT | wxLIST_MASK_WIDTH;
     itemCol.m_text = "Name";
-    itemCol.SetWidth((parentSize.GetWidth()/2) - 15);
+    itemCol.SetWidth((parentSize.GetWidth()/3) - 15);
     mpContactList->InsertColumn(0, itemCol);
     itemCol.m_text = "Address";
-    itemCol.SetWidth((parentSize.GetWidth()/2) - 15);
+    itemCol.SetWidth((parentSize.GetWidth()/3) - 15);
     mpContactList->InsertColumn(1, itemCol);
+    itemCol.m_text = "Certificate";
+    itemCol.SetWidth((parentSize.GetWidth()/3) + 25);
+    mpContactList->InsertColumn(2, itemCol);
    
     SetAutoLayout(TRUE);
     Layout();
+    
+    const UtlDList& contactNames = sipXezPhoneSettings::getInstance().getContactNames();
+    const UtlDList& contactUrls = sipXezPhoneSettings::getInstance().getContactUrls();
+    const UtlDList& contactCerts = sipXezPhoneSettings::getInstance().getContactCerts();
+    
+    UtlDListIterator nameIter(contactNames);
+    UtlDListIterator urlIter(contactUrls);
+    UtlDListIterator certIter(contactCerts);
+    UtlString* pName;
+    UtlString* pUrl;
+    UtlString* pCert;
+    int i = 0;
+    while (pName = (UtlString*) nameIter())
+    {
+        pUrl = (UtlString*) urlIter();
+        pCert = (UtlString*) certIter();
+        
+        long index = mpContactList->InsertItem(i, pName->data()) ;
+        mpContactList->SetItem(index, 1, pUrl->data()) ;
+        mpContactList->SetItem(index, 2, pCert->data());
+        i++;
+    }
 }
 
 
@@ -81,7 +107,7 @@ ContactListPanel::~ContactListPanel()
 }
 
 
-void ContactListPanel::OnAddContact(wxEvent& event)
+void ContactListPanel::OnAddContact(wxCommandEvent& event)
 {
     AddContactDlg dlg(this, -1, "Add Contact") ;
 
@@ -90,12 +116,15 @@ void ContactListPanel::OnAddContact(wxEvent& event)
         long index = mpContactList->InsertItem(mpContactList->GetItemCount(),
                 dlg.getName()) ;
         mpContactList->SetItem(index, 1, dlg.getUrl()) ;
-        sipXezPhoneSettings::getInstance().addContact(dlg.getName().c_str(), dlg.getUrl().c_str());
+        mpContactList->SetItem(index, 2, dlg.getCert());
+        sipXezPhoneSettings::getInstance().addContact(dlg.getName().c_str(),
+                                                      dlg.getUrl().c_str(),
+                                                      dlg.getCert().c_str());
     }
 }
 
 
-void ContactListPanel::OnRemoveContact(wxEvent& event)
+void ContactListPanel::OnRemoveContact(wxCommandEvent& event)
 {
     long itemIndex = mpContactList->GetNextItem(-1, wxLIST_NEXT_ALL,
                                         wxLIST_STATE_SELECTED);
@@ -112,10 +141,18 @@ void ContactListPanel::OnRemoveContact(wxEvent& event)
         urlItem.SetId(itemIndex);
         urlItem.SetColumn(1);
         mpContactList->GetItem(urlItem);
+        
+        wxListItem certItem;
+        certItem.SetMask(wxLIST_MASK_TEXT);
+        certItem.SetId(itemIndex);
+        certItem.SetColumn(2);
+        mpContactList->GetItem(certItem);
 
         sipXezPhoneSettings::getInstance().removeContact(nameItem.GetText().c_str(),
-                                                         urlItem.GetText().c_str());
+                                                         urlItem.GetText().c_str(),
+                                                         certItem.GetText().c_str());
         mpContactList->DeleteItem(itemIndex);
+        sipXezPhoneSettings::getInstance().saveSettings();
     }    
 }
 

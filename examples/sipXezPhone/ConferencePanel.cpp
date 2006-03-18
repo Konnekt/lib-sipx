@@ -91,7 +91,7 @@ ConferencePanel::~ConferencePanel()
 }
 
 
-void ConferencePanel::OnAddParty(wxEvent& event)
+void ConferencePanel::OnAddParty(wxCommandEvent& event)
 {
     wxString sParty;
         
@@ -114,7 +114,7 @@ void ConferencePanel::AddPartyToList(wxString sParty)
     return;
 }
 
-void ConferencePanel::OnRemoveParty(wxEvent& event)
+void ConferencePanel::OnRemoveParty(wxCommandEvent& event)
 {
     wxString sParty;
     
@@ -128,4 +128,10 @@ void ConferencePanel::OnRemoveParty(wxEvent& event)
     }
     
     return;
+}
+
+void ConferencePanel::UpdateBackground(wxColor color)
+{
+    SetBackgroundColour(color);
+    mpComboBox->SetBackgroundColour(color);
 }

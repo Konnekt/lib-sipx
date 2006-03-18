@@ -40,12 +40,12 @@ public:
    /**
     * Add Party Button event handler
     */
-   void OnAddContact(wxEvent& event);
+   void OnAddContact(wxCommandEvent& event);
 
    /**
     * Add Remove Button event handler
     */
-   void OnRemoveContact(wxEvent& event);
+   void OnRemoveContact(wxCommandEvent& event);
 
    /**
     * Add Select event handler

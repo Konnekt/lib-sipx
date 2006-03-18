@@ -15,6 +15,12 @@
 #include "states/PhoneStateMachineObserver.h"
 
 // DEFINES
+#define EVT_UPDATE_ADDRESS_COMBO(id, fn) \
+    DECLARE_EVENT_TABLE_ENTRY ( \
+        ezEVT_UPDATE_ADDRESS_COMBO, id, -1, \
+        (wxObjectEventFunction)(wxEventFunction)(wxCommandEventFunction)&fn, \
+        (wxObject*) NULL \
+    ),
 // MACROS
 // EXTERNAL FUNCTIONS
 // EXTERNAL VARIABLES
@@ -46,22 +52,26 @@ public:
    /**
     * Dial Button event handler
     */
-   void OnButtonClick(wxEvent& event);
+   void OnButtonClick(wxCommandEvent& event);
 
    /**
     * Combo box text entry handler
     */
-   void OnEnter(wxEvent& event);
+   void OnEnter(wxCommandEvent& event);
 
    /**
     * retrieve the text from the combo box
     */
    const wxString getEnteredText();
 
+   void UpdateBackground(wxColor color);
+
    /**
     *
     */
    wxComboBox& getComboBox() {return *mpComboBox;};
+
+   void OnProcessUpdateAddressCombo(wxCommandEvent& event);
 
 /* ============================ MANIPULATORS ============================== */
 /* ============================ ACCESSORS ================================= */
@@ -78,6 +88,7 @@ private:
         wxBitmapButton* mpDialButton;
         wxComboBox* mpComboBox;
         wxStaticBox* mpOutline;
+        wxString mAddressString;
 
         /**
          * Specialized state machine observer class.  Allows us to listen for Dialing and Ringing state changes.
@@ -112,6 +123,8 @@ private:
          * Its the instance of the DialEntryPhoneStateMachineObserver.
          */
         DialEntryPhoneStateMachineObserver* mpListener;
+
+    
 
 };
 

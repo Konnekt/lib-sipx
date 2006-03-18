@@ -13,6 +13,7 @@
 // APPLICATION INCLUDES
 #include "../stdwx.h"
 #include "../sipXmgr.h"
+#include "../DialerThread.h"
 #include "PhoneStateTransferRequested.h"
 #include "PhoneStateIdle.h"
 #include "PhoneStateMachine.h"
@@ -35,6 +36,9 @@ PhoneStateTransferRequested::~PhoneStateTransferRequested(void)
 
 PhoneState* PhoneStateTransferRequested::Execute()
 {
-   sipxCallBlindTransfer(sipXmgr::getInstance().getCurrentCall(), mPhoneNumber);
-   return this;
+    TransferThread* pThread = new TransferThread(sipXmgr::getInstance().getCurrentCall(), mPhoneNumber);
+    pThread->Create();
+    pThread->Run();
+
+    return this;
 }

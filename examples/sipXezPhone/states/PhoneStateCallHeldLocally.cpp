@@ -17,6 +17,7 @@
 #include "PhoneStateConnected.h"
 #include "PhoneStateIdle.h"
 #include "PhoneStateDisconnectRequested.h"
+#include "PhoneStateTransferRequested.h"
 #include "../sipXezPhoneApp.h"
 
 
@@ -40,10 +41,17 @@ PhoneState* PhoneStateCallHeldLocally::OnFlashButton()
    return (new PhoneStateDisconnectRequested());
 }
 
-PhoneState* PhoneStateCallHeldLocally::OnDisconnected()
+PhoneState* PhoneStateCallHeldLocally::OnDisconnected(const SIPX_CALL hCall)
 {
-   sipXmgr::getInstance().disconnect();
-   return (new PhoneStateIdle());
+   if (hCall == sipXmgr::getInstance().getCurrentCall())
+   {
+      sipXmgr::getInstance().disconnect(hCall, false);
+      return (new PhoneStateIdle());
+   }
+   else
+   {
+      return this;
+   }
 }
 
 PhoneState* PhoneStateCallHeldLocally::OnHoldButton()
@@ -51,6 +59,12 @@ PhoneState* PhoneStateCallHeldLocally::OnHoldButton()
     sipXmgr::getInstance().unholdCurrentCall();
     return (new PhoneStateConnected());    
 }
+
+PhoneState* PhoneStateCallHeldLocally::OnTransferRequested(const wxString phoneNumber)
+{
+    return (new PhoneStateTransferRequested(phoneNumber));
+}
+
 
 PhoneState* PhoneStateCallHeldLocally::Execute()
 {

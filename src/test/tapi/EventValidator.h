@@ -19,7 +19,7 @@
 #include "os/OsLock.h"
 #include "utl/UtlSList.h"
 
-#define DEFAULT_TIMEOUT         -1 
+#define DEFAULT_TIMEOUT         -1
 #define MAX_EVENT_CATEGORIES    16  // room for growth
 #ifndef MIN
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
@@ -38,6 +38,7 @@ class EventValidator
 protected:
     bool m_filterCategories[MAX_EVENT_CATEGORIES] ;
     int  m_iDefaultTimeoutInSecs ;
+    bool m_bIgnoreMessages ;
     int  m_iMaxLookAhead ;
 
     UtlSList   m_unprocessedEvents ;
@@ -55,7 +56,9 @@ public:
     ~EventValidator() ;
 
     void ignoreEventCategory(SIPX_EVENT_CATEGORY category) ;
-    bool isIgnoredCateogry(SIPX_EVENT_CATEGORY category) ;
+    bool isIgnoredCateogry(SIPX_EVENT_CATEGORY category) ;    
+    void ignoreMessages() ;
+    bool isMessageIgnored() ;
     void setDefaultTimeout(int iTimeoutInSecs) ;
     void setMaxLookhead(int iMaxLookAhead) ;
     void reset() ;
@@ -103,6 +106,25 @@ public:
                             bool bStrictOrderMatch = true, 
                             int iTimeoutInSecs = DEFAULT_TIMEOUT) ;
 
+    bool waitForSubStatusEvent(SIPX_SUBSCRIPTION_STATE state, 
+                            SIPX_SUBSCRIPTION_CAUSE cause, 
+                            bool bStrictOrderMatch = true, 
+                            int iTimeoutInSecs = DEFAULT_TIMEOUT) ; 
+                            
+    bool waitForNotifyEvent(SIPX_NOTIFY_INFO* pInfo, 
+                            bool bStrictOrderMatch = true, 
+                            int iTimeoutInSecs = DEFAULT_TIMEOUT) ; 
+
+    bool waitForSecurityEvent(SIPX_SECURITY_EVENT event,
+                              SIPX_SECURITY_CAUSE cause,
+                              bool bStrictOrderMatch = true,
+                              int iTimeoutInSecs = DEFAULT_TIMEOUT);
+
+    bool waitForMediaEvent(SIPX_MEDIA_EVENT event,
+                           SIPX_MEDIA_CAUSE cause,
+                           SIPX_MEDIA_TYPE  type,
+                           bool bStrictOrderMatch = true,
+                           int iTimeoutInSecs = DEFAULT_TIMEOUT);
 
     bool hasUnprocessedEvents() ;
 
@@ -142,8 +164,15 @@ protected:
                               int nContentLength) ;
 
     UtlString* allocConfigEvent(SIPX_CONFIG_EVENT hEvent) ;
-
- 
+    UtlString* allocSecurityEvent(SIPX_SECURITY_EVENT hEvent,
+                                  SIPX_SECURITY_CAUSE cause) ;
+    UtlString* allocMediaEvent(SIPX_MEDIA_EVENT hEvent,
+                                  SIPX_MEDIA_CAUSE cause,
+                                  SIPX_MEDIA_TYPE type) ;
+    UtlString* allocNotifyEvent(SIPX_NOTIFY_INFO* pInfo); 
+    UtlString* allocSubStatusEvent(SIPX_SUBSCRIPTION_STATE state, 
+                                    SIPX_SUBSCRIPTION_CAUSE cause); 
+                                  
     bool findEvent(const char* szEvent, int nMaxLookAhead, int &nActualLookAhead) ;
 
 

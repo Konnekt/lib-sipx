@@ -46,8 +46,10 @@ public:
    //virtual PhoneState* OnRemoteBusy();
    virtual PhoneState* OnFlashButton();
    //virtual PhoneState* OnConnected();
-   virtual PhoneState* OnDisconnected();
+   virtual PhoneState* OnDisconnected(const SIPX_CALL hCall);
    virtual PhoneState* OnHoldButton();
+   virtual PhoneState* OnTransferRequested(const wxString phoneNumber);
+
 
    virtual PhoneState* Execute();
 

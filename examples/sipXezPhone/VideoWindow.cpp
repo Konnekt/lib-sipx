@@ -31,8 +31,9 @@ VideoWindow::VideoWindow(wxWindow* parent, const wxPoint& pos, const wxSize& siz
 {
     wxColor* wxBlack = wxTheColourDatabase->FindColour("BLACK");
     SetBackgroundColour(*wxBlack);
-    
+#ifdef VIDEO    
     sipXmgr::getInstance().setVideoWindow((void*)GetHWND());
+#endif
 }
 
 void VideoWindow::OnPaint(wxPaintEvent& event)

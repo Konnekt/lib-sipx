@@ -12,6 +12,7 @@
 
 // SYSTEM INCLUDES
 // APPLICATION INCLUDES
+#include "stdwx.h"
 // DEFINES
 // MACROS
 // EXTERNAL FUNCTIONS
@@ -33,7 +34,7 @@ public:
    /**
     * ButtonPanel contructor.
     */
-   ButtonPanel(wxWindow* parent, const wxPoint& pos, const wxSize& size);
+   ButtonPanel(wxWindow* parent, const wxPoint& pos, const wxSize& size, bool bLogo);
 
    /**
     * ButtonPanel destructor.
@@ -43,22 +44,24 @@ public:
    /**
     * Handset Button event handler
     */
-   void OnHandsetClick(wxEvent& event);
+   void OnHandsetClick(wxCommandEvent& event);
 
    /**
     * Hold Button event handler
     */
-   void OnHoldButton(wxEvent& event);
+   void OnHoldButton(wxCommandEvent& event);
 
    /**
     * Transfer Button event handler.
     */
-   void OnTransferButton(wxEvent& event);
+   void OnTransferButton(wxCommandEvent& event);
    
    /**
     * Mute button event hander
     */
-   void OnMuteButton(wxEvent& event);
+   void OnMuteButton(wxCommandEvent& event);
+
+   void UpdateBackground(wxColor color);
 
 /* ============================ MANIPULATORS ============================== */
 /* ============================ ACCESSORS ================================= */

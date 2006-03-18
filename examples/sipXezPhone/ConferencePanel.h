@@ -40,12 +40,12 @@ public:
    /**
     * Add Party Button event handler
     */
-   void OnAddParty(wxEvent& event);
+   void OnAddParty(wxCommandEvent& event);
 
    /**
     * Add Remove Button event handler
     */
-   void OnRemoveParty(wxEvent& event);
+   void OnRemoveParty(wxCommandEvent& event);
    
    void AddPartyToList(wxString sParty);
    
@@ -53,6 +53,8 @@ public:
     * ConferencePanel destructor.
     */
    virtual ~ConferencePanel();
+
+   void UpdateBackground(wxColor color);
 
 /* ============================ MANIPULATORS ============================== */
 /* ============================ ACCESSORS ================================= */

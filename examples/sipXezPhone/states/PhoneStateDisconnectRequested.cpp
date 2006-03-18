@@ -34,13 +34,13 @@ PhoneStateDisconnectRequested::~PhoneStateDisconnectRequested(void)
 PhoneState* PhoneStateDisconnectRequested::OnFlashButton()
 {
    // try to disconnect again, then force the state to IDLE
-   sipXmgr::getInstance().disconnect();  // SHOULD cause the DISCONNECT sipXtapiEvent to occur
+   sipXmgr::getInstance().disconnect(0, true);  // SHOULD cause the DISCONNECT sipXtapiEvent to occur
    return (new PhoneStateIdle());   
 }
 
 PhoneState* PhoneStateDisconnectRequested::Execute()
 {
-   sipXmgr::getInstance().disconnect();  // should cause the DISCONNECT sipXtapiEvent to occur
+   sipXmgr::getInstance().disconnect(0, true);  // should cause the DISCONNECT sipXtapiEvent to occur
    
    
    // now, force a transition to the Idle state

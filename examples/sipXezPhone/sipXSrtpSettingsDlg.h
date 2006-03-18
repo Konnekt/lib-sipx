@@ -9,12 +9,14 @@
 #define __sipXSrtpSettingsDlg_H__
 
 #ifdef __GNUG__
-    #pragma interface "sipXVideoSettingsDlg.cpp"
+    #pragma interface "sipXSrtpSettingsDlg.cpp"
 #endif
 
 #ifndef WX_PRECOMP
     #include "wx/wx.h"
 #endif
+
+#include <utl/UtlString.h>
 
 #include "sipXezPhone_wdr.h"
 
@@ -23,6 +25,13 @@
 #define ID_RTP_AUTH_TYPE   8202
 #define ID_RTP_ENABLE_AUTH 8203
 #define ID_RTP_ENABLE_ENCR 8204
+#define ID_RTP_KEY         8205
+#define ID_RTP_ENABLE_SEC  8208
+#define ID_RTP_KEYLEN      8209
+#define ID_RTP_RANDOM      8210
+#define ID_DB_LOCATION     8211
+#define ID_CERTDB_PASSWORD 8213
+#define ID_CERT_NICKNAME   8214
 
 // WDR: class declarations
 
@@ -38,11 +47,17 @@ public:
         const wxPoint& pos = wxDefaultPosition,
         const wxSize& size = wxDefaultSize,
         long style = wxDEFAULT_DIALOG_STYLE );
-    
-    // WDR: method declarations for sipXVideoSettingsDlg
-    static wxGridSizer* grid;
-    static wxStaticBox* video;
-    
+
+    void InitializeControls();
+
+    // public members
+public:    
+   UtlString mSrtpKey;
+   bool      mbEncryption;
+   int       mSecurityLevel;
+   UtlString mCertNickname;
+   UtlString mCertDbPassword;
+
 private:
     // WDR: member variable declarations for sipXVideoSettingsDlg
     
@@ -50,6 +65,10 @@ private:
     // WDR: handler declarations for sipXVideoSettingsDlg
     void OnOk( wxCommandEvent &event );
     void OnCancel( wxCommandEvent &event );
+    void OnSecurity(wxCommandEvent &event);
+    void OnKeyEntry(wxCommandEvent &event);
+    void OnRandom(wxCommandEvent &event);
+    void enable(bool bEnable);
 
 private:
     DECLARE_EVENT_TABLE()

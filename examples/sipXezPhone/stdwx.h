@@ -11,9 +11,12 @@
 #define _stdwx_h_
 
 // SYSTEM INCLUDES
+#include "wx/wxprec.h"
+
 #ifndef WX_PRECOMP
     #include "wx/wx.h"
 #endif
+
 #include <wx/datetime.h>
 
 // APPLICATION INCLUDES

@@ -43,9 +43,18 @@ PhoneState* PhoneStateDialing::OnConnected()
    return (new PhoneStateConnected());
 }
 
+PhoneState* PhoneStateDialing::OnDisconnected(const SIPX_CALL hCall)
+{
+   if (hCall == sipXmgr::getInstance().getCurrentCall())
+   {
+      sipXmgr::getInstance().disconnect(hCall, false);
+   }
+   return (new PhoneStateIdle());
+}
+
 PhoneState* PhoneStateDialing::OnFlashButton()
 {
-   sipXmgr::getInstance().disconnect();
+   sipXmgr::getInstance().disconnect(0, true);
    return (new PhoneStateIdle());
 }
 

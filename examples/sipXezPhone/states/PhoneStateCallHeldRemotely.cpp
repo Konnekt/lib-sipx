@@ -18,6 +18,7 @@
 #include "PhoneStateIdle.h"
 #include "PhoneStateDisconnectRequested.h"
 #include "../sipXezPhoneApp.h"
+#include "PhoneStateTransferRequested.h"
 
 
 // EXTERNAL FUNCTIONS
@@ -40,15 +41,27 @@ PhoneState* PhoneStateCallHeldRemotely::OnFlashButton()
    return (new PhoneStateDisconnectRequested());
 }
 
-PhoneState* PhoneStateCallHeldRemotely::OnDisconnected()
+PhoneState* PhoneStateCallHeldRemotely::OnDisconnected(const SIPX_CALL hCall)
 {
-   sipXmgr::getInstance().disconnect();
-   return (new PhoneStateIdle());
+   if (hCall == sipXmgr::getInstance().getCurrentCall())
+   {
+      sipXmgr::getInstance().disconnect(hCall, false);
+      return (new PhoneStateIdle());
+   }
+   else
+   {
+      return this;
+   }
 }
 
 PhoneState* PhoneStateCallHeldRemotely::OnConnected()
 {
     return (new PhoneStateConnected());    
+}
+
+PhoneState* PhoneStateCallHeldRemotely::OnTransferRequested(const wxString phoneNumber)
+{
+    return (new PhoneStateTransferRequested(phoneNumber));
 }
 
 PhoneState* PhoneStateCallHeldRemotely::Execute()

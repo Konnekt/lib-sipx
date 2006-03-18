@@ -12,6 +12,13 @@
 
 // APPLICATION INCLUDES
 #include "stdwx.h"
+
+BEGIN_DECLARE_EVENT_TYPES()
+    DECLARE_EVENT_TYPE(ezEVT_UPDATE_ADDRESS_COMBO, 8303)
+END_DECLARE_EVENT_TYPES()
+
+DEFINE_EVENT_TYPE(ezEVT_UPDATE_ADDRESS_COMBO)
+
 #include "DialEntryPanel.h"
 #include "sipXezPhoneSettings.h"
 #include "sipXmgr.h"
@@ -27,6 +34,8 @@
 BEGIN_EVENT_TABLE(DialEntryPanel, wxPanel)
    EVT_BUTTON(IDR_DIAL_ENTRY_BUTTON, DialEntryPanel::OnButtonClick)
    EVT_TEXT_ENTER(wxID_ANY, DialEntryPanel::OnEnter)
+   EVT_UPDATE_ADDRESS_COMBO(-1, DialEntryPanel::OnProcessUpdateAddressCombo)
+
 END_EVENT_TABLE()
 
 
@@ -81,6 +90,7 @@ DialEntryPanel::DialEntryPanel(wxWindow* parent, const wxPoint& pos, const wxSiz
     // add a state machine observer
     mpListener = new DialEntryPhoneStateMachineObserver(this);
     PhoneStateMachine::getInstance().addObserver(mpListener);
+    mpComboBox->SetFocus();
 }
 
 // Destructor
@@ -104,7 +114,7 @@ const wxString DialEntryPanel::getEnteredText()
 }
 
 // Event handler for the button
-void DialEntryPanel::OnButtonClick(wxEvent& event)
+void DialEntryPanel::OnButtonClick(wxCommandEvent& event)
 {
    wxString phoneNumber = getEnteredText();
 
@@ -115,7 +125,7 @@ void DialEntryPanel::OnButtonClick(wxEvent& event)
     }
 }
 
-void DialEntryPanel::OnEnter(wxEvent& event)
+void DialEntryPanel::OnEnter(wxCommandEvent& event)
 {
     wxString phoneNumber = getEnteredText();
 
@@ -128,10 +138,10 @@ void DialEntryPanel::OnEnter(wxEvent& event)
 
 PhoneState* DialEntryPanel::DialEntryPhoneStateMachineObserver::OnDial(const wxString phoneNumber)
 {
-    if (mpOwner->getComboBox().FindString(phoneNumber) == -1)
-    {
-        mpOwner->getComboBox().Append(phoneNumber);
-    }
+    wxCommandEvent comboEvent(ezEVT_UPDATE_ADDRESS_COMBO); 
+
+    mpOwner->mAddressString = phoneNumber;
+    wxPostEvent(mpOwner, comboEvent);
     return NULL;
 }
 
@@ -141,10 +151,26 @@ PhoneState* DialEntryPanel::DialEntryPhoneStateMachineObserver::OnRinging(SIPX_C
     sipxCallGetRemoteID(hCall, szIncomingNumber, 256);
     wxString incomingNumber(szIncomingNumber);
 
-    if (mpOwner->getComboBox().FindString(incomingNumber) == -1)
-    {
-        mpOwner->getComboBox().Append(incomingNumber);
-    }
+    wxCommandEvent comboEvent(ezEVT_UPDATE_ADDRESS_COMBO); 
+
+    mpOwner->mAddressString = incomingNumber;
+    wxPostEvent(mpOwner, comboEvent);
+
     return NULL;
 }
 
+void DialEntryPanel::UpdateBackground(wxColor color)
+{
+    SetBackgroundColour(color);
+    mpOutline->SetBackgroundColour(color);
+    mpComboBox->SetBackgroundColour(color);
+}
+
+void DialEntryPanel::OnProcessUpdateAddressCombo(wxCommandEvent& event)
+{
+    if (getComboBox().FindString(mAddressString) == -1)
+    {
+        getComboBox().Append(mAddressString);
+    }
+
+}
