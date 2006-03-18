@@ -277,6 +277,8 @@ UtlBoolean CpCall::handleMessage(OsMsg& eventMessage)
                 int repeat = ((CpMultiStringMessage&)eventMessage).getInt1Data();
                 UtlBoolean local = ((CpMultiStringMessage&)eventMessage).getInt2Data();
                 UtlBoolean remote = ((CpMultiStringMessage&)eventMessage).getInt3Data();
+                UtlBoolean mixWithMic = ((CpMultiStringMessage&)eventMessage).getInt4Data();
+                int downScaling = ((CpMultiStringMessage&)eventMessage).getInt5Data();
                 UtlString url;
                 ((CpMultiStringMessage&)eventMessage).getString2Data(url);
 
@@ -285,7 +287,6 @@ UtlBoolean CpCall::handleMessage(OsMsg& eventMessage)
                     mpMediaInterface->playAudio(url.data(), repeat,
                         local, remote);
                 }
-                url.remove(0);
             }
             break;
 
@@ -315,7 +316,6 @@ UtlBoolean CpCall::handleMessage(OsMsg& eventMessage)
                 mpMediaInterface->stopAudio();
             }
             break;
-
         case CallManager::CP_CREATE_PLAYLIST_PLAYER:
             {
                 UtlString callId;
@@ -730,8 +730,8 @@ UtlBoolean CpCall::handleMessage(OsMsg& eventMessage)
 
 void CpCall::inFocus(int talking)
 {
-
     mCallInFocus = TRUE;
+
     mLocalConnectionState = PtEvent::CONNECTION_ESTABLISHED;
     if (talking)
         mLocalTermConnectionState = PtTerminalConnection::TALKING;
@@ -749,8 +749,6 @@ void CpCall::inFocus(int talking)
 void CpCall::outOfFocus()
 {
     mCallInFocus = FALSE;
-    //      mLocalConnectionState = PtEvent::CONNECTION_QUEUED;
-    //      mLocalTermConnectionState = PtTerminalConnection::HELD;
 
     if(mpMediaInterface)
     {

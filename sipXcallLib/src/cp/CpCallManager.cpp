@@ -21,7 +21,6 @@
 #include <os/OsLock.h>
 #include <os/OsDateTime.h>
 #include <os/OsSocket.h>
-#include <os/OsSysLog.h>
 #include <os/OsReadLock.h>
 #include <os/OsWriteLock.h>
 #include <os/OsProcess.h>
@@ -38,7 +37,7 @@ const int    CpCallManager::CALLMANAGER_MAX_REQUEST_MSGS = 6000;
 const int    CpCallManager::CALLMANAGER_MAX_REQUEST_MSGS = 1000;
 #endif  
 
-intll CpCallManager::mCallNum = 0;
+unsigned long CpCallManager::mCallNum = 0;
 OsMutex CpCallManager::mCallNumMutex(OsMutex::Q_FIFO);
 
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
@@ -58,7 +57,6 @@ mCallListMutex(OsMutex::Q_FIFO),
 mCallIndices(),
 mAddressForwardMutex(OsMutex::Q_FIFO)
 {
-   mCallNum = 0;
     mpAddressForwards = 0;
     mDoNotDisturbFlag = FALSE;
     mMsgWaitingFlag = FALSE;
@@ -92,6 +90,8 @@ mAddressForwardMutex(OsMutex::Q_FIFO)
    }
 
    mLastMetaEventId = 0;
+   mbEnableICE = false ;
+
 }
 
 // Copy constructor
@@ -119,6 +119,7 @@ mAddressForwardMutex(OsMutex::Q_FIFO)
     }
 
     mLastMetaEventId = 0;
+    mbEnableICE = rCpCallManager.mbEnableICE ; 
 }
 
 // Destructor
@@ -393,6 +394,7 @@ CpCallManager::operator=(const CpCallManager& rhs)
     mDoNotDisturbFlag = rhs.mDoNotDisturbFlag;
     mMsgWaitingFlag = rhs.mMsgWaitingFlag;
     mOfferedTimeOut = rhs.mOfferedTimeOut;
+    mbEnableICE = rhs.mbEnableICE ;
 
     return *this;
 }
@@ -404,7 +406,7 @@ void CpCallManager::getNewCallId(UtlString* callId)
 
 void CpCallManager::getNewSessionId(UtlString* callId)
 {
-    getNewCallId("session", callId);
+    getNewCallId("s", callId);
 }
 
 // This implements a new strategy for generating Call-IDs after the
@@ -492,11 +494,11 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
       // Get the start time.
       OsTime current_time;
       OsDateTime::getCurTime(current_time);
-      intll start_time =
-         ((intll) current_time.seconds()) * 1000000 + current_time.usecs();
+      unsigned long start_time =
+         ((unsigned long) current_time.seconds()) * 1000000 + current_time.usecs();
 
       // Get the process ID.
-      PID process_id;
+      int process_id;
       process_id = OsProcess::getCurrentPID();
 
       // Get the host identity.
@@ -518,7 +520,7 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
    }
 
    // Compose the new Call-Id.
-   sprintf(buffer, "%s/%lld/%s", callIdPrefix, mCallNum, suffix.data());
+   sprintf(buffer, "%s_%lld_%s", callIdPrefix, mCallNum, suffix.data());
 
    // Copy it to the destination.
    *callId = buffer;
@@ -700,6 +702,11 @@ void CpCallManager::setOfferedTimeout(int milisec)
     mOfferedTimeOut = milisec;
 }
 
+void CpCallManager::enableIce(UtlBoolean bEnable) 
+{
+    mbEnableICE = bEnable ;
+}
+
 /* ============================ ACCESSORS ================================= */
 
 int CpCallManager::getNewMetaEventId()
@@ -707,6 +714,12 @@ int CpCallManager::getNewMetaEventId()
     mLastMetaEventId++;
     return(mLastMetaEventId);
 }
+
+UtlBoolean CpCallManager::isIceEnabled() const
+{
+    return mbEnableICE ;
+}
+
 
 /* ============================ INQUIRY =================================== */
 UtlBoolean CpCallManager::isCallStateLoggingEnabled()

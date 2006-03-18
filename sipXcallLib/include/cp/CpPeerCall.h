@@ -35,9 +35,6 @@
 // FORWARD DECLARATIONS
 class Connection;
 class SipUserAgent;
-class CpIntMessage;
-class OsQueuedEvent;
-class OsTimer;
 
 //:Class short description which may consist of multiple lines (note the ':')
 // Class detailed description which may extend to multiple lines
@@ -101,7 +98,12 @@ public:
     Connection* addParty(const char* partyAddress, const char* callController,
         const char* originalCallConnectionAddress, const char* pNewCallId,
         CONTACT_ID contactId = 0,
-        const void* pDisplay = NULL);
+        const void* pDisplay = NULL,
+        const void* pSecurity = NULL,
+        const char* locationHeader = NULL,
+        const int bandWidth = AUDIO_CODEC_BW_DEFAULT,
+        UtlBoolean bOnHold = false);
+
     Connection* stringDial(OsMsg& eventMessage, UtlString& dialString);
 
 
@@ -145,6 +147,11 @@ public:
 
     virtual UtlBoolean canDisconnectConnection(Connection* pConnection);
 
+    UtlBoolean isConnectionLocallyInitiatedRemoteHold(const char* callId, 
+                                                      const char* toTag,
+                                                      const char* fromTag) ;
+
+
     /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
     virtual UtlBoolean handleCallMessage(OsMsg& eventMessage);
@@ -157,6 +164,9 @@ protected:
     //: message
     UtlBoolean handleRenegotiateCodecsAllConnections(OsMsg* pEventMessage);
     //: Handles the processing of a CallManager::CP_RENEGOTIATE_CODECS_ALL_CONNECTIONS
+    //: message
+    UtlBoolean handleSilentRemoteHold(OsMsg* pEventMessage);
+    //: Handles the processing of a CallManager::CP_SILENT_REMOTE_HOLD
     //: message
     UtlBoolean handleGetCodecCPULimit(OsMsg& eventMessage);
     //: Handles the processing of a CallManager::CP_GET_CODEC_CPU_LIMIT
@@ -276,14 +286,37 @@ protected:
     UtlBoolean handleGetMediaConnectionId(OsMsg* pEventMessage);
     //: Handles the processing of a CP_GET_MEDIA_CONNECTION_ID message
 
+    UtlBoolean handleLimitCodecPreferences(OsMsg* pEventMessage);
+    //: Handles the processing of the CP_LIMIT_CODEC_PREFERENCES message
+
+    UtlBoolean handleGetMediaEnergyLevels(OsMsg* pEventMessage);
+    //: Handles the processing of a CP_GET_MEDIA_ENERGY_LEVELS message
+
+    UtlBoolean handleGetCallMediaEnergyLevels(OsMsg* pEventMessage);
+    //: Handles the processing of a CP_GET_CALL_MEDIA_ENERGY_LEVELS message
+
+    UtlBoolean handleGetMediaRtpSourceIDs(OsMsg* pEventMessage);
+    //: Handles the processing of a CP_GET_MEDIA_RTP_SOURCE_IDS message
+
     UtlBoolean handleGetCanAddParty(OsMsg* pEventMessage);
     //: Handles the processing of a CP_GET_CAN_ADD_PARTY message
-
-    //: Handles the processing of a CP_SPLIT_CONNECTION message
+    
     UtlBoolean handleSplitConnection(OsMsg* pEventMessage) ;
-
-    //: Handles the processing of a CP_JOIN_CONNECTION message
+    //: Handles the processing of a CP_SPLIT_CONNECTION message
+    
     UtlBoolean handleJoinConnection(OsMsg* pEventMessage) ;
+    //: Handles the processing of a CP_JOIN_CONNECTION message
+    
+    UtlBoolean handleTransferOtherPartyHold(OsMsg* pEventMessage) ;
+    //: Handles the processing of a CP_TRANSFER_OTHER_PARTY_HOLD message
+
+    UtlBoolean handleTransferOtherPartyJoin(OsMsg* pEventMessage) ;
+    //: Handles the processing of a CP_TRANSFER_OTHER_PARTY_JOIN message
+
+    UtlBoolean handleTransferOtherPartyUnhold(OsMsg* pEventMessage) ;
+    //: Handles the processing of a CP_TRANSFER_OTHER_PARTY_UNHOLD message
+
+    UtlBoolean handleGetUserAgent(OsMsg* pEventMessage);
 
     virtual UtlBoolean getConnectionState(const char* remoteAddress, int& state);
 
@@ -341,14 +374,10 @@ private:
     UtlString mLocalTerminalId;
     UtlBoolean mIsEarlyMediaFor180;
     UtlBoolean mbRequestedDrop;      // Have we requested to be dropped by the CallManager
+    SIPXTACK_SECURITY_ATTRIBUTES* mpSecurity;
 
     SIPX_CALLSTATE_EVENT eLastMajor ;
-    SIPX_CALLSTATE_CAUSE eLastMinor ;
-    
-    // For media server
-    CpIntMessage* pExitMsg;
-    OsQueuedEvent* queuedEvent;
-    OsTimer* timer;
+    SIPX_CALLSTATE_CAUSE eLastMinor ; 
 
     CpPeerCall(const CpPeerCall& rCpPeerCall);
     //:Copy constructor

@@ -20,6 +20,7 @@
 #include <tapi/sipXtapiEvents.h>
 #include <tapi/sipXtapiInternal.h>
 #include <net/SipContactDb.h>
+#include <mi/CpMediaInterface.h>
 
 
 // DEFINES
@@ -74,7 +75,8 @@ public:
  		TERMCONNECTION_NONE,
  		TERMCONNECTION_HOLDING,
  		TERMCONNECTION_HELD,
- 		TERMCONNECTION_TALKING
+ 		TERMCONNECTION_TALKING,
+        TERMCONNECTION_UNHOLDING
  	};
    
 
@@ -193,12 +195,12 @@ public:
 /* ============================ MANIPULATORS ============================== */
 
    virtual void prepareForSplit() ;
-   virtual void prepareForJoin(CpCall* pNewCall, CpMediaInterface* pNewMediaInterface) ;
+   virtual void prepareForJoin(CpCall* pNewCall, const char* szLocalAddress, CpMediaInterface* pNewMediaInterface) ;
 
    virtual void forceHangUp(int connectionState = CONNECTION_DISCONNECTED)
    {
 	   setState(connectionState, CONNECTION_REMOTE);
-      fireSipXEvent(CALLSTATE_CONNECTED, CALLSTATE_CONNECTED_ACTIVE) ;
+      fireSipXEvent(CALLSTATE_CONNECTED, CALLSTATE_CAUSE_NORMAL) ;
    }
 
    virtual UtlBoolean dequeue(UtlBoolean callInFocus) = 0;
@@ -209,7 +211,12 @@ public:
                           const char* callController = NULL,
                           const char* originalCallConnection = NULL,
                           UtlBoolean requestQueuedCall = FALSE,
-                          const void* pDisplay = NULL) = 0;
+                          const void* pDisplay = NULL,
+                          const void* pSecurity = NULL,
+                          const char* locationHeader = NULL,
+                          const int bandWidth = AUDIO_MICODEC_BW_DEFAULT,
+                          UtlBoolean bOnHold = FALSE) = 0;
+
    //! param: requestQueuedCall - indicates that the caller wishes to have the callee queue the call if busy
 
    virtual UtlBoolean originalCallTransfer(UtlString& transferTargetAddress,
@@ -233,6 +240,7 @@ public:
    // Method to communicate status to target call on transfer
    // controller side
 
+   virtual void outOfFocus() = 0;
 
    virtual UtlBoolean answer(const void* hWnd = NULL) = 0;
 
@@ -244,7 +252,12 @@ public:
 
    virtual UtlBoolean renegotiateCodecs() = 0;
 
-   virtual UtlBoolean accept(int forwardOnNoAnswerTimeOut) = 0;
+   virtual UtlBoolean silentRemoteHold() = 0 ;
+
+   virtual UtlBoolean accept(int forwardOnNoAnswerTimeOut, 
+                             const void *pSecurity = NULL, 
+                             const char* locationHeader = NULL,
+                             const int bandWidth = AUDIO_MICODEC_BW_DEFAULT) = 0;
 
    virtual UtlBoolean reject() = 0;
 
@@ -252,7 +265,10 @@ public:
 
    virtual UtlBoolean processMessage(OsMsg& eventMessage,
                                     UtlBoolean callInFocus, UtlBoolean onHook) = 0;
-                                    
+
+   virtual UtlBoolean canSendInfo() { return false; }
+   //:Virtual method signature and default implementation for sendInfo - this should be overridden by
+   //:SipConnection.
    virtual UtlBoolean sendInfo(UtlString contentType, UtlString sContent){ return false; }
    //:Virtual method signature and default implementation for sendInfo - this should be overridden by
    //:SipConnection.
@@ -277,6 +293,11 @@ public:
 
     UtlBoolean validStateTransition(SIPX_CALLSTATE_EVENT eFrom, SIPX_CALLSTATE_EVENT eTo) ;
     void fireSipXEvent(SIPX_CALLSTATE_EVENT eMajor, SIPX_CALLSTATE_CAUSE eMinor, void *pEventData=NULL) ;
+    void fireSipXSecurityEvent(SIPX_SECURITY_INFO *pEventData) ;
+    void fireSipXMediaEvent(SIPX_MEDIA_EVENT event, 
+                            SIPX_MEDIA_CAUSE cause, 
+                            SIPX_MEDIA_TYPE  type, 
+                            void*            pEventData=NULL) ;
 
 /* ============================ ACCESSORS ================================= */
 
@@ -318,6 +339,14 @@ public:
      //: Get the time after which this connection can be deleted.  This 
      //: timespan is relative to boot.
 
+   void setTransferHeld(UtlBoolean bHeld) ;
+    //: Set the held state for a transfer operation (did we put the connection
+    // on hold as part of the transfer)
+
+   const UtlString& getRemoteRtpAddress() const ;
+
+   virtual void getRemoteUserAgent(UtlString* pUserAgent) = 0;
+
 /* ============================ INQUIRY =================================== */
 
     UtlBoolean isRemoteCallee();
@@ -341,6 +370,14 @@ public:
 
     UtlBoolean isHeld() const ;
       //:Is this connection on remote hold (not sending or receiving audio)
+
+    UtlBoolean isHoldInProgress() const ;
+      //:Is a hold currently in progress?
+
+    UtlBoolean isTransferHeld() const ;
+     //:Was the connection held for for a transfer operation
+
+    virtual UtlBoolean isLocallyInitiatedRemoteHold() const ;
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
@@ -393,6 +430,8 @@ protected:
 	UtlString remoteRtpAddress;
 	int remoteRtpPort;
     int remoteRtcpPort;
+	int remoteVideoRtpPort;
+	int remoteVideoRtcpPort; 
 	int sendCodec;
 	int receiveCodec;
 	
@@ -402,7 +441,10 @@ protected:
 	int mTerminalConnState;
 //	int mLocalTerminalConnState;
 //	int mRemoteTerminalConnState;
-	int mFarEndHoldState;
+	// int mFarEndHoldState;
+
+    int mHoldState ;
+
 	int mResponseCode;		// response code obtained at processResponse, passed through events to upper layer
 	UtlString mResponseText;	// response text obtained at processResponse
 
@@ -412,8 +454,7 @@ protected:
 	UtlString mLocalAddress;
     UtlString mOriginalCallConnectionAddress;
     UtlString mTargetCallConnectionAddress;
-    UtlString mTargetCallId;
-    
+    UtlString mTargetCallId;   
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
@@ -423,12 +464,10 @@ private:
     UtlString connectionCallerId;
 	OsMutex  callIdMutex;
     OsTime   mDeleteAfter ;    // Instructs the call to delete this connection
-                              // after this time period (time since boot)
+                               // after this time period (time since boot)
+    UtlBoolean mbTransferHeld ;
     SIPX_CALLSTATE_EVENT m_eLastMajor ; 
     SIPX_CALLSTATE_CAUSE m_eLastMinor ; 
-    SIPX_CALLSTATE_EVENT m_eLastAudioMajor;
-    SIPX_CALLSTATE_CAUSE m_eLastAudioMinor;
-
 
 	Connection(const Connection& rConnection);
      //:Copy constructor (disabled)

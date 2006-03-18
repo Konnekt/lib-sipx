@@ -89,13 +89,16 @@ Connection::Connection(CpCallManager* callMgr,
     mRemoteIsCallee = FALSE;
 	mRemoteRequestedHold = FALSE;
     remoteRtpPort = PORT_NONE;
+    remoteRtcpPort = PORT_NONE;
+	remoteVideoRtpPort = PORT_NONE;
+	remoteVideoRtcpPort = PORT_NONE;
     sendCodec = -1;
     receiveCodec = -1;
     mLocalConnectionState = CONNECTION_IDLE;
     mRemoteConnectionState = CONNECTION_IDLE;
     mConnectionStateCause = CONNECTION_CAUSE_NORMAL;
     mTerminalConnState = PtTerminalConnection::IDLE;
-	mFarEndHoldState = TERMCONNECTION_NONE;
+	mHoldState = TERMCONNECTION_NONE;
 	mResponseCode = 0;	
     mResponseText.remove(0);
 
@@ -110,10 +113,9 @@ Connection::Connection(CpCallManager* callMgr,
 
     m_eLastMajor = (SIPX_CALLSTATE_EVENT) -1 ;
     m_eLastMinor = (SIPX_CALLSTATE_CAUSE) -1 ;
-    m_eLastAudioMajor = (SIPX_CALLSTATE_EVENT) -1 ;
-    m_eLastAudioMinor = (SIPX_CALLSTATE_CAUSE) -1 ;
-
+  
     mpCallManager->getNewSessionId(this) ;
+    mbTransferHeld = false ;
 
 
 #ifdef TEST_PRINT    
@@ -157,6 +159,7 @@ Connection::~Connection()
 	   mpListeners = 0;
    }
 
+
 #ifdef TEST_PRINT 
     if (!callId.isNull())
        OsSysLog::add(FAC_CP, PRI_DEBUG, "Leaving Connection destructed: %s\n", callId.data());
@@ -180,13 +183,15 @@ void Connection::prepareForSplit()
 }
 
 
-void Connection::prepareForJoin(CpCall* pNewCall, CpMediaInterface* pNewMediaInterface) 
+void Connection::prepareForJoin(CpCall* pNewCall, const char* szLocalAddress, CpMediaInterface* pNewMediaInterface) 
 {
     mpCall = pNewCall ;
     mpMediaInterface = pNewMediaInterface ;
-    mpMediaInterface->createConnection(mConnectionId, NULL) ;
+
+    mpMediaInterface->createConnection(mConnectionId, szLocalAddress, NULL) ;
 
     // VIDEO: Need to include window handle!
+    // SECURITY:  What about the security attributes?
 }
 
 
@@ -279,12 +284,12 @@ void Connection::setState(int newState, int isLocal, int newCause, int termState
 
    if (bPostStateChange)
    {
-      mConnectionStateCause = newCause;
-      mTerminalConnState = termState == -1 ? terminalConnectionState(newState) : termState;
+      mConnectionStateCause = newCause;      
 
       if (isLocal)
       {
          mLocalConnectionState = newState;
+         mTerminalConnState = termState == -1 ? terminalConnectionState(newState) : termState;
       }
       else
       {
@@ -468,10 +473,10 @@ UtlBoolean Connection::validStateTransition(SIPX_CALLSTATE_EVENT eFrom, SIPX_CAL
 
     switch (eFrom)
     {
-        case DISCONNECTED:
-            bValid = (eTo == DESTROYED) ;
+        case CALLSTATE_DISCONNECTED:
+            bValid = (eTo == CALLSTATE_DESTROYED) ;
             break ;
-        case DESTROYED:
+        case CALLSTATE_DESTROYED:
             bValid = FALSE ;
             break ;
         default:
@@ -479,7 +484,7 @@ UtlBoolean Connection::validStateTransition(SIPX_CALLSTATE_EVENT eFrom, SIPX_CAL
     }
 
     // Make sure a local focus change doesn't kick off an established event
-    if ((eTo == CONNECTED) && (getLocalState() != CONNECTION_ESTABLISHED))
+    if ((eTo == CALLSTATE_CONNECTED) && (getLocalState() != CONNECTION_ESTABLISHED))
     {
         bValid = FALSE ;
     }
@@ -488,29 +493,23 @@ UtlBoolean Connection::validStateTransition(SIPX_CALLSTATE_EVENT eFrom, SIPX_CAL
 }
 
 
+void Connection::fireSipXSecurityEvent(SIPX_SECURITY_INFO *pEventData)
+{
+    TapiMgr::getInstance().fireEvent(mpCallManager, EVENT_CATEGORY_SECURITY, pEventData);
+}
 
 void Connection::fireSipXEvent(SIPX_CALLSTATE_EVENT eventCode, SIPX_CALLSTATE_CAUSE causeCode, void* pEventData) 
 {
     UtlString callId ;
     UtlString remoteAddress ;
     SipSession session ;
-    UtlBoolean bDuplicateAudio =
-            (eventCode == CALLSTATE_AUDIO_EVENT && causeCode == m_eLastAudioMinor) ? TRUE : FALSE;
 
     // Avoid sending duplicate events
     if ((   (eventCode != m_eLastMajor) || (causeCode != m_eLastMinor)) && 
-            validStateTransition(m_eLastMajor, eventCode) && !bDuplicateAudio)
+            validStateTransition(m_eLastMajor, eventCode))
     {
-        if (eventCode != CALLSTATE_AUDIO_EVENT)
-        {
-            m_eLastMajor = eventCode;
-            m_eLastMinor = causeCode;
-        }
-        else
-        {
-            m_eLastAudioMajor = eventCode;
-            m_eLastAudioMinor = causeCode;
-        }
+        m_eLastMajor = eventCode;
+        m_eLastMinor = causeCode;
 
         getCallId(&callId) ;
         getRemoteAddress(&remoteAddress);
@@ -520,6 +519,28 @@ void Connection::fireSipXEvent(SIPX_CALLSTATE_EVENT eventCode, SIPX_CALLSTATE_CA
     }
 }
 
+
+void Connection::fireSipXMediaEvent(SIPX_MEDIA_EVENT event, 
+                                    SIPX_MEDIA_CAUSE cause, 
+                                    SIPX_MEDIA_TYPE  type, 
+                                    void*            pEventData) 
+{
+    UtlString callId ;
+    UtlString remoteAddress ;
+
+
+    getCallId(&callId) ;
+    getRemoteAddress(&remoteAddress);
+
+    TapiMgr::getInstance().fireMediaEvent(mpCallManager, callId.data(), remoteAddress.data(), event, cause, type, pEventData) ;
+}
+
+
+
+void Connection::setTransferHeld(UtlBoolean bHeld) 
+{
+    mbTransferHeld = bHeld ;
+}
 
 /* ============================ ACCESSORS ================================= */
 void Connection::getLocalAddress(UtlString* address)
@@ -600,8 +621,11 @@ int Connection::getRemoteState() const
 {
    return mRemoteConnectionState ;
 }
-     
 
+const UtlString& Connection::getRemoteRtpAddress() const 
+{
+    return remoteRtpAddress ;
+}
 
 /* ============================ INQUIRY =================================== */
 
@@ -625,7 +649,23 @@ UtlBoolean Connection::isMarkedForDeletion() const
 
 UtlBoolean Connection::isHeld() const
 {
-    return mFarEndHoldState == TERMCONNECTION_HELD ;
+    return mHoldState == TERMCONNECTION_HELD ;
+}
+
+UtlBoolean Connection::isHoldInProgress() const
+{
+    return (mHoldState == TERMCONNECTION_HOLDING || 
+            mHoldState == TERMCONNECTION_UNHOLDING) ;
+}
+
+UtlBoolean Connection::isTransferHeld() const 
+{
+    return mbTransferHeld ;
+}
+
+UtlBoolean Connection::isLocallyInitiatedRemoteHold() const 
+{
+    return false ;
 }
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */

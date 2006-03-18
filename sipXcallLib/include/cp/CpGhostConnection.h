@@ -53,12 +53,17 @@ public:
    virtual UtlBoolean dequeue(UtlBoolean callInFocus);
 
    virtual UtlBoolean dial(const char* dialString,
-                                                  const char* callerId,
-                                                  const char* callId,
-                          const char* callController = NULL,
-                          const char* originalCallConnection = NULL,
-                          UtlBoolean requestQueuedCall = FALSE,
-                          const void* pDisplay = NULL);
+                           const char* callerId,
+                           const char* callId,
+                           const char* callController = NULL,
+                           const char* originalCallConnection = NULL,
+                           UtlBoolean requestQueuedCall = FALSE,
+                           const void* pDisplay = NULL,
+                           const void* pSecurity = NULL,
+                           const char* locationHeader = NULL,
+                           const int bandWidth = AUDIO_MICODEC_BW_DEFAULT,
+                           UtlBoolean bOnHold = FALSE);
+
    //! param: requestQueuedCall - indicates that the caller wishes to have the callee queue the call if busy
 
    virtual UtlBoolean originalCallTransfer(UtlString& transferTargetAddress,
@@ -82,6 +87,8 @@ public:
 
    virtual UtlBoolean answer(const void* hWnd = NULL);
 
+   virtual void outOfFocus();
+
    virtual UtlBoolean hangUp();
 
    virtual UtlBoolean hold();
@@ -94,7 +101,12 @@ public:
 
    virtual UtlBoolean renegotiateCodecs();
 
-   virtual UtlBoolean accept(int forwardOnNoAnswerSeconds);
+   virtual UtlBoolean silentRemoteHold() ;
+
+   virtual UtlBoolean accept(int forwardOnNoAnswerSeconds, 
+                             const void *pSecurity = NULL,
+                             const char* locationHeader = NULL,
+                             const int bandWidth = AUDIO_MICODEC_BW_DEFAULT);
 
    virtual UtlBoolean processMessage(OsMsg& eventMessage,
                                     UtlBoolean callInFocus, UtlBoolean onHook);
@@ -117,6 +129,8 @@ public:
     virtual void getLocalContactAddresses( CONTACT_ADDRESS contacts[],
                                            size_t nMaxContacts,
                                            size_t& nActualContacts) ;
+
+    virtual void getRemoteUserAgent(UtlString* pUserAgent);
 
 
 /* ============================ INQUIRY =================================== */

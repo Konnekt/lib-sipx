@@ -19,6 +19,8 @@
 #include "net/SipUserAgent.h"
 #include "utl/UtlVoidPtr.h"
 #include "os/OsEventMsg.h"
+#include "os/OsLock.h"
+
 // EXTERNAL FUNCTIONS
 // EXTERNAL VARIABLES
 extern UtlSList*	g_pEventListeners;
@@ -126,7 +128,10 @@ bool SipXMessageObserver::handleIncomingInfoMessage(SipMessage* pMessage)
         // Find Line
         UtlString lineId;
         pMessage->getToUri(&lineId);
-        SIPX_LINE hLine = sipxLineLookupHandle(lineId.data()) ;
+        UtlString requestUri; 
+    
+        pMessage->getRequestUri(&requestUri); 
+        SIPX_LINE hLine = sipxLineLookupHandle(lineId.data(), requestUri) ; 
         
         //if (0 != hLine)
         if (!pMessage->isResponse())
@@ -178,6 +183,7 @@ bool SipXMessageObserver::handleIncomingInfoMessage(SipMessage* pMessage)
             pInfoData->pMutex = new OsRWMutex(OsRWMutex::Q_FIFO);
 
             UtlVoidPtr* ptr = NULL;
+	        OsLock eventLock(*g_pEventListenerLock) ;
             UtlSListIterator eventListenerItor(*g_pEventListeners);
             while ((ptr = (UtlVoidPtr*) eventListenerItor()) != NULL)
             {
@@ -238,6 +244,7 @@ bool SipXMessageObserver::handleIncomingInfoStatus(SipMessage* pSipMessage)
         infoStatus.szResponseText = sResponseText.data();
         
         UtlVoidPtr* ptr = NULL;
+	    OsLock eventLock(*g_pEventListenerLock) ;
         UtlSListIterator eventListenerItor(*g_pEventListeners);
         while ((ptr = (UtlVoidPtr*) eventListenerItor()) != NULL)
         {

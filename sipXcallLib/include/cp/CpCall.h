@@ -231,6 +231,8 @@ public:
 
     virtual UtlBoolean canDisconnectConnection(Connection* pConnection) = 0;
 
+    virtual UtlBoolean isInFocus() const { return mCallInFocus ;} ;
+
     /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
     virtual UtlBoolean handleMessage(OsMsg& eventMessage);

@@ -21,6 +21,7 @@
 #include <net/StateChangeNotifier.h>
 #include <net/SipDialogMonitor.h>
 #include <cp/LinePresenceBase.h>
+#include <cp/SipPresenceMonitor.h>
 
 
 // DEFINES
@@ -50,12 +51,11 @@ public:
 /* ============================ CREATORS ================================== */
 
    /// Constructor
-   LinePresenceMonitor(int userAgentPort,       ///< user agent port
-                       UtlString& domainName,   ///< sipX domain name
-                       UtlString& groupName,    ///< name of the group to be monitored
-                       bool local,              ///< option for using local or remote monitor
-                       Url& remoteServerUrl,    ///< remote monitor server url
-                       Url& presenceServerUrl); ///< presence server url
+   LinePresenceMonitor(int userAgentPort,     ///< user agent port
+                       UtlString& domainName, ///< sipX domain name
+                       UtlString& groupName,  ///< name of the group to be monitored
+                       bool local,            ///< option for using local or remote monitor
+                       Url& remoteServerUrl); ///< remote server url
   
    /// Destructor
    virtual ~LinePresenceMonitor();
@@ -67,50 +67,22 @@ public:
    /// Set the state value.
    virtual bool setStatus(const Url& aor, const Status value);
 
-   /// Subscribe the dialog on a specific line in the list
-   OsStatus subscribeDialog(LinePresenceBase* line);
+   /// Subscribe a line in the list
+   OsStatus subscribe(LinePresenceBase* line);
 
-   /// Unsubscribe the dialog on a specific line from the list
-   OsStatus unsubscribeDialog(LinePresenceBase* line);
+   /// Unsubscribe a line from the list
+   OsStatus unsubscribe(LinePresenceBase* line);
    
-   /// Subscribe the dialogs for a list
-   OsStatus subscribeDialog(UtlSList& list);
+   /// Subscribe a list
+   OsStatus subscribe(UtlSList& list);
    
-   /// Unsubscribe the dialogs for a list
-   OsStatus unsubscribeDialog(UtlSList& list);
-
-   /// Subscribe the presence on a specific line in the list
-   OsStatus subscribePresence(LinePresenceBase* line);
-
-   /// Unsubscribe the presence on a specific line from the list
-   OsStatus unsubscribePresence(LinePresenceBase* line);
-   
-   /// Subscribe the presence for a list
-   OsStatus subscribePresence(UtlSList& list);
-   
-   /// Unsubscribe the presence for a list
-   OsStatus unsubscribePresence(UtlSList& list);
+   /// Unsubscribe a list
+   OsStatus unsubscribe(UtlSList& list);
 
 /* ============================ INQUIRY =================================== */
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
-
-   static void subscriptionStateCallback(SipSubscribeClient::SubscriptionState newState,
-                                         const char* earlyDialogHandle,
-                                         const char* dialogHandle,
-                                         void* applicationData,
-                                         int responseCode,
-                                         const char* responseText,
-                                         long expiration,
-                                         const SipMessage* subscribeResponse);
-
-   static void notifyEventCallback(const char* earlyDialogHandle,
-                                   const char* dialogHandle,
-                                   void* applicationData,
-                                   const SipMessage* notifyRequest);
-                                   
-   void handleNotifyMessage(const SipMessage* notifyMessage);
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
@@ -118,21 +90,17 @@ private:
    SipUserAgent* mpUserAgent;
    UtlString mGroupName;
    bool mLocal;
-   UtlString mDomainName;
-   UtlString mContact;
    
    SipDialogMonitor* mpDialogMonitor;
+   SipPresenceMonitor* mpPresenceMonitor;
 
    SipDialogMgr mDialogManager;
    SipRefreshManager* mpRefreshMgr;
    SipSubscribeClient* mpSipSubscribeClient;
    
    Url mRemoteServer;
-   UtlString mPresenceServer;
 
-   UtlHashMap mDialogSubscribeList;
-   UtlHashMap mPresenceSubscribeList;
-   UtlHashMap mDialogHandleList;
+   UtlHashMap mSubscribeList;
 
    OsBSem mLock;                  /**<
                                     * semaphore used to ensure that there
