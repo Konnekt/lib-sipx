@@ -199,6 +199,19 @@ void UtlList::removeAll()
    }
 }
 
+
+// Re-calculates hashes for all items
+void UtlList::rehash()
+{
+   OsLock take(mContainerLock);
+   
+   UtlLink* link;
+   for (link = head(); link; link = link->next())
+   {
+      link->rehash() ;
+   }
+}
+
 /* ============================ ACCESSORS ================================= */
 
 // Return the first element (head) of the list.

@@ -16,8 +16,9 @@ testsuite_LDADD = \
 
 testsuite_CXXFLAGS = \
 	-I$(top_srcdir)/include \
-	@PCRE_CFLAGS@ @CPPUNIT_CFLAGS@ \
+	@PCRE_CFLAGS@ \
 	@SSL_CXXFLAGS@ \
+	-DSIPX_TMPDIR=\"@SIPX_TMPDIR@\" \
 	-DTEST_DIR=\"@abs_builddir@\" \
 	-fno-gcse -O0
 
@@ -30,7 +31,6 @@ testsuite_SOURCES = \
     utl/UtlContainableTestStub.h \
     utl/UtlVoidPtr.cpp \
     utl/UtlInt.cpp \
-    utl/UtlLongLongInt.cpp \
     utl/UtlStringTest.cpp \
     utl/UtlStringTest.h \
     utl/UtlStringTest_ConstructiveManipulators.cpp \
@@ -44,11 +44,12 @@ testsuite_SOURCES = \
     utl/UtlSortedListIteratorTest.cpp \
     utl/UtlHashMap.cpp \
     utl/UtlHashMapIterator.cpp \
+    utl/UtlRegex.cpp \
     utl/UtlHashBag.cpp \
     utl/UtlHashBagIterator.cpp \
     utl/UtlRegex.cpp \
     utl/UtlTokenizerTest.cpp \
-    utl/XmlContentTest.cpp \
+	 utl/XmlContentTest.cpp \
     os/OsTestUtilities.cpp \
     os/OsTestUtilities.h \
     os/OsNameDbTest.cpp \
@@ -70,10 +71,8 @@ testsuite_SOURCES = \
     os/OsProcessIteratorTest.cpp \
     os/OsProcessTest.cpp \
     os/OsProcessMgrTest.cpp \
-    utl/TestPlugin.h \
-    utl/PluginHooksTest.cpp
-
-# Removed because it hangs when the working directory does not exist
+	 utl/TestPlugin.h \
+	 utl/PluginHooksTest.cpp
 
 # :TODO: Removed because they depend on direct access to glib
 #    os/OsTimerTest.cpp
@@ -92,12 +91,12 @@ sandbox_LDADD = $(testsuite_LDADD)
 
 sandbox_CXXFLAGS = $(testsuite_CXXFLAGS)
 sandbox_SOURCES = \
-    utl/UtlLongLongInt.cpp
+    os/OsEventTest.cpp \
+    utl/PluginHooksTest.cpp
 
 # Performance test of UtlList
 
 UtlListPerformance_SOURCES = \
-	utl/UtlPerformanceStrings.h \
 	utl/UtlListPerformance.cpp
 
 
@@ -111,7 +110,6 @@ UtlListPerformance_LDADD = \
 # Performance test of UtlHashMap
 
 UtlHashMapPerformance_SOURCES = \
-	utl/UtlPerformanceStrings.h \
 	utl/UtlHashMapPerformance.cpp
 
 
@@ -122,6 +120,6 @@ UtlHashMapPerformance_CXXFLAGS = \
 UtlHashMapPerformance_LDADD = \
     ../libsipXport.la
 
+
 EXTRA_DIST=
 
-DISTCLEANFILES = Makefile.in

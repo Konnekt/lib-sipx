@@ -277,7 +277,6 @@ OsStatus OsConfigDb::remove(const UtlString& rKey)
 // Remove all the key/value pairs starting with the designated prefix
 OsStatus OsConfigDb::removeByPrefix(const UtlString& rPrefix) 
 {
-   OsWriteLock lock(mRWMutex);
    DbEntry* pEntry ;
 
    UtlSortedListIterator itor(mDb) ;
@@ -530,13 +529,12 @@ OsStatus OsConfigDb::getNext(const UtlString& rKey,
 void OsConfigDb::addList(const UtlString& rPrefix,
                          UtlSList& rList) 
 {
-    OsWriteLock lock(mRWMutex);
+    // First remove all items start with the specified prefix
+    removeByPrefix(rPrefix) ;
     int iNumEntries ;
     UtlString key ;
     UtlString* pValue ;
 
-    // First remove all items start with the specified prefix
-    removeByPrefix(rPrefix) ;
 
     // Next add all of the new items
     iNumEntries = rList.entries() ;
@@ -635,6 +633,20 @@ int OsConfigDb::getPort(const char* szKey)
 
     return port ;
 }
+
+// Delete all entries from the configuration database
+void OsConfigDb::clear() 
+{
+   OsReadLock lock(mRWMutex);
+   
+    while (mDb.entries() > 0)   
+    {
+        DbEntry *e = (DbEntry *)mDb.at(0);
+        mDb.removeAt(0) ;
+        delete e ;
+    }
+}
+
 
 /* ============================ INQUIRY =================================== */
 

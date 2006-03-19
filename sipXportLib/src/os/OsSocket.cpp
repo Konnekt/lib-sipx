@@ -19,6 +19,7 @@
 
 #include "utl/UtlRscTrace.h"
 
+#include "os/HostAdapterAddress.h"
 #if defined(_WIN32)
 #   include <winsock2.h>
 #elif defined(_VXWORKS)
@@ -291,7 +292,14 @@ int OsSocket::read(char* buffer, int bufferLength,
       // 10038 WSAENOTSOCK not a valid socket descriptor
       if(error)
       {
+#ifdef _WIN32
+          if (error != WSAECONNRESET)
+          {
+            close();
+          }
+#else
          close();
+#endif
          // perror("OsSocket::read call to recvfrom failed\n");
          osPrintf("recvfrom call failed with error: %d\n", error);
       }
@@ -682,9 +690,9 @@ const char* socketType_MULTICAST = "MULTICAST";
 const char* socketType_SSL = "TLS";
 const char* socketType_invalid = "INVALID";
 
-const char* OsSocket::ipProtocolString(OsSocket::IpProtocolSocketType type)
+const char* OsSocket::ipProtocolString() const
 {
-   switch (type)
+   switch (getIpProtocol())
    {
    case OsSocket::UNKNOWN:
       return socketType_UNKNOWN;
@@ -745,7 +753,7 @@ UtlBoolean OsSocket::socketInit()
             socketInitialized = TRUE;
             mInitializeSem.release();
            // Windows specific startup
-#               ifdef _WIN32
+#ifdef _WIN32
                 WORD wVersionRequested = MAKEWORD( 1, 1 );
                 WSADATA wsaData;
                 int error = WSAStartup(wVersionRequested, &wsaData);
@@ -756,7 +764,7 @@ UtlBoolean OsSocket::socketInit()
                                 HIBYTE( wsaData.wVersion ));
                         returnCode = FALSE;
                 }
-#               endif
+#endif
 
                 
         }
@@ -841,7 +849,11 @@ int OsSocket::getSocketDescriptor() const
 void OsSocket::setDefaultBindAddress(const unsigned long bind_address)
 {
     mInitializeSem.acquire();
+#ifndef _DISABLE_MULTIPLE_INTERFACE_SUPPORT
     m_DefaultBindAddress = bind_address;
+#else
+    OsSysLog::add(FAC_NET, PRI_WARNING, "Multiple interface support disabled on this platform") ;
+#endif
     mInitializeSem.release();
 }
 
@@ -922,8 +934,18 @@ void OsSocket::getHostIp(UtlString* hostAddress)
 
       if (address_val == htonl(INADDR_ANY))
       {
-         getHostName(&thisHost);
-         getHostIpByName(thisHost.data(), hostAddress);
+        // get the first local address and
+        // make it the default address
+        const HostAdapterAddress* addresses[MAX_IP_ADDRESSES];
+        int numAddresses = 0;
+        memset(addresses, 0, sizeof(addresses));
+        getAllLocalHostIps(addresses, numAddresses);
+        assert(numAddresses > 0);
+        // Bind to the first address in the list.
+        *hostAddress = (char*)addresses[0]->mAddress.data();
+        // Now free up the list.
+        for (int i = 0; i < numAddresses; i++)
+           delete addresses[i];       
       }
       else
       {
@@ -1184,32 +1206,6 @@ void OsSocket::inet_ntoa_pt(struct in_addr input_address,
 #else
 #error Unsupported target platform.
 #endif
-}
-
-//:Returns TRUE if the given IpProtocolSocketType is a framed message protocol
-// (that is, every read returns exactly one message), and so the Content-Length
-// header may be omitted.
-UtlBoolean OsSocket::isFramed(IpProtocolSocketType type)
-{
-   UtlBoolean r;
-
-   switch (type)
-   {
-   case TCP:
-   case SSL_SOCKET:
-      // UNKNOWN and all other values return TRUE for safety.
-   case UNKNOWN:
-   default:
-      r = FALSE;
-      break;
-
-   case UDP:
-   case MULTICAST:
-      r = TRUE;
-      break;
-   }
-
-   return r;
 }
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */

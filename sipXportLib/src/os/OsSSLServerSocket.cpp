@@ -104,17 +104,14 @@ OsConnectionSocket* OsSSLServerSocket::accept()
       if (clientSocket < 0)
       {
          int error = OsSocketGetERRNO();
-         if (0 != error)
-         {
-            OsSysLog::add(FAC_KERNEL, PRI_ERR, 
-                          "OsSSLServerSocket: accept call failed with error: %d=%x",
-                          error, error);
-            socketDescriptor = OS_INVALID_SOCKET_DESCRIPTOR;
-         }
+         OsSysLog::add(FAC_KERNEL, PRI_ERR, 
+                       "OsSSLServerSocket: accept call failed with error: %d=%x",
+                       error, error);
+         socketDescriptor = OS_INVALID_SOCKET_DESCRIPTOR;
       }
       else
       {
-         OsSysLog::add(FAC_KERNEL, PRI_DEBUG, 
+         OsSysLog::add(FAC_KERNEL, PRI_ERR, 
                        "OsSSLServerSocket::accept socket accepted: %d",
                        clientSocket);
 
@@ -122,6 +119,11 @@ OsConnectionSocket* OsSSLServerSocket::accept()
          SSL* pSSL = OsSharedSSL::get()->getServerConnection();
          if (pSSL)
          {
+#           if 1 // TBD
+            OsSysLog::add(FAC_KERNEL, PRI_DEBUG,
+                          "OsSSLServerSocket::accept got connections ssl %p sock %d",
+                          pSSL, clientSocket);
+#           endif
             SSL_set_fd (pSSL, clientSocket);
 
             newSocket = new OsSSLConnectionSocket(pSSL,clientSocket);
@@ -131,15 +133,15 @@ OsConnectionSocket* OsSSLServerSocket::accept()
                if (1 == result)
                {
                   OsSSL::logConnectParams(FAC_KERNEL, PRI_DEBUG
-                                          ,"OsSSLServerSocket::accept"
+                                          ,"OsSSLServerSocket::accept %p"
                                           ,pSSL);
                }
                else
                {
                   OsSSL::logError(FAC_KERNEL, PRI_ERR,
                                   (  result == 0
-                                   ? "OsSSLServerSocket SSL_accept - incompatible client?"
-                                   : "OsSSLServerSocket SSL_accept SSL handshake error"
+                                   ? "OsSSLServerSocket SSL_accept - incompatible client? - %s"
+                                   : "OsSSLServerSocket SSL_accept SSL handshake error - %s"
                                    ),
                                   SSL_get_error(pSSL, result));
                   socketDescriptor = OS_INVALID_SOCKET_DESCRIPTOR;
@@ -187,7 +189,7 @@ int OsSSLServerSocket::getLocalHostPort() const
 
 /* ============================ INQUIRY =================================== */
 
-OsSocket::IpProtocolSocketType OsSSLServerSocket::getIpProtocol() const
+int OsSSLServerSocket::getIpProtocol() const
 {
     return(OsSocket::SSL_SOCKET);
 }

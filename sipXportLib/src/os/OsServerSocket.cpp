@@ -60,7 +60,8 @@
 // Constructor
 OsServerSocket::OsServerSocket(int connectionQueueSize,
     int serverPort,
-    const char* szBindAddr)
+    const char* szBindAddr,
+    const bool bPerformBind)
 {
    const int one = 1;
    int error = 0;
@@ -76,26 +77,20 @@ OsServerSocket::OsServerSocket(int connectionQueueSize,
 
    localHostPort = serverPort;
 
-   OsSysLog::add(FAC_KERNEL, PRI_DEBUG,
-                 "OsServerSocket::_ queue=%d port=%d bindaddr=%s",
-                 connectionQueueSize, serverPort, szBindAddr
-                 );
-
    // Create the socket
    socketDescriptor = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
    if(socketDescriptor == OS_INVALID_SOCKET_DESCRIPTOR)
    {
       error = OsSocketGetERRNO();
-      OsSysLog::add(FAC_KERNEL, PRI_ERR,
-                    "OsServerSocket: socket call failed with error: %d=0x%x",
-                    error, error);
+      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsServerSocket: socket call failed with error: %d=0x%x\n",
+         error, error);
       socketDescriptor = OS_INVALID_SOCKET_DESCRIPTOR;
       goto EXIT;
    }
 
 #ifndef WIN32
    if(setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)))
-      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsServerSocket: setsockopt(SO_REUSEADDR) failed!");
+      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsServerSocket: setsockopt(SO_REUSEADDR) failed!\n");
 #endif
     setsockopt(socketDescriptor, SOL_SOCKET, SO_DONTROUTE, (char *)&one, sizeof(one)) ;
 
@@ -106,14 +101,11 @@ OsServerSocket::OsServerSocket(int connectionQueueSize,
    {
       error = OsSocketGetERRNO();
       close();
-      OsSysLog::add(FAC_SIP, PRI_ERR,
-                    "setsockopt call failed with error: 0x%x in OsServerSocket::OsServerSocket",
-                    error);
+      perror("call to setsockopt failed in OsServerSocket::OsServerSocket\n");
+      OsSysLog::add(FAC_SIP, PRI_ERR, "setsockopt call failed with error: 0x%x in OsServerSocket::OsServerSocket\n", error);
       goto EXIT;
    }
 #       endif
-
-
 
    localAddr.sin_family = AF_INET;
 
@@ -121,6 +113,7 @@ OsServerSocket::OsServerSocket(int connectionQueueSize,
    // any available port number if PORT_DEFAULT.
    localAddr.sin_port = htons((PORT_DEFAULT == serverPort) ? 0 : serverPort);
 
+#ifndef _DISABLE_MULTIPLE_INTERFACE_SUPPORT
    // Allow IP in on any of this host's addresses or NICs.
    if (szBindAddr)
    {
@@ -132,42 +125,49 @@ OsServerSocket::OsServerSocket(int connectionQueueSize,
       localAddr.sin_addr.s_addr=OsSocket::getDefaultBindAddress();
       mLocalIp = inet_ntoa(localAddr.sin_addr);
    }
-//   localAddr.sin_addr.s_addr=htonl(INADDR_ANY); // Allow IP in on
+#else
+   localAddr.sin_addr.s_addr=htonl(INADDR_ANY); // Allow IP in on
+   mLocalIp = inet_ntoa(localAddr.sin_addr);
+#endif
 
-   error = bind(socketDescriptor,
-                (OsSS_CONST struct sockaddr*) &localAddr,
-                sizeof(localAddr));
-   if (error == OS_INVALID_SOCKET_DESCRIPTOR)
+   if (bPerformBind)
    {
-      error = OsSocketGetERRNO();
-      OsSysLog::add(FAC_KERNEL, PRI_ERR,
-                    "OsServerSocket:  bind to port %d failed with error: %d = 0x%x",
-                    ((PORT_DEFAULT == serverPort) ? 0 : serverPort), error, error);
-      socketDescriptor = OS_INVALID_SOCKET_DESCRIPTOR;
-      goto EXIT;
+        error = bind(socketDescriptor,
+                        (OsSS_CONST struct sockaddr*) &localAddr,
+                        sizeof(localAddr));
+        if (error == OS_INVALID_SOCKET_DESCRIPTOR)
+        {
+            error = OsSocketGetERRNO();
+            OsSysLog::add(FAC_KERNEL, PRI_ERR,
+                            "OsServerSocket:  bind to port %d failed with error: %d = 0x%x\n",
+                            ((PORT_DEFAULT == serverPort) ? 0 : serverPort), error, error);
+            socketDescriptor = OS_INVALID_SOCKET_DESCRIPTOR;
+            goto EXIT;
+        }
    }
-
    addrSize = sizeof(struct sockaddr_in);
    error = getsockname(socketDescriptor,
                            (struct sockaddr*) &localAddr, SOCKET_LEN_TYPE &addrSize);
    if (error) {
       error = OsSocketGetERRNO();
-      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsServerSocket: getsockname call failed with error: %d=0x%x",
+      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsServerSocket: getsockname call failed with error: %d=0x%x\n",
          error, error);
    } else {
       localHostPort = htons(localAddr.sin_port);
    }
 
-   // Setup the queue for connection requests
-   error = listen(socketDescriptor,  connectionQueueSize);
-   if (error)
-   {
-      error = OsSocketGetERRNO();
-      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsServerSocket: listen call failed with error: %d=0x%x",
-         error, error);
-      socketDescriptor = OS_INVALID_SOCKET_DESCRIPTOR;
-   }
-
+    // Setup the queue for connection requests
+    if (bPerformBind)
+    {
+        error = listen(socketDescriptor,  connectionQueueSize);
+        if (error)
+        {
+            error = OsSocketGetERRNO();
+            OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsServerSocket: listen call failed with error: %d=0x%x\n",
+                error, error);
+            socketDescriptor = OS_INVALID_SOCKET_DESCRIPTOR;
+        }
+    }
 EXIT:
    ;
 
@@ -204,7 +204,7 @@ OsConnectionSocket* OsServerSocket::accept()
    if (clientSocket < 0)
    {
       int error = OsSocketGetERRNO();
-      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsServerSocket: accept call failed with error: %d=0x%x",
+      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsServerSocket: accept call failed with error: %d=0x%x\n",
          error, error);
       socketDescriptor = OS_INVALID_SOCKET_DESCRIPTOR;
       return NULL;
@@ -248,7 +248,6 @@ UtlBoolean OsServerSocket::isOk() const
 {
     return(socketDescriptor != OS_INVALID_SOCKET_DESCRIPTOR);
 }
-
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 

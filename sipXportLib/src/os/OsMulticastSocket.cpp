@@ -238,7 +238,7 @@ int OsMulticastSocket::read(char* buffer, int bufferLength)
 }
 
 /* ============================ ACCESSORS ================================= */
-OsSocket::IpProtocolSocketType OsMulticastSocket::getIpProtocol() const
+int OsMulticastSocket::getIpProtocol() const
 {
         return(MULTICAST);
 }

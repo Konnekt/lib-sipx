@@ -334,8 +334,8 @@ void OsDateTimeBase::getDayOfWeek(int year, int  month, int dayOfMonth, int& day
     // A copy of this page is also in:
     // \\Pingpdc\Software\Info\technology\calendar-math\node3.html
 
-    //both vxw and windows will set the mMonth to 0 based.
-    //windows used 1 based month (doh) and vxw uses 0 based
+    // The calculation below assumes a 1-based month -- internally, we used a 0-based number
+    // and the API docs ask for a 0-based month.
     month++;
 
 //    osPrintf("getDayOfWeek (IN): year=%d, month=%d, dayofmonth=%d\n",year,month,dayOfMonth);
@@ -344,7 +344,6 @@ void OsDateTimeBase::getDayOfWeek(int year, int  month, int dayOfMonth, int& day
     int gy = year - a;
     
     int m = month + (12 * a) - 2;
-    //int julianDay = (5 + dayOfMonth + gy + gy/4 + 31 * m / 12) % 7;
     dayOfWeek = (dayOfMonth + gy + (gy/4) - (gy/100) + (gy/400) + (31 * m) / 12) % 7;
     
 //    osPrintf("Month: %d day: %d, %d is on day of week: %d \n",
@@ -370,6 +369,8 @@ OsStatus OsDateTimeBase::cvtToTimeSinceEpoch(OsTime& rTime) const
    thisTime.tm_hour  = mHour;
    thisTime.tm_min   = mMinute;
    thisTime.tm_sec   = mSecond;
+   thisTime.tm_wday  = 0;
+   thisTime.tm_yday  = 0;     
    thisTime.tm_isdst = 0;
 
    thisTimeAsTimeT  = tm2Epoch(&thisTime);

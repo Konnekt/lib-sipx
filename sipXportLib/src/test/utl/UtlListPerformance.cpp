@@ -1,14 +1,12 @@
-//////////////////////////////////////////////////////////////////////////////
-// 
 //
-// Copyright (C) 2005 SIPfoundry Inc.
+// Copyright (C) 2004-2006 SIPfoundry Inc.
 // Licensed by SIPfoundry under the LGPL license.
 //
-// Copyright (C) 2005 Pingtel Corp.
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
 // Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
 #include "assert.h"
@@ -155,7 +153,7 @@ void doListOperations()
    // iterate over each item in the list
    UtlSListIterator iterate(testList);
    UtlString* item;
-   while ((item = dynamic_cast<UtlString*>(iterate())))
+   while (item = dynamic_cast<UtlString*>(iterate()))
    {
       externalForSideEffects = item->length();
       delete item;

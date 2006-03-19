@@ -16,11 +16,11 @@
 /**
  * Unit test for RegEx
  *
- * This is designed to test the encapsulation of PCRE, not PCRE itself.
+ * This is designed to test the encapsulation of pcre, not pcre itself.
  * These tests assume that the actual regular expression matching is
- * correct (although most will fail if it is not) because PCRE has its
+ * correct (although most will fail if it is not) because pcre has its
  * own excellent unit tests.  If you are incorporating a modified version
- * of PCRE, you must use its unit tests to confirm the correctness of
+ * of pcre, you must use its unit test to confirm the correctness of
  * the modifications before this test will be useful.
  */
 #include "utl/UtlRegex.h"
@@ -93,22 +93,6 @@ public:
          SHOULD_NOT_MATCH( "foo35 " );
 
          delete TheRegEx;
-      }
-
-   void testCopy2()
-      {
-         static const RegEx ConstRegEx("^[a-z]+([0-9]+)$");
-         RegEx TheCopiedRegEx(ConstRegEx);
-         RegEx* TheRegEx = &TheCopiedRegEx;
-         
-         SHOULD_MATCH(2,"foo35");
-         MATCH(0,"foo35");
-         MATCH(1,"35");
-
-         SHOULD_NOT_MATCH( "abc" );
-         SHOULD_NOT_MATCH( "Foo35" );
-         SHOULD_NOT_MATCH( "12Foo35" );
-         SHOULD_NOT_MATCH( "foo35 " );
       }
 
    void testMatchInfo()
@@ -276,7 +260,10 @@ public:
          CPPUNIT_ASSERT( matchAs.Match(0, start, length));
          CPPUNIT_ASSERT( start == 4 );
          CPPUNIT_ASSERT( length == 2 );
+
+
       }
+
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(UtlRegExTest);

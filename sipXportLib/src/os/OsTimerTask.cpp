@@ -35,7 +35,7 @@
 // STATIC VARIABLE INITIALIZATIONS
 OsTimerTask* OsTimerTask::spInstance = 0;
 OsBSem       OsTimerTask::sLock(OsBSem::Q_PRIORITY, OsBSem::FULL);
-const int    OsTimerTask::TIMER_MAX_REQUEST_MSGS = 10000;
+const int    OsTimerTask::TIMER_MAX_REQUEST_MSGS = 1000;
 
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
 
@@ -126,18 +126,21 @@ void OsTimerTask::stopTimer(OsTimer& rTimer)
    OsStatus     res;
    int          rpcRetVal;
 
-   pTimerTask = getTimerTask();
-   res = pTimerTask->postMessage(msg);
-   assert(res == OS_SUCCESS);
+   pTimerTask = OsTimerTask::spInstance;
+   if (pTimerTask)
+   {
+    res = pTimerTask->postMessage(msg);
+    assert(res == OS_SUCCESS);
 
-   res = rpcEvent.wait();
-   assert(res == OS_SUCCESS);
+    res = rpcEvent.wait();
+    assert(res == OS_SUCCESS);
 
-   res = rpcEvent.getEventData(rpcRetVal);
-   assert(res == OS_SUCCESS && rpcRetVal == OS_SUCCESS);
+    res = rpcEvent.getEventData(rpcRetVal);
+    assert(res == OS_SUCCESS && rpcRetVal == OS_SUCCESS);
 
-   res = rpcEvent.reset();
-   assert(res == OS_SUCCESS);
+    res = rpcEvent.reset();
+    assert(res == OS_SUCCESS);
+   }
 }
 
 /* ============================ ACCESSORS ================================= */

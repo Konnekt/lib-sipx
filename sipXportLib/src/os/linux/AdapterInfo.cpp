@@ -11,12 +11,13 @@
 // SYSTEM INCLUDES
 #include <arpa/inet.h>
 #include <errno.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
+#include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <net/if.h>
 
 // APPLICATION INCLUDES
 #include <os/HostAdapterAddress.h>
@@ -52,7 +53,13 @@ bool getAllLocalHostIps(const HostAdapterAddress* localHostAddresses[],
    else
    {
       // Perform the SIOCGIFCONF ioctl to get the interface addresses.
+#ifdef __MACH__
+      // Under MacOS, SIOCFIGCONF assumes a variable length structure,
+      // using OSIOCGIFCONF appears to be the popular workaround.
+      int ret = ioctl(sock, OSIOCGIFCONF, (void*) &ifconf_structure);
+#else
       int ret = ioctl(sock, SIOCGIFCONF, (void*) &ifconf_structure);
+#endif
 
       if (ret < 0)
       {
@@ -70,6 +77,10 @@ bool getAllLocalHostIps(const HostAdapterAddress* localHostAddresses[],
          // Iterate through the returned addresses.
          for (int i = 0; i < numAddresses; i++)
          {
+            
+            if (ifreq_array[i].ifr_addr.sa_family != AF_INET)
+                continue;
+
             // Get transient pointer to address in text format.
             char* s = inet_ntoa(((struct sockaddr_in&) (ifreq_array[i].ifr_addr)).sin_addr);
 
@@ -80,9 +91,11 @@ bool getAllLocalHostIps(const HostAdapterAddress* localHostAddresses[],
             {
                // Put the interface name and address into a HostAdapterAddress.
                localHostAddresses[j] = new HostAdapterAddress(ifreq_array[i].ifr_name, s);
+/*
                OsSysLog::add(FAC_KERNEL, PRI_DEBUG,
                              "getAllLocalHostIps entry %d, interface '%s', address '%s'",
                              j, ifreq_array[i].ifr_name, s);
+*/
                j++;
             }
          }
@@ -93,7 +106,7 @@ bool getAllLocalHostIps(const HostAdapterAddress* localHostAddresses[],
    return rc;
 }
 
-bool getContactAdapterName(char* szAdapter, const char* szIp)
+bool getContactAdapterName(char* szAdapter, const char* szIp, bool unusedHere)
 {
    bool found = false;
    
@@ -108,9 +121,11 @@ bool getContactAdapterName(char* szAdapter, const char* szIp)
       if (ipAddress.compareTo(adapterAddresses[i]->mAddress.data()) == 0)
       {
          strcpy(szAdapter, adapterAddresses[i]->mAdapter.data());
+/*
          OsSysLog::add(FAC_KERNEL, PRI_DEBUG,
                        "getContactAdapterName found name %s for ip %s",
                        szAdapter, szIp);
+*/
          found = true;
       }
       delete adapterAddresses[i];

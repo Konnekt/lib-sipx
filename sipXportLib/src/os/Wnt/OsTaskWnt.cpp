@@ -91,7 +91,7 @@ UtlBoolean OsTaskWnt::restart(void)
 // the task operates in the remaining state.
 OsStatus OsTaskWnt::resume(void)
 {
-   int    ntResult;
+   BOOL    ntResult;
    OsLock lock(mDataGuard);
 
    if (!isStarted())
@@ -119,7 +119,7 @@ UtlBoolean OsTaskWnt::start(void)
    if (isStarted())
       return FALSE;
 
-   return doWntCreateTask();
+   return doWntCreateTask(); ;
 }
 
 // Suspend the task.
@@ -240,31 +240,6 @@ OsStatus OsTaskWnt::delay(const int milliSecs)
    return OS_SUCCESS;
 }
 
-// Disable rescheduling for the currently executing task.
-// This routine disables task context switching. The task that calls
-// this routine will be the only task that is allowed to execute,
-// unless the task explicitly gives up the CPU by making itself no
-// longer ready. Typically this call is paired with unlock();
-// together they surround a critical section of code. These
-// preemption locks are implemented with a counting variable that
-// allows nested preemption locks. Preemption will not be unlocked
-// until unlock() has been called as many times as lock().
-OsStatus OsTaskWnt::lock(void)
-{
-   return OS_NOT_YET_IMPLEMENTED;
-}
-
-// Enable rescheduling for the currently executing task.
-// This routine decrements the preemption lock count. Typically
-// this call is paired with lock() and concludes a critical
-// section of code. Preemption will not be unlocked until
-// unlock() has been called as many times as lock(). When
-// the lock count is decremented to zero, any tasks that were
-// eligible to preempt the current task will execute.
-OsStatus OsTaskWnt::unlock(void)
-{
-   return OS_NOT_YET_IMPLEMENTED;
-}
 
 // Make the calling task safe from deletion.
 // This routine protects the calling task from deletion. Tasks that
@@ -513,7 +488,7 @@ UtlBoolean OsTaskWnt::doWntCreateTask(void)
 void OsTaskWnt::doWntTerminateTask(UtlBoolean force)
 {
    char      idString[15];
-   UtlBoolean ntResult;
+   BOOL      ntResult;
    OsStatus  res;
 
    if (mState == UNINITIALIZED)

@@ -310,6 +310,16 @@ void UtlLink::release()
 }
 
 
+/// Recalculate the hash for this item
+void UtlLink::rehash()
+{
+   if (data)
+   {
+      hash = data->hash();
+   }   
+}
+
+
 size_t UtlLink::totalAllocated()
 {
    return spLinkPool->totalAllocated();

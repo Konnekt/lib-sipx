@@ -58,9 +58,12 @@ const char* OsSysLog::sFacilityNames[] =
    "REPLICATION_CGI",
    "SIPDB",
    "PROCESSMGR",
-   "OS",
+   "PROCESS",
    "SIPXTAPI",
    "AUDIO",
+   "CONFERENCE",
+   "VOICEENGINE",
+   "VIDEOENGINE",
    "UNKNOWN",
 } ;
 

@@ -66,11 +66,9 @@
 OsDatagramSocket::OsDatagramSocket(int remoteHostPortNum,
        const char* remoteHost, int localHostPortNum, const char* localHost) :
    mNumTotalWriteErrors(0),
-   mNumRecentWriteErrors(0)
+   mNumRecentWriteErrors(0),
+   mSimulatedConnect(FALSE)
 {
-    OsSysLog::add(FAC_SIP, PRI_DEBUG, "OsDatagramSocket::_ attempt %s:%d"
-                  ,remoteHost, remoteHostPortNum);
-
     int                error = 0;
     UtlBoolean         isIp = FALSE;
     struct sockaddr_in localAddr;
@@ -113,6 +111,7 @@ OsDatagramSocket::OsDatagramSocket(int remoteHostPortNum,
     }
 
     // Bind to the socket
+#ifndef _DISABLE_MULTIPLE_INTERFACE_SUPPORT
     localAddr.sin_family = AF_INET;
     localAddr.sin_port =
        htons(localHostPort == PORT_DEFAULT ? 0 : localHostPort);
@@ -130,18 +129,24 @@ OsDatagramSocket::OsDatagramSocket(int remoteHostPortNum,
         localAddr.sin_addr.s_addr= ipAddr.s_addr;
         mLocalIp = localHost;
     }
+#else
+    localAddr.sin_family = AF_INET;
+    localAddr.sin_port = htons(localHostPort == PORT_DEFAULT ? 0 : localHostPort);
+    localAddr.sin_addr.s_addr=OsSocket::getDefaultBindAddress(); 
+    OsSocket::getHostIp(&mLocalIp) ;
+#endif
 
-    
 #   if defined(_WIN32)
     error = bind( socketDescriptor, (const struct sockaddr*) &localAddr,
             sizeof(localAddr));
 #   elif defined(__pingtel_on_posix__)
-
     error = bind( socketDescriptor, (struct sockaddr*) &localAddr,
             sizeof(localAddr));
 #   endif
+
     if(error == OS_INVALID_SOCKET_DESCRIPTOR)
     {
+        OsSysLog::add(FAC_KERNEL, PRI_ERR, "Failed to bind to socket %d\n", socketDescriptor) ; 
         close();
         goto EXIT;
     }
@@ -299,7 +304,7 @@ int OsDatagramSocket::write(const char* buffer, int bufferLength,
 
         if(bytesSent != bufferLength)
         {
-           OsSysLog::add(FAC_SIP, PRI_ERR,
+           OsSysLog::add(FAC_KERNEL, PRI_ERR,
                          "OsDatagramSocket::write(4) bytesSent = %d, "
                          "bufferLength = %d, errno = %d",
                          bytesSent, bufferLength, errno);
@@ -438,7 +443,7 @@ int OsDatagramSocket::read(char* buffer, int bufferLength)
 }
 
 /* ============================ ACCESSORS ================================= */
-OsSocket::IpProtocolSocketType OsDatagramSocket::getIpProtocol() const
+int OsDatagramSocket::getIpProtocol() const
 {
     return(UDP);
 }
@@ -487,7 +492,7 @@ void OsDatagramSocket::getRemoteHostIp(struct in_addr* remoteHostAddress,
 }
 
 // Return the external IP address for this socket.
-UtlBoolean OsDatagramSocket::getExternalIp(UtlString* ip, int* port) 
+UtlBoolean OsDatagramSocket::getMappedIp(UtlString* ip, int* port) 
 {
     return FALSE ;
 }

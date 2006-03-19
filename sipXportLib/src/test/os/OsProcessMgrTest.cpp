@@ -29,7 +29,7 @@ public:
     void testManager()
     {
         OsStatus stat;
-        OsProcessMgr processManager(TEST_DIR);
+        OsProcessMgr processManager;
 
         UtlString alias = "MyPing1";
 
@@ -49,8 +49,11 @@ public:
         
         UtlString MyPing1("MyPing1");
         UtlString MyPing2("MyPing2");
+#ifdef _WIN32
+        OsPath startupDir = "";
+#else
         OsPath startupDir = ".";
-
+#endif
         stat = processManager.startProcess(MyPing1, appName, params, startupDir);
         CPPUNIT_ASSERT_MESSAGE("Started first proccess", stat == OS_SUCCESS);
 

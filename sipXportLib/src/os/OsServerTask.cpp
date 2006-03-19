@@ -38,13 +38,17 @@ OsServerTask::OsServerTask(const UtlString& name,
 
    // other than initialization, no work required
 {
+/*
+   // Only useful when debugging queue problems -- very small case and doesn't
+   // warrant spam in general case -- my opinion anyways.
    if (OsSysLog::willLog(FAC_KERNEL, PRI_INFO))
    {
 
            OsSysLog::add(FAC_KERNEL, PRI_INFO,
-                                "OsServerTask::OsServerTask %s queue: %p queue limit: %d",
-                                mName.data(), &mIncomingQ, maxRequestQMsgs);
+                                "OsServerTask::OsServerTask %s queue: %p",
+                                mName.data(), &mIncomingQ);
    }
+*/
 }
 
 // Destructor

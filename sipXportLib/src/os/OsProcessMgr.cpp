@@ -43,10 +43,10 @@ OsProcessMgr * OsProcessMgr::spManager = NULL;
 /* ============================ CREATORS ================================== */
 
 // Constructor
-OsProcessMgr::OsProcessMgr(const char* workingDirectory) :
+OsProcessMgr::OsProcessMgr() :
 mProcessFilename(PROCESS_ALIAS_FILE),
 mProcessLockFilename(PROCESS_ALIAS_LOCK_FILE),
-mWorkPath(workingDirectory),
+mWorkPath(PROCESS_MGR_DIR),
 mStdInputFilename(""),
 mStdOutputFilename(""),
 mStdErrorFilename(""),
@@ -54,6 +54,24 @@ pProcessList(NULL),
 mAliasLockFileCount(0),
 mMutex(OsMutex::Q_PRIORITY)
 {
+
+#ifdef _VXWORKS
+    mWorkPath = "";
+#endif
+
+#ifdef _WIN32
+    mWorkPath = "C:\\TEMP";
+#endif
+#ifdef __pingtel_on_posix__
+    mWorkPath = PROCESS_MGR_DIR;
+
+    // Check whether the directory exists or not. If not, use /var/tmp
+    if (OsFileSystem::exists(mWorkPath) != OS_SUCCESS)
+    {
+       mWorkPath = "/var/tmp";
+    }
+#endif
+
     if (!pProcessList)
     {
         lockAliasFile();
@@ -152,6 +170,11 @@ OsStatus OsProcessMgr::setUserRequestState(UtlString &rAlias, int userRequestedS
 void OsProcessMgr::setProcessListFilename(UtlString &rFilename)
 {
     mProcessFilename = rFilename;
+}
+
+void OsProcessMgr::setWorkingDirectory(UtlString &rPath)
+{
+    mWorkPath = rPath;
 }
 
 OsStatus OsProcessMgr::setIORedirect(OsPath &rStdInputFilename,
@@ -471,11 +494,11 @@ void OsProcessMgr::setAliasStopped(UtlString &rAlias)
 }
 
 /* ============================ ACCESSORS ================================= */
-OsProcessMgr *OsProcessMgr::getInstance(const char* workingDirectory)
+OsProcessMgr *OsProcessMgr::getInstance()
 {
    if (!spManager)
    {
-      spManager = new OsProcessMgr(workingDirectory);
+      spManager = new OsProcessMgr();
    }
    
    return spManager;

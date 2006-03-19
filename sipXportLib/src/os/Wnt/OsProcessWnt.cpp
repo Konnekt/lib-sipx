@@ -218,10 +218,19 @@ OsStatus OsProcessWnt::launch(UtlString &rAppName, UtlString parameters[],OsPath
                     OsProcessPriorityClass prioClass, UtlBoolean bExeclusive)
 {
     OsStatus retval = OS_FAILED;
-        STARTUPINFO StartupInfo;
-        PROCESS_INFORMATION ProcessInformation;
-    UtlString cmdLine = startupDir + OsPath::separator;
-        cmdLine += rAppName;
+    STARTUPINFO StartupInfo;
+    PROCESS_INFORMATION ProcessInformation;
+    UtlString cmdLine;
+
+    if (startupDir.length() != 0)
+    {
+        cmdLine = startupDir + OsPath::separator;
+    }
+    else
+    {
+        startupDir = ".";
+    }
+    cmdLine += rAppName;
 /*
     int saved_stderr = dup(2);
     int saved_stdout = dup(1);

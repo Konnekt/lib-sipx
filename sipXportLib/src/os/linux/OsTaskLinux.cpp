@@ -13,7 +13,6 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
-#include <sched.h>
 
 /* Make sure we get MCL_CURRENT and MCL_FUTURE (for mlockall) on OS X 10.3 */
 #define _P1003_1B_VISIBLE
@@ -24,7 +23,6 @@
 #include "os/OsExcept.h"
 #include "os/OsLock.h"
 #include "os/OsUtil.h"
-
 #include "os/linux/OsLinuxDefs.h"
 #include "os/linux/OsTaskLinux.h"
 #include "os/linux/OsUtilLinux.h"
@@ -243,31 +241,6 @@ OsStatus OsTaskLinux::delay(const int milliSecs)
    return OS_SUCCESS;
 }
 
-// Disable rescheduling for the currently executing task.
-// This routine disables task context switching. The task that calls
-// this routine will be the only task that is allowed to execute,
-// unless the task explicitly gives up the CPU by making itself no
-// longer ready. Typically this call is paired with unlock();
-// together they surround a critical section of code. These
-// preemption locks are implemented with a counting variable that
-// allows nested preemption locks. Preemption will not be unlocked
-// until unlock() has been called as many times as lock().
-OsStatus OsTaskLinux::lock(void)
-{
-   return OS_NOT_YET_IMPLEMENTED;
-}
-
-// Enable rescheduling for the currently executing task.
-// This routine decrements the preemption lock count. Typically
-// this call is paired with lock() and concludes a critical
-// section of code. Preemption will not be unlocked until
-// unlock() has been called as many times as lock(). When
-// the lock count is decremented to zero, any tasks that were
-// eligible to preempt the current task will execute.
-OsStatus OsTaskLinux::unlock(void)
-{
-   return OS_NOT_YET_IMPLEMENTED;
-}
 
 // Make the calling task safe from deletion.
 // This routine protects the calling task from deletion. Tasks that
@@ -521,7 +494,7 @@ UtlBoolean OsTaskLinux::doLinuxCreateTask(const char* pTaskName)
    }
    else
    {
-      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsTaskLinux:doLinuxCreateTask pthread_create failed, returned %d in %s (%p)", linuxRes, mName.data(), this);
+      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsTaskLinux:doLinuxCreateTask pthread_create failed, returned %d in %s (%p) \n", linuxRes, mName.data(), this);
       return FALSE;
    }
 }
@@ -534,7 +507,7 @@ void OsTaskLinux::doLinuxTerminateTask(UtlBoolean doForce)
 
    OsSysLog::add(FAC_KERNEL, PRI_DEBUG,
                  "OsTaskLinux::doLinuxTerminateTask, deleting task thread: %x,"
-                 " force = %d", (int)mTaskId, doForce);
+                 " force = %d\n", (int)mTaskId, doForce);
 
    // if there is no low-level task, or entry in the name database, just return
    if ((mState != UNINITIALIZED) && ((int)mTaskId != 0))
@@ -636,15 +609,10 @@ void * OsTaskLinux::taskEntry(void* arg)
 
    if((geteuid() == 0) && (linuxPriority != RT_NO))
    {
+#ifndef __MACH__
       // Use FIFO realtime scheduling
       param.sched_priority = linuxPriority;
-
-#if defined(__APPLE__)
-      linuxRes = ~POSIX_OK;
-#else
       linuxRes = sched_setscheduler(0, SCHED_FIFO, &param); 
-#endif
-
       if (linuxRes == POSIX_OK)
       {
          OsSysLog::add(FAC_KERNEL, PRI_INFO, 
@@ -657,6 +625,11 @@ void * OsTaskLinux::taskEntry(void* arg)
                        "OsTaskLinux::taskEntry: failed to set RT linux priority: %d for task: %s", 
                        linuxPriority, pTask->mName.data());
       }
+#else
+      linuxRes = ~POSIX_OK;
+      OsSysLog::add(FAC_KERNEL, PRI_INFO, 
+            "OsTaskLinux not starting at RT priority under MacOs") ;
+#endif
 
       // keep all memory locked into physical mem, to guarantee realtime-behaviour
       if (linuxRes == POSIX_OK)

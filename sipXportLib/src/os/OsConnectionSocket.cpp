@@ -33,7 +33,6 @@
 // APPLICATION INCLUDES
 #include <os/OsConnectionSocket.h>
 #include "os/OsUtil.h"
-#include "utl/UtlSList.h"
 #include <os/OsSysLog.h>
 
 // EXTERNAL FUNCTIONS
@@ -63,7 +62,8 @@ OsConnectionSocket::OsConnectionSocket(const char* szLocalIp, int connectedSocke
 OsConnectionSocket::OsConnectionSocket(int serverPort,
                                        const char* serverName,
                                        UtlBoolean blockingConnect,
-                                       const char* localIp)
+                                       const char* localIp,
+                                       const bool bConnect)
 {
    int error = 0;
    UtlBoolean isIp;
@@ -71,7 +71,9 @@ OsConnectionSocket::OsConnectionSocket(int serverPort,
    struct hostent* server = NULL;
    struct sockaddr_in serverSockAddr;
    UtlString temp_output_address;
+   int connectReturn = 0;
 
+   mLocalIp = localIp;
    OsSysLog::add(FAC_SIP, PRI_DEBUG, "OsConnectionSocket::_ attempt %s:%d %s"
                  ,serverName, serverPort, blockingConnect ? "BLOCKING" : "NON-BLOCKING" );
 
@@ -83,10 +85,11 @@ OsConnectionSocket::OsConnectionSocket(int serverPort,
    if(! serverName || strlen(serverName) == 0)
    {
 #if defined(_VXWORKS)
+      mLocalIp = "127.0.0.1";
       serverName = "127.0.0.1";
 #elif defined(__pingtel_on_posix__)
     unsigned long address_val = OsSocket::getDefaultBindAddress();
-      
+#ifndef _DISABLE_MULTIPLE_INTERFACE_SUPPORT      
     if (!localIp)
     {
         if (address_val == htonl(INADDR_ANY))
@@ -104,10 +107,14 @@ OsConnectionSocket::OsConnectionSocket(int serverPort,
         mLocalIp = localIp;
         serverName = localIp;
     }
-
+#else
+    struct in_addr in;
+    in.s_addr = address_val;
+    serverName = inet_ntoa(in);
+#endif
 #elif defined(WIN32)
-      unsigned long address_val = OsSocket::getDefaultBindAddress();
-      
+    unsigned long address_val = OsSocket::getDefaultBindAddress();
+#ifndef _DISABLE_MULTIPLE_INTERFACE_SUPPORT      
     if (!localIp)
     {
         if (address_val == htonl(INADDR_ANY))
@@ -125,7 +132,11 @@ OsConnectionSocket::OsConnectionSocket(int serverPort,
         mLocalIp = localIp;
         serverName = localIp;
     }
-      
+#else
+    struct in_addr in;
+    in.S_un.S_addr = address_val;
+    serverName = inet_ntoa(in);
+#endif
 #else
 #error Unsupported target platform.
 #endif
@@ -205,22 +216,23 @@ OsConnectionSocket::OsConnectionSocket(int serverPort,
       serverSockAddr.sin_addr.s_addr = inet_addr(serverName);
    }
 
-   // Set the default destination address for the socket
-   int connectReturn;
+   // Set the default destination address for the socket   
+   if (bConnect)
+   {
 #       if defined(_WIN32) || defined(__pingtel_on_posix__)
-   connectReturn = connect(socketDescriptor,
-                           (const struct sockaddr*) &serverSockAddr,
-                           sizeof(serverSockAddr));
+        connectReturn = connect(socketDescriptor,
+                                (const struct sockaddr*) &serverSockAddr,
+                                sizeof(serverSockAddr));
 #       elif defined(_VXWORKS)
-   connectReturn = connect(socketDescriptor,
-                           (struct sockaddr*) &serverSockAddr,
-                           sizeof(serverSockAddr));
+        connectReturn = connect(socketDescriptor,
+                                (struct sockaddr*) &serverSockAddr,
+                                sizeof(serverSockAddr));
 #       else
 #       error Unsupported target platform.
 #       endif
 
-   error = OsSocketGetERRNO();
-
+        error = OsSocketGetERRNO();
+    }
 #if defined(_WIN32)
    if(error == WSAEWOULDBLOCK &&
       !blockingConnect)
@@ -237,7 +249,7 @@ OsConnectionSocket::OsConnectionSocket(int serverPort,
    }
 #endif
 
-   if(connectReturn && error)
+   if(bConnect && connectReturn && error)
    {
       char* msgBuf;
       close();
@@ -270,35 +282,6 @@ OsConnectionSocket::OsConnectionSocket(int serverPort,
         
   EXIT:
    return;
-}
-
-/// Is this connection encrypted using TLS/SSL?
-bool OsConnectionSocket::isEncrypted() const
-{
-   return false;
-}
-
-   
-/// Get any authenticated peer host names.
-bool OsConnectionSocket::peerIdentity( UtlSList* altNames
-                                      ,UtlString* commonName
-                                      ) const
-{
-   /*
-    * @returns
-    * - true if the connection is TLS/SSL and the peer has presented
-    *        a certificate signed by a trusted certificate authority
-    * - false if not
-    */
-   if (altNames)
-   {
-      altNames->destroyAll();
-   }
-   if (commonName)
-   {
-      commonName->remove(0);
-   }
-   return false; // an OsSSLServerSocket might return true...
 }
 
 
@@ -366,7 +349,7 @@ int OsConnectionSocket::read(char* buffer,
 }
 
 /* ============================ ACCESSORS ================================= */
-OsSocket::IpProtocolSocketType OsConnectionSocket::getIpProtocol() const
+int OsConnectionSocket::getIpProtocol() const
 {
         return(TCP);
 }

@@ -29,9 +29,11 @@
 // Constructor
 UtlRandom::UtlRandom()
 {
+    static int count = 0 ;
+
     OsTime now ;
     OsDateTime::getCurTime(now) ;
-    srand((int) (now.cvtToMsecs() % INT_MAX)) ;
+    srand((int) (now.cvtToMsecs() % INT_MAX) ^ ++count) ;
 }
 
 // Constructor
