@@ -7080,3 +7080,33 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* 
 }
 
 
+
+SIPXTAPI_API SIPX_RESULT sipxFieldWatchAdd(SIPX_INST hInst, const char* field) {
+	SIPX_RESULT res = SIPX_RESULT_FAILURE;
+    SIPX_INSTANCE_DATA* pInst = (SIPX_INSTANCE_DATA*) hInst ;
+	assert(hInst != NULL);
+	pInst->pSipUserAgent->addFieldWatch(field);
+	res = SIPX_RESULT_SUCCESS;
+	return res;
+}
+SIPXTAPI_API SIPX_RESULT sipxFieldWatchGet(SIPX_INST hInst, const char* field, char* value, int bufferSize) {
+	SIPX_RESULT res = SIPX_RESULT_FAILURE;
+    SIPX_INSTANCE_DATA* pInst = (SIPX_INSTANCE_DATA*) hInst ;
+	assert(hInst != NULL);
+	UtlString valueStr;
+	value[0] = 0;
+	if (pInst->pSipUserAgent->getFieldWatch(field, valueStr)) {
+		if (valueStr.length() >= bufferSize) {
+			value[bufferSize] = 0;
+			res = SIPX_RESULT_OUT_OF_RESOURCES;
+		} else {
+			value[valueStr.length()] = 0;
+			res = SIPX_RESULT_SUCCESS;
+		}
+		strncpy(value, valueStr.data(), bufferSize-1);
+	} else {
+	}
+	return res;
+}
+
+
