@@ -7045,6 +7045,12 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetLocationHeader(const SIPX_INST hInst,
     return rc;
 }
 
+
+SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* name, void *, unsigned, unsigned (__stdcall *) (void *), void *, unsigned, unsigned *)) {
+	assert(func != 0);
+	osBeginThread = func;
+	return SIPX_RESULT_SUCCESS;
+}
 SIPXTAPI_API SIPX_RESULT sipxConfigSetConnectionIdleTimeout(const SIPX_INST hInst,
                                                             const int idleTimeout)
 {
