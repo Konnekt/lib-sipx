@@ -876,13 +876,6 @@ SIPXTAPI_API SIPX_RESULT sipxEventListenerRemove(const SIPX_INST hInst,
                                                  void* pUserData) ;
 
 /* ============================ FUNCTIONS ================================= */
-/*RL*/
-SIPXTAPI_API void sipxReportCallback(SIPX_CALL hCall, 
-					SIPX_LINE hLine, 
-					SIPX_CALLSTATE_MAJOR eMajor, 
-					SIPX_CALLSTATE_MINOR eMinor, 
-					void* pUserData);
-
 /**
  * Create a printable string version of the designated call state event ids.
  * This is generally used for debugging.
