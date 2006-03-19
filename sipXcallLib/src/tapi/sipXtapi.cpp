@@ -61,6 +61,9 @@
 #include "include/VoiceEngineFactoryImpl.h"
 #endif
 
+#include "os/OsBeginThread.h"
+
+
 // DEFINES
 #define MP_SAMPLE_RATE          8000    // Sample rate (don't change)
 #define MP_SAMPLES_PER_FRAME    80      // Frames per second (don't change)
@@ -7051,3 +7054,10 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetConnectionIdleTimeout(const SIPX_INST hIns
     }
     return rc;
 }
+SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* name, void *, unsigned, unsigned (__stdcall *) (void *), void *, unsigned, unsigned *)) {
+	assert(func != 0);
+	osBeginThread = func;
+	return SIPX_RESULT_SUCCESS;
+}
+
+
