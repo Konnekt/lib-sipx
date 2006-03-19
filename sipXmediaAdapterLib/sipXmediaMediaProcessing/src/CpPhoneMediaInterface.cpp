@@ -331,8 +331,8 @@ OsStatus CpPhoneMediaInterface::createConnection(int& connectionId,
         // Enable Stun if we have a stun server and either non-local contact type or 
         // ICE is enabled.
         if ((mStunServer.length() != 0) && ((mediaConnection->mContactType != LOCAL) || mbEnableICE))
-        {
-            rtpSocket->enableStun(mStunServer, mStunPort, mStunRefreshPeriodSecs, 0, false) ;
+		{
+            rtpSocket->enableStun(mStunServer, mStunPort, mStunRefreshPeriodSecs, 0, true) ;
         }
 
         // Enable Turn if we have a stun server and either non-local contact type or 
