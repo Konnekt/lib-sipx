@@ -209,8 +209,8 @@ static WAVEHDR* outPrePrep(int n, DWORD bufLen)
 {
    WAVEHDR* pWH;
    int doAlloc = (hOutHdr[n] == NULL);
-   MpBufferMsg* msg;
-   MpBufferMsg* pFlush;
+   MpBufferMsg* msg = NULL;
+   MpBufferMsg* pFlush = NULL;
    MpBufPtr     ob;
 
    static int oPP = 0;
@@ -503,16 +503,17 @@ void closeSpeakerDevices()
         }
 
         ret = waveOutClose(audioOutCallH);
+        audioOutCallH = NULL;
         if (ret != MMSYSERR_NOERROR)
         {
              showWaveError("waveOutClose", ret, -1, __LINE__);
-        }
-        audioOutCallH = NULL;
+		} else {
 
-        do 
-        {
-            bSuccess = GetMessage(&tMsg, NULL, 0, 0) ;
-        } while (bSuccess && (tMsg.message != WOM_CLOSE)) ;
+			do 
+			{
+				bSuccess = GetMessage(&tMsg, NULL, 0, 0) ;
+			} while (bSuccess && (tMsg.message != WOM_CLOSE)) ;
+		}
     }
 }
 
@@ -669,6 +670,19 @@ unsigned int __stdcall SpkrThread(LPVOID Unused)
                     if (ret != MMSYSERR_NOERROR)
                     {
    				        showWaveError("waveOutWrite", ret, played, __LINE__);
+						/* RL < */
+						if (ret == MMSYSERR_NODRIVER) {
+
+							closeSpeakerDevices() ;
+							if (openSpeakerDevices(pWH, hOut))
+							{
+								timeSetEvent(10, 0, TimerCallbackProc, GetCurrentThreadId(), TIME_PERIODIC);                    
+							}
+
+							continue;
+
+						}
+						/* RL > */
                     }
                     played++;
 			    }

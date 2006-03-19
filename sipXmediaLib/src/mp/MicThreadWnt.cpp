@@ -407,12 +407,14 @@ void closeMicDevice()
     if (ret != MMSYSERR_NOERROR)
     {
         showWaveError("waveInClose", ret, -1, __LINE__);
-    }
+	} else { /* RL */
 
-    do 
-    {
-        bSuccess = GetMessage(&tMsg, NULL, 0, 0) ;
-    } while (bSuccess && (tMsg.message != WIM_CLOSE)) ;
+		do 
+		{
+			bSuccess = GetMessage(&tMsg, NULL, 0, 0) ;
+		} while (bSuccess && (tMsg.message != WIM_CLOSE)) ;
+	
+	}
 
     audioInH = NULL;
 }
@@ -551,6 +553,12 @@ unsigned int __stdcall MicThread(LPVOID Unused)
                     ret = waveInAddBuffer(audioInH, pWH, sizeof(WAVEHDR));
                     if (ret != MMSYSERR_NOERROR)
                     {
+						if (ret == MMSYSERR_NODRIVER) {
+							closeMicDevice() ;
+							openMicDevice(bRunning, pWH) ;
+
+							continue ;
+						}
                         showWaveError("waveInAddBuffer", ret, recorded, __LINE__);
                         recorded++;
                     }
