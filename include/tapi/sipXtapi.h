@@ -3451,6 +3451,11 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* 
 SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* name, void *, unsigned, unsigned (__stdcall *) (void *), void *, unsigned, unsigned *));
 
 
+SIPXTAPI_API SIPX_RESULT sipxConfigSetLogCallbackEx(SIPXTAPI_LOGCALLBACK_EX func);
+
+SIPXTAPI_API SIPX_RESULT sipxLineRemoveByUrl(SIPX_INST hInst, const char* szLineUrl);
+
+
 SIPXTAPI_API SIPX_RESULT sipxFieldWatchAdd(SIPX_INST hInst, const char* field);
 SIPXTAPI_API SIPX_RESULT sipxFieldWatchGet(SIPX_INST hInst, const char* field, char* value, int bufferSize);
 
