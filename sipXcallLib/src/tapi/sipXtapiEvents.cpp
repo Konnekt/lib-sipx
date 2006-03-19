@@ -963,6 +963,14 @@ void ReportCallback(SIPX_CALL hCall,
     }
 }
 
+/*RL*/
+void sipxReportCallback(SIPX_CALL hCall, 
+					SIPX_LINE hLine, 
+					SIPX_CALLSTATE_MAJOR eMajor, 
+					SIPX_CALLSTATE_MINOR eMinor, 
+					void* pUserData) {
+	ReportCallback(hCall, hLine, eMajor, eMinor, pUserData);
+}
 
 void sipxFireCallEvent(const void* pSrc,
                        const char* szCallId,

@@ -20,6 +20,8 @@
 #include "os/linux/OsLinuxDefs.h"
 #endif // __pingtel_on_posix__
 
+#include <stdio.h>
+
 // APPLICATION INCLUDES
 // MACROS
 // EXTERNAL FUNCTIONS
@@ -29,7 +31,12 @@
 extern "C" {
 #endif
 
+/*RL*/
+#undef osPrintf
+
 void enableConsoleOutput(int bEnable) ;
+/*RL*/
+void enableFileOutput(FILE* file);
 void osPrintf(const char* format , ...)
 #ifdef __GNUC__
             // with the -Wformat switch, this enables format string checking

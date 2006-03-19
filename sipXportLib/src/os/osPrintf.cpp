@@ -43,6 +43,8 @@ void PrintIt(const char *s)
 // CONSTANTS
 // STATIC VARIABLE INITIALIZATIONS
 static int bEnableConsoleOutput = FALSE ;  /**< Should osPrintf print to console? */
+/*RL*/
+static FILE* fEnableFileOutput = 0;
 // FUNCTIONS
 
 
@@ -53,9 +55,22 @@ extern "C" void enableConsoleOutput(int bEnable)
     bEnableConsoleOutput = bEnable ;
 }
 
+extern "C" void enableFileOutput(FILE* file) 
+{
+    fEnableFileOutput = file ;
+}
+
+
 extern "C" void osPrintf(const char* format, ...)
 {
-    if (bEnableConsoleOutput)
+	if (fEnableFileOutput) {
+        va_list args;
+        va_start(args, format);
+		vfprintf(fEnableFileOutput, format, args);
+		fflush(fEnableFileOutput);
+		va_end(args);
+	}
+	if (bEnableConsoleOutput)
     {
         va_list args;
         va_start(args, format);

@@ -50,6 +50,8 @@ OsSysLogPriority* OsSysLog::spPriorities = new OsSysLogPriority[FAC_MAX_FACILITY
 OsSysLogPriority OsSysLog::sLoggingPriority = PRI_ERR ;
 UtlBoolean OsSysLog::bPrioritiesInitialized = FALSE ;
 
+OsSysLog::fSysLogCallback OsSysLog::syslogCallback = 0;
+
 // A static array of priority names uses for displaying log entries
 const char* OsSysLog::sPriorityNames[] =
 {
@@ -334,6 +336,18 @@ OsStatus OsSysLog::vadd(const char*            taskName,
          
          UtlString   strTime ;
          logTime.getIsoTimeStringZus(strTime) ;
+
+		 if (syslogCallback) {
+			 syslogCallback(strTime.data(),
+               ++sEventCount,
+               OsSysLog::sFacilityNames[facility], 
+               OsSysLog::sPriorityNames[priority],
+               sHostname.data(),
+               (taskName == NULL) ? "" : taskName,
+               taskId,
+               sProcessId.data(),
+               logData.data());
+		 }
 
          mysprintf(logEntry, "\"%s\":%d:%s:%s:%s:%s:%08X:%s:\"%s\"",
                strTime.data(),

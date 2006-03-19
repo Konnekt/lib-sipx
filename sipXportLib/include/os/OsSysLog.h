@@ -177,6 +177,13 @@ class OsSysLog
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
 public:
 
+/*RL*/
+	typedef void (*fSysLogCallback)(
+		const char* time, unsigned int eventCount, const char* facility, const char* priority, const char* hostname, const char* taskName, int taskId, const char* processId, const char* message);
+
+	static fSysLogCallback syslogCallback;
+
+
    static const char* sPriorityNames[] ;
      //:List of Priority Names orders in the same order as OsSysLogPriority.
 
