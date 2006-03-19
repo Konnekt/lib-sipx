@@ -201,6 +201,106 @@
 			<Filter
 				Name="mp"
 				Filter="">
+				<File
+					RelativePath="..\sipXcallLib\src\test\mp\CallManagerPlayerTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\mp\MpStreamPlayerTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\mp\MpStreamPlaylistPlayerTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\mp\MpStreamQueuePlayerTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\mp\MpTestConfig.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\mp\MyPlayerListenerHistoryKeeper.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\mp\MyPlayerListenerPoller.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\mp\MyStreamQueueHistoryKeeper.cpp">
+				</File>
+			</Filter>
+			<Filter
+				Name="tapi"
+				Filter="">
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\callbacks.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\callbacks.h">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\EventRecorder.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\EventRecorder.h">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\EventValidator.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\EventValidator.h">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\SipSubcriptionTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\sipXtapiTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\sipXtapiTest.h">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\sipXtapiTestCall.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\sipXtapiTestConference.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\sipXtapiTestConferenceAdv.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\sipXtapiTestConfig.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\sipXtapiTestLine.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\sipXtapiTestSubscribe.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\sipXtapiTestTransfer.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\TestRegistrar.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\TestRegistrar.h">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\TestRegistryCollection.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\TestRegistryCollection.h">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\TestRegistryData.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\TestRegistryData.h">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\TestStunServerTask.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXcallLib\src\test\tapi\TestStunServerTask.h">
+				</File>
 			</Filter>
 		</Filter>
 		<Filter
@@ -209,6 +309,15 @@
 			<Filter
 				Name="Utl"
 				Filter="">
+				<File
+					RelativePath="..\sipXportLib\src\test\utl\PluginHooksTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXportLib\src\test\utl\TestPlugin.h">
+				</File>
+				<File
+					RelativePath="..\sipXportLib\src\test\utl\UtlChainTest.cpp">
+				</File>
 				<File
 					RelativePath="..\sipXportLib\src\test\utl\UtlContainableTestStub.cpp">
 				</File>
@@ -234,7 +343,19 @@
 					RelativePath="..\sipXportLib\src\test\utl\UtlHashMapIterator.cpp">
 				</File>
 				<File
+					RelativePath="..\sipXportLib\src\test\utl\UtlHashMapPerformance.cpp">
+				</File>
+				<File
 					RelativePath="..\sipXportLib\src\test\utl\UtlInt.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXportLib\src\test\utl\UtlLinkTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXportLib\src\test\utl\UtlListPerformance.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXportLib\src\test\utl\UtlPerformanceStrings.h">
 				</File>
 				<File
 					RelativePath="..\sipXportLib\src\test\utl\UtlRegex.cpp">
@@ -381,6 +502,9 @@
 					RelativePath="..\sipXtackLib\src\test\net\HttpMessageTest.cpp">
 				</File>
 				<File
+					RelativePath="..\sipXtackLib\src\test\net\NameValuePairInsensitiveTest.cpp">
+				</File>
+				<File
 					RelativePath="..\sipXtackLib\src\test\net\NameValuePairTest.cpp">
 				</File>
 				<File
@@ -393,16 +517,52 @@
 					RelativePath="..\sipXtackLib\src\test\net\SdpBodyTest.cpp">
 				</File>
 				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipContactDbTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipDialogEventTest.cpp">
+				</File>
+				<File
 					RelativePath="..\sipXtackLib\src\test\net\SipDialogTest.cpp">
 				</File>
 				<File
 					RelativePath="..\sipXtackLib\src\test\net\SipMessageTest.cpp">
 				</File>
 				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipPresenceEventTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipPublishContentMgrTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipRefreshManagerTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipServerShutdownTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipSrvLookupTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipSubcribeServerTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipSubcriptionClientTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXtackLib\src\test\net\SipSubcriptionMgrTest.cpp">
+				</File>
+				<File
 					RelativePath="..\sipXtackLib\src\test\net\SipUserAgentTest.cpp">
 				</File>
 				<File
+					RelativePath="..\sipXtackLib\src\test\net\SmimeBodyTest.cpp">
+				</File>
+				<File
 					RelativePath="..\sipXtackLib\src\test\net\UrlTest.cpp">
+				</File>
+				<File
+					RelativePath="..\sipXtackLib\src\test\net\XmlRpcTest.cpp">
 				</File>
 			</Filter>
 		</Filter>
