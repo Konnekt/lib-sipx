@@ -2126,6 +2126,19 @@ void SipRefreshMgr::setLastLineEvent(const UtlString& lineId, const SIPX_LINESTA
     return;
 }
 
+/*RL*/
+UtlBoolean SipRefreshMgr::clearRegisterList(const Url& url) {
+	OsReadLock readlock(mRegisterListMutexR);
+	UtlBoolean result = FALSE;
+	SipMessage* msg = 0;
+	while ((msg = mRegisterList.isSameFrom(url)) != NULL) {
+		removeFromRegisterList(msg);
+		result = TRUE;
+	}
+	return result;
+}
+
+
 
 void SipRefreshMgr::removeAllFromRequestList(SipMessage* response)
 {

@@ -146,6 +146,13 @@ public:
     UtlBoolean getNatMappedAddress(UtlString* pIpAddress, int* pPort) ;
       //: Get the nat mapped address (if available)
 
+	/*RL*/
+	/** Removes all pending register messages for specified url. 
+	It's here to prevent old register messages to interfere with new ones...
+	*/
+    UtlBoolean clearRegisterList(const Url& url);
+
+
 protected:
     SipLineMgr* mpLineMgr;
     // the line manager object that uses this refresh manager
@@ -305,6 +312,7 @@ protected:
     int mUdpPort;
     int mRestartCount;
     UtlRandom mRandomNumGenerator ;
+
 };
 
 #endif // SIPREFRESHMGR_H

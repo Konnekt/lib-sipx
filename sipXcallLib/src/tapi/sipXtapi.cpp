@@ -4950,6 +4950,29 @@ SIPXTAPI_API SIPX_RESULT sipxLineRemove(SIPX_LINE hLine)
 }
 
 
+SIPXTAPI_API SIPX_RESULT sipxLineRemoveByUrl(SIPX_INST hInst, const char* szLineUrl) {
+	SIPX_RESULT sr = SIPX_RESULT_FAILURE;
+    assert(szLineUrl != NULL) ;
+	gpLineHandleMap->lock() ;
+	SIPX_LINE line = sipxLineLookupHandle(szLineUrl);
+	if (line) {
+		sr = sipxLineRemove(line);
+	}
+	gpLineHandleMap->unlock() ;
+	
+    SIPX_INSTANCE_DATA* pInst = (SIPX_INSTANCE_DATA*) hInst ;
+    Url lineUrl(szLineUrl);
+
+	if (pInst && pInst->pRefreshManager && szLineUrl && *szLineUrl) {
+		pInst->pRefreshManager->clearRegisterList(lineUrl);
+	}
+
+	return sr;
+}
+
+
+
+
 SIPXTAPI_API SIPX_RESULT sipxLineAddCredential(const SIPX_LINE hLine,                                                 
                                                 const char* szUserID,
                                                 const char* szPasswd,
