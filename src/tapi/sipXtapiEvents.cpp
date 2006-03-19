@@ -1829,7 +1829,7 @@ bool sipxFireEvent(const void* pSrc,
                 pData->pInst->pMessageObserver == pSrc ||
                 pData->pInst->pSipUserAgent == pSrc ||
 				/*RL*/ 
-				pData->pInst->pSipUserAgent == pSrc
+				pData->pInst->pSipUserAgent == pSrc)
 			{
 
                 // for security events, fill in the hCall

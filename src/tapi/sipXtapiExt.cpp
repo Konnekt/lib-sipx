@@ -82,11 +82,11 @@ SIPXTAPI_API SIPX_RESULT sipxQOSDebug(SIPX_INST phInst, CStdString& txt) {
 
 	MpMediaTask* mtask = MpMediaTask::getMediaTask(32);
 	MpFlowGraphBase* flowGraph = mtask->getFocus();
+	/*
 	if (flowGraph) {
 		for (int i=0; i < flowGraph->mResourceCnt; i++) {
 			MpResource* r = flowGraph->mExecOrder[i];
 			if (strstr(r->getName(), "Dejitter")) {
-				/*
 				MprDejitter* dejj = (MprDejitter*) r;
 				buff.Format("<u>%s</u>:: ave=%d, buff=%d, pull=%d, push=%d, " 
 					//"lmax=%d, lmin=%d, " 
@@ -94,9 +94,7 @@ SIPXTAPI_API SIPX_RESULT sipxQOSDebug(SIPX_INST phInst, CStdString& txt) {
 					//, dejj->mLatencyMax, dejj->mLatencyMin
 					, dejj->mNumDiscarded, dejj->mNumPackets);
 				txt += buff + "<br/>";
-				*/
 			} else if (strstr(r->getName(), "Decode")) {
-				/*
 				MprDecode* decode = (MprDecode*) r;
 
 				for (int c=0; c < decode->mNumCurrentCodecs; c++) {
@@ -110,12 +108,13 @@ SIPXTAPI_API SIPX_RESULT sipxQOSDebug(SIPX_INST phInst, CStdString& txt) {
 						txt += buff + "<br/>";
 					}
 				}
-*/
-			}/* else if (stristr(r->getName(), "FromNet")) {
+			} else if (stristr(r->getName(), "FromNet")) {
 				MprFromNet* fromNet = (MprFromNet*) r;
-			}*/
+			}
 		}
 	}
+	*/
+
 
 	int rating = 0;
 	sipxQOSRating(phInst, rating);
@@ -245,7 +244,7 @@ SIPXTAPI_API SIPX_RESULT sipxLineGetByUrl(const char* szLineUrl,
 {
     assert(szLineUrl != NULL) ;
     assert(phLine != NULL) ;
-	*phLine = sipxLineLookupHandle(szLineUrl);
+	*phLine = sipxLineLookupHandleByURI(szLineUrl);
 	return (phLine) ? SIPX_RESULT_SUCCESS : SIPX_RESULT_FAILURE;
 }
 
