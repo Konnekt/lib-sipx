@@ -1106,6 +1106,11 @@ SipRefreshMgr::parseContactFields(
     UtlString requestContactIdentity;
     requestContactUrl.getIdentity(requestContactIdentity);
     
+	/*RL*/
+	/*If request is sent with one IP, and it comes back with another (discovered) one, we should check the LINE parameter...*/
+	UtlString requestContactLineId;
+	requestContactUrl.getUrlParameter("LINEID", requestContactLineId);
+
     UtlString contactField;
     int indexContactField = 0;
 
@@ -1114,8 +1119,14 @@ SipRefreshMgr::parseContactFields(
         Url returnedContact(contactField);
         UtlString returnedIdentity;
         returnedContact.getIdentity(returnedIdentity);
-        
-        if ( returnedIdentity.compareTo(requestContactIdentity) == 0 )
+
+		/*RL*/
+		UtlString returnedLineId;
+		returnedContact.getUrlParameter("LINEID", returnedLineId);
+
+        if ( returnedIdentity.compareTo(requestContactIdentity) == 0
+			/*RL*/ || ( !requestContactLineId.isNull() && !returnedLineId.isNull() && requestContactLineId.compareTo(returnedLineId) == 0 )
+			)
         {
             UtlString subfieldText;
             int subfieldIndex = 0;
