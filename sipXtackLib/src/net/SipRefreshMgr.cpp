@@ -2138,7 +2138,7 @@ void SipRefreshMgr::fireSipXLineEvent(const Url& url, const UtlString& lineId, c
                 mpLineMgr->setStateForLine(url, SipLine::LINE_STATE_REGISTERED);
             }
         }
-        else if (event == LINESTATE_UNREGISTERED)
+		else if (event == LINESTATE_UNREGISTERED || event == LINESTATE_UNREGISTER_FAILED)
         {
             if (getLineMgr())
             {
@@ -2147,7 +2147,7 @@ void SipRefreshMgr::fireSipXLineEvent(const Url& url, const UtlString& lineId, c
         }
         setLastLineEvent(lineId.data(), event);
 
-        if (event == LINESTATE_UNREGISTERED)
+        if (event == LINESTATE_UNREGISTERED || event == LINESTATE_UNREGISTER_FAILED)
         {
             if (getLineMgr())
             {
