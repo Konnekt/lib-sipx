@@ -508,7 +508,11 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
       thisHost.replace('@','*');
 
       // Compose the static fields.
+#ifdef WIN32
+      sprintf(buffer, "%d/%I64d/%s", process_id, start_time, thisHost.data());
+#else
       sprintf(buffer, "%d/%lld/%s", process_id, start_time, thisHost.data());
+#endif
       // Hash them.
       NetMd5Codec encoder;
       encoder.encode(buffer, suffix);
@@ -520,7 +524,11 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
    }
 
    // Compose the new Call-Id.
+#ifdef WIN32
+   sprintf(buffer, "%s_%I64d_%s", callIdPrefix, mCallNum, suffix.data());
+#else
    sprintf(buffer, "%s_%lld_%s", callIdPrefix, mCallNum, suffix.data());
+#endif
 
    // Copy it to the destination.
    *callId = buffer;
