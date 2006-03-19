@@ -96,6 +96,8 @@ typedef enum SIPX_EVENT_CATEGORY
     EVENT_CATEGORY_MEDIA            /**< MEDIA events signify changes in the audio state for
                                          sipXtapi or a particular call. */
                                          
+	/*RL*/
+	EVENT_CATEGORY_HEADERWATCH		/**< Events on watched packet header values */
 } SIPX_EVENT_CATEGORY;
 
 #define VALID_SIPX_EVENT_CATEGORY(x) (((x) >= EVENT_CATEGORY_CALLSTATE) && ((x) <= EVENT_CATEGORY_MEDIA))
@@ -329,6 +331,9 @@ typedef enum SIPX_CALLSTATE_CAUSE
                                              within a timeout period.  */
     LINESTATE_PROVISIONED      = 26000,   /**< The PROVISIONED event is fired when a sipXtapi Line is added, and Registration is not 
                                              requested (i.e. - sipxLineAdd is called with a bRegister parameter of false. */ 
+
+	LINESTATE_HEADER_VALUE_CHANGE = 30000, /*RL*/
+
 } SIPX_LINESTATE_EVENT;  
 
 
@@ -360,8 +365,12 @@ typedef enum SIPX_LINESTATE_CAUSE
                                                                                                 authentication failure. */
     LINESTATE_UNREGISTER_FAILED_TIMEOUT               = LINESTATE_UNREGISTER_FAILED + 3,   /**< Failed to register because of
                                                                                                 a timeout. */
-    LINESTATE_PROVISIONED_NORMAL                      = LINESTATE_PROVISIONED + 1          /**< See LINESTATE_PROVISIONED
+    LINESTATE_PROVISIONED_NORMAL                      = LINESTATE_PROVISIONED + 1,          /**< See LINESTATE_PROVISIONED
                                                                                                 event. */
+
+	LINESTATE_HEADER_VALUE_CHANGE_NORMAL = LINESTATE_HEADER_VALUE_CHANGE + 1, /*RL*/
+
+
 } SIPX_LINESTATE_CAUSE;
 
 
@@ -393,6 +402,24 @@ enum SIPX_CONFIG_EVENT
     CONFIG_STUN_FAILURE  = 41000, /**< Unable to obtain a STUN binding for signaling purposes. */
 } ;
 
+/*RL*/
+/**
+ * Enumeration of possible HEADER_WATCH status events
+ */
+enum SIPX_HEADERWATCH_EVENT
+{
+    HEADERWATCH_UNKNOWN = -1,    /**< Unknown event */
+    HEADERWATCH_FIELD_CHANGED = 1000,    /**< Watched field has changed */
+};
+
+/*RL*/
+typedef struct {
+	size_t nSize;
+	SIPX_LINE hLine;
+	const char* field;
+	const char* oldValue;
+	const char* newValue;
+} SIPX_HEADERWATCH_INFO;
 
 /**
  * Enumeration of possible security events
