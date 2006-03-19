@@ -3450,6 +3450,8 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* 
 
 SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* name, void *, unsigned, unsigned (__stdcall *) (void *), void *, unsigned, unsigned *));
 
+typedef void (*SIPXTAPI_LOGCALLBACK_EX)(
+		const char* time, unsigned int eventCount, const char* facility, const char* priority, const char* hostname, const char* taskName, int taskId, const char* processId, const char* message);
 
 SIPXTAPI_API SIPX_RESULT sipxConfigSetLogCallbackEx(SIPXTAPI_LOGCALLBACK_EX func);
 
