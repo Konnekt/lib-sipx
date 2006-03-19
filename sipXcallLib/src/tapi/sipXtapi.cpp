@@ -235,17 +235,16 @@ static void initAudioDevices(SIPX_INSTANCE_DATA* pInst)
     WAVEOUTCAPS outcaps ;
     WAVEINCAPS  incaps ;
     int numDevices ;
-    int i ;
 
     numDevices = waveInGetNumDevs();
-    for (i=0; i<numDevices && i<MAX_AUDIO_DEVICES; i++)
+    for (int i=0; i<numDevices && i<MAX_AUDIO_DEVICES; i++)
     {
         waveInGetDevCaps(i, &incaps, sizeof(WAVEINCAPS)) ;
         pInst->inputAudioDevices[i] = strdup(incaps.szPname) ;
     }
 
     numDevices = waveOutGetNumDevs();
-    for (i=0; i<numDevices && i<MAX_AUDIO_DEVICES; i++)
+    for (int i=0; i<numDevices && i<MAX_AUDIO_DEVICES; i++)
     {
         waveOutGetDevCaps(i, &outcaps, sizeof(WAVEOUTCAPS)) ;
         pInst->outputAudioDevices[i] = strdup(outcaps.szPname) ;
@@ -4954,7 +4953,7 @@ SIPXTAPI_API SIPX_RESULT sipxLineRemoveByUrl(SIPX_INST hInst, const char* szLine
 	SIPX_RESULT sr = SIPX_RESULT_FAILURE;
     assert(szLineUrl != NULL) ;
 	gpLineHandleMap->lock() ;
-	SIPX_LINE line = sipxLineLookupHandle(szLineUrl);
+	SIPX_LINE line = sipxLineLookupHandleByURI(szLineUrl);
 	if (line) {
 		sr = sipxLineRemove(line);
 	}
@@ -7069,13 +7068,6 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetLocationHeader(const SIPX_INST hInst,
 }
 
 
-SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* name, void *, unsigned, unsigned (__stdcall *) (void *), void *, unsigned, unsigned *)) {
-	assert(func != 0);
-	osBeginThread = func;
-	return SIPX_RESULT_SUCCESS;
-}
-
-
 SIPXTAPI_API SIPX_RESULT sipxConfigSetLogCallbackEx(SIPXTAPI_LOGCALLBACK_EX func) {
 	OsSysLog::syslogCallback = func;
 	return SIPX_RESULT_SUCCESS;
@@ -7103,13 +7095,12 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetConnectionIdleTimeout(const SIPX_INST hIns
     }
     return rc;
 }
+
 SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* name, void *, unsigned, unsigned (__stdcall *) (void *), void *, unsigned, unsigned *)) {
 	assert(func != 0);
 	osBeginThread = func;
 	return SIPX_RESULT_SUCCESS;
 }
-
-
 
 SIPXTAPI_API SIPX_RESULT sipxFieldWatchAdd(SIPX_INST hInst, const char* field) {
 	SIPX_RESULT res = SIPX_RESULT_FAILURE;

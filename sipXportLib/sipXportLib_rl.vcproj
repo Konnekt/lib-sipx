@@ -273,6 +273,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\src\hmac-sha1\hmac-sha1.c">
+			</File>
+			<File
 				RelativePath="src\os\OsAssert.c">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -1522,6 +1525,12 @@
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions=""/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\os\OsNatAgentTask.cpp">
+			</File>
+			<File
+				RelativePath=".\src\os\OsNatDatagramSocket.cpp">
 			</File>
 			<File
 				RelativePath="src\os\OsPathBase.cpp">
@@ -2895,6 +2904,21 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\src\os\OsTLS.cpp">
+			</File>
+			<File
+				RelativePath=".\src\os\OsTLSClientConnectionSocket.cpp">
+			</File>
+			<File
+				RelativePath=".\src\os\OsTLSConnectionSocket.cpp">
+			</File>
+			<File
+				RelativePath=".\src\os\OsTLSServerConnectionSocket.cpp">
+			</File>
+			<File
+				RelativePath=".\src\os\OsTLSServerSocket.cpp">
+			</File>
+			<File
 				RelativePath="src\os\OsTokenizer.cpp">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -3010,6 +3034,15 @@
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions=""/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\hmac-sha1\sha1.c">
+			</File>
+			<File
+				RelativePath=".\src\os\StunMessage.cpp">
+			</File>
+			<File
+				RelativePath=".\src\os\StunUtils.cpp">
 			</File>
 			<File
 				RelativePath="src\xmlparser\tinystr.cpp">
@@ -3205,6 +3238,9 @@
 						AdditionalIncludeDirectories=""
 						PreprocessorDefinitions=""/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\src\os\TurnMessage.cpp">
 			</File>
 			<File
 				RelativePath=".\src\utl\UtlBool.cpp">
@@ -4592,6 +4628,9 @@
 			</File>
 			<File
 				RelativePath="include\utl\PtTest.h">
+			</File>
+			<File
+				RelativePath=".\src\hmac-sha1\sha1.h">
 			</File>
 			<File
 				RelativePath="include\xmlparser\tinystr.h">
