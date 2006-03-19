@@ -61,6 +61,9 @@
 #include "include/VoiceEngineFactoryImpl.h"
 #endif
 
+#include "mp/MprFromMic.h"
+#include "mp/MprToSpkr.h"
+
 #include "os/OsBeginThread.h"
 
 
@@ -5160,7 +5163,7 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetMicAudioHook(fnMicAudioHook hookProc)
     OsSysLog::add(FAC_SIPXTAPI, PRI_INFO,
         "sipxConfigSetMicAudioHook hookProc=%p",
         hookProc);
-//    MprFromMic::s_fnMicDataHook = hookProc ;
+    MprFromMic::s_fnMicDataHook = hookProc ;
 // TODO - call MediaInterface for hook data
     return SIPX_RESULT_SUCCESS ;
 }
@@ -5171,7 +5174,7 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetSpkrAudioHook(fnSpkrAudioHook hookProc)
     OsSysLog::add(FAC_SIPXTAPI, PRI_INFO,
         "sipxConfigSetSpkrAudioHook hookProc=%p",
         hookProc);
-//    MprToSpkr::s_fnToSpeakerHook = hookProc ;
+    MprToSpkr::s_fnToSpeakerHook = hookProc ;
 // TODO - call MediaInterface for hook data
 
     return SIPX_RESULT_SUCCESS ;
