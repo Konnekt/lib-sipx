@@ -7074,6 +7074,13 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* 
 	osBeginThread = func;
 	return SIPX_RESULT_SUCCESS;
 }
+
+
+SIPXTAPI_API SIPX_RESULT sipxConfigSetLogCallbackEx(SIPXTAPI_LOGCALLBACK_EX func) {
+	OsSysLog::syslogCallback = func;
+	return SIPX_RESULT_SUCCESS;
+}
+
 SIPXTAPI_API SIPX_RESULT sipxConfigSetConnectionIdleTimeout(const SIPX_INST hInst,
                                                             const int idleTimeout)
 {
