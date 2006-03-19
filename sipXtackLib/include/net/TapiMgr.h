@@ -104,6 +104,12 @@ public:
                    void* pInfo);
     
 
+	/*RL*/
+	SIPX_LINE getLineHandle(const char* szLineIdentifier) {
+		return sipxLineLookupHandle(szLineIdentifier);
+	}
+
+
 /* ============================ MANIPULATORS ============================== */
 /* ============================ ACCESSORS ================================= */
 /* ============================ INQUIRY =================================== */

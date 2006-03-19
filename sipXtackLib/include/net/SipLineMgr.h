@@ -242,6 +242,10 @@ public:
 
    UtlBoolean getContactTypeForLine(const Url& identity, LINE_CONTACT_TYPE& eContactType) const ;
 
+   SipRefreshMgr* getRefreshMgr() {
+	   return this->mpRefreshMgr;
+   }
+
 /* ============================ INQUIRY =================================== */
 
    UtlBoolean isUserIdDefined( const SipMessage* request /*[in]*/) const;
