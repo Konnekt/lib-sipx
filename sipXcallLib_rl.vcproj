@@ -607,6 +607,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\src\cp\CSeqManager.cpp">
+			</File>
+			<File
 				RelativePath="src\ps\PsButtonInfo.cpp">
 				<FileConfiguration
 					Name="Release|Win32">
@@ -4169,6 +4172,9 @@
 			</File>
 			<File
 				RelativePath="include\cp\CpStringMessage.h">
+			</File>
+			<File
+				RelativePath=".\include\cp\CSeqManager.h">
 			</File>
 			<File
 				RelativePath="include\ps\PsButtonId.h">
