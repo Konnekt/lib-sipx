@@ -653,6 +653,23 @@ SIPXTAPI_API SIPX_RESULT sipxDuplicateEvent(SIPX_EVENT_CATEGORY category,
                     rc = SIPX_RESULT_SUCCESS ;
                 }
                 break ;
+			case EVENT_CATEGORY_HEADERWATCH: /*RL:*/
+				{
+					SIPX_HEADERWATCH_INFO* src = (SIPX_HEADERWATCH_INFO*) pEventSource;
+                    assert(src->nSize == sizeof(SIPX_HEADERWATCH_INFO)) ;
+
+					SIPX_HEADERWATCH_INFO* dest = new SIPX_HEADERWATCH_INFO;
+					dest->nSize = sizeof(SIPX_HEADERWATCH_INFO);
+					dest->hLine = src->hLine;
+					dest->field = strdup(src->field);
+					dest->newValue = strdup(src->newValue);
+					dest->oldValue = strdup(src->oldValue);
+
+					*pEventCopy = dest;
+
+					rc = SIPX_RESULT_SUCCESS;
+				}
+				break ; 
             default:
                 *pEventCopy = NULL ;
                 break;
@@ -806,6 +823,17 @@ SIPXTAPI_API SIPX_RESULT sipxFreeDuplicatedEvent(SIPX_EVENT_CATEGORY category,
                     rc = SIPX_RESULT_SUCCESS ;
                 }
                 break ;
+			case EVENT_CATEGORY_HEADERWATCH: /*RL:*/
+				{
+					SIPX_HEADERWATCH_INFO* src = (SIPX_HEADERWATCH_INFO*) pEventCopy ;
+					assert(src->nSize == sizeof(SIPX_HEADERWATCH_INFO));
+					free((void*)src->field);
+					free((void*)src->newValue);
+					free((void*)src->oldValue);
+					delete src;
+					rc = SIPX_RESULT_SUCCESS;
+				}
+				break ;
             default:
                 break;
         }
