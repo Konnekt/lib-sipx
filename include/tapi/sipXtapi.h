@@ -2568,7 +2568,14 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetLogLevel(SIPX_LOG_LEVEL logLevel) ;
  */
 SIPXTAPI_API SIPX_RESULT sipxConfigSetLogFile(const char *szFilename) ;
 
-
+/*RL*/
+/** Sets debug console output destinations.
+@param outputToConsole - debug information is printed to debug console
+@param outputToFile - debug information is printed to specified handle. Handle must be already opened!
+*/
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableConsoleOutput(
+			bool outputToConsole, 
+			FILE* outputToFile);
 /**
  * Set a callback function to collect logging information. This function
  * directs logging output to the specfied function.

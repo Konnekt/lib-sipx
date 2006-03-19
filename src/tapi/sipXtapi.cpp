@@ -5090,6 +5090,12 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetLogFile(const char* szFilename)
     return SIPX_RESULT_SUCCESS ;
 }
 
+/*RL*/
+SIPXTAPI_API SIPX_RESULT sipxConfigEnableConsoleOutput(bool outputToConsole, FILE* outputToFile) {
+	enableFileOutput(outputToFile);
+	enableConsoleOutput(outputToConsole);
+	return SIPX_RESULT_SUCCESS ;
+}
 
 SIPXTAPI_API SIPX_RESULT sipxConfigSetLogCallback(sipxLogCallback pCallback)
 {
