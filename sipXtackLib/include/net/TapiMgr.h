@@ -105,9 +105,7 @@ public:
     
 
 	/*RL*/
-	SIPX_LINE getLineHandle(const char* szLineIdentifier) {
-		return sipxLineLookupHandleByURI(szLineIdentifier);
-	}
+	SIPX_LINE getLineHandle(const char* szLineIdentifier);
 
 
 /* ============================ MANIPULATORS ============================== */

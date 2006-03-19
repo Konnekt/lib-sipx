@@ -13,7 +13,7 @@
 
 // APPLICATION INCLUDES
 
-#include "sipxportlib-buildstamp.h"
+//#include "sipxportlib-buildstamp.h"
 #include "utl/UtlInt.h"
 #include "utl/UtlHashMap.h"
 #include "utl/UtlHashMapIterator.h"

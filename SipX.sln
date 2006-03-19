@@ -39,6 +39,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sipxtest", "sipXtest\sipxte
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sipxtest_tapi", "sipXtest\sipxtest_tapi.vcproj", "{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA6}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sipxtest_global", "sipXtest\sipxtest_global.vcproj", "{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA7}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfiguration) = preSolution
 		Debug = Debug
@@ -77,6 +85,14 @@ Global
 		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA5}.Debug.Build.0 = Debug|Win32
 		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA5}.Release.ActiveCfg = Release|Win32
 		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA5}.Release.Build.0 = Release|Win32
+		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA6}.Debug.ActiveCfg = Debug|Win32
+		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA6}.Debug.Build.0 = Debug|Win32
+		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA6}.Release.ActiveCfg = Release|Win32
+		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA6}.Release.Build.0 = Release|Win32
+		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA7}.Debug.ActiveCfg = Debug|Win32
+		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA7}.Debug.Build.0 = Debug|Win32
+		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA7}.Release.ActiveCfg = Release|Win32
+		{DF1BD1A7-2C96-4BDF-9DC9-29081730BCA7}.Release.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionItems) = postSolution
 		Poprawki.txt = Poprawki.txt

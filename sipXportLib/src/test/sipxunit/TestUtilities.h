@@ -14,6 +14,8 @@
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/TestCase.h>
 
+#define TEST_DIR "."
+
 // MACROS
 #define MAX_BUG_MESSAGE_LEN 1024
 

@@ -143,3 +143,8 @@ bool TapiMgr::fireEvent(const void* pSrc, const SIPX_EVENT_CATEGORY event, void 
         return false;
     }
 }
+
+/*RL:*/
+SIPX_LINE TapiMgr::getLineHandle(const char* szLineIdentifier) {
+	return sipxLineLookupHandleByURI(szLineIdentifier);
+}

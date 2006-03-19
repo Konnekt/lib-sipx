@@ -48,7 +48,7 @@ OsDatagramSocket* g_pPrimaryStunSeverSocket2 ;
 OsDatagramSocket* g_pSecondaryStunServerSocket ;
 OsDatagramSocket* g_pSecondaryStunServerSocket2 ;
 
-
+/*
 int main(int argc, char* argv[])
 {
     enableConsoleOutput(FALSE) ;
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     // Return error code 1 if one of the tests failed.
     return wasSuccessful ? 0 : 1 ;
 }
-
+*/
 
 CPPUNIT_TEST_SUITE_REGISTRATION( sipXtapiTestSuite );
 

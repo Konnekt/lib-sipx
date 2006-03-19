@@ -14,6 +14,12 @@
 #include <io.h>
 #include <stdio.h>
 #include <os/OsSysLog.h>
+
+unsigned int __cdecl sipxLineLookupHandleByURI(const char* szURI) {
+	/*placeholder*/
+	return 0;
+}
+
 /**
  * include this in your project and it will find all Suite's that have been
  * registered with the CppUnit TextFactoryRegistry and run them
