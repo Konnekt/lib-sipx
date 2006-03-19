@@ -3446,6 +3446,7 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSubscribe(const SIPX_INST hInst,
 SIPXTAPI_API SIPX_RESULT sipxConfigUnsubscribe(const SIPX_SUB hSub); 
 
 
+SIPXTAPI_API SIPX_RESULT sipxConfigSetBeginThread(uintptr_t (*func)(const char* name, void *, unsigned, unsigned (__stdcall *) (void *), void *, unsigned, unsigned *));
 //@}
 
 #endif // _sipXtapi_h_
