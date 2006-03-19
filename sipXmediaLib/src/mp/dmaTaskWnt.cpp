@@ -26,6 +26,7 @@
 #include "mp/MpMediaTask.h"
 #include "mp/dmaTask.h"
 #include "os/OsMsgPool.h"
+#include "os/OsBeginThread.h"
 
 // DEFINES
 
@@ -198,7 +199,8 @@ OsStatus dmaStartup(int samplesPerFrame)
 
     // start a thread to receive microphone input
     // mic thread will prime the device input queue
-    hMicThread = (void *)_beginthreadex(
+    hMicThread = (void *)osBeginThread(
+			"micThread",
             NULL,             // pointer to thread security attributes
             16000,            // initial thread stack size, in bytes
             MicThread,        // pointer to thread function
@@ -211,7 +213,8 @@ OsStatus dmaStartup(int samplesPerFrame)
 
     // start a thread to send audio out to the speaker
     // speaker thread will prime the device output queue
-    hSpkrThread = (void *)_beginthreadex(
+	hSpkrThread = (void *)osBeginThread(
+			"spkrThread",
             NULL,             // pointer to thread security attributes
             16000,            // initial thread stack size, in bytes
             SpkrThread,       // pointer to thread function

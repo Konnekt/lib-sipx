@@ -10,6 +10,7 @@
 
 // Include
 #include "rtcp/MsgQueue.h"
+#include "os/OsBeginThread.h"
 
 #ifdef _VXWORKS /* [ */
 #include <taskLib.h>
@@ -514,7 +515,8 @@ bool CMsgQueue::CreateMessageThread()
     unsigned int iMessageThreadID;
 
 //  We need to create a separate thread for managing the message queue
-    m_hMessageThread = (int *)_beginthreadex(
+	m_hMessageThread = (int *)osBeginThread(
+				"messageThread",
                 NULL,                // No Special Security Attributes
                 0,                   // Default Stack Size
                 InitMessageThread,   // Thread Function

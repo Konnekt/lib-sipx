@@ -13,6 +13,7 @@
 #ifdef _WIN32
 #include <process.h>
 #endif
+#include "os/OsBeginThread.h"
 
 #include "rtcp/RTCPTimer.h"
 #ifdef INCLUDE_RTCP /* [ */
@@ -265,7 +266,8 @@ bool CRTCPTimer::CreateTimerThread(void)
         return (FALSE);
 
     // We need to create a separate thread for managing the message queue
-    m_hTimerThread = (void *)_beginthreadex(
+	m_hTimerThread = (void *)osBeginThread(
+						  "timerThread",
                           NULL,             // No Special Security Attributes
                           0,                // Default Stack Size
                           TimerThreadProc,  // Thread Function

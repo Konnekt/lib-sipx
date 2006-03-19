@@ -17,8 +17,10 @@
 #include "os/OsLock.h"
 #include "os/OsUtil.h"
 #include "os/OsDateTime.h"
+#include "utl/UtlString.h"
 #include "os/Wnt/OsTaskWnt.h"
 #include "os/Wnt/OsUtilWnt.h"
+#include "os/OsBeginThread.h"
 #include <process.h>
 // EXTERNAL FUNCTIONS
 // EXTERNAL VARIABLES
@@ -470,8 +472,11 @@ UtlBoolean OsTaskWnt::doWntCreateTask(void)
 {
    char  idString[15];
    unsigned int threadId;
-
-   mThreadH = (void *)_beginthreadex(
+	/*RL*/
+   UtlString name (this->mName ? this->mName : "unnamed");
+   name.prepend("OsTask::");
+   mThreadH = (void *)osBeginThread(
+				name.data(),
                 0,             // don't specify any thread attributes
                 mStackSize,    // stack size (in bytes)
                 threadEntry,   // starting address of the new thread
