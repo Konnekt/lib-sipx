@@ -3457,6 +3457,8 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetLogCallbackEx(SIPXTAPI_LOGCALLBACK_EX func
 
 SIPXTAPI_API SIPX_RESULT sipxLineRemoveByUrl(SIPX_INST hInst, const char* szLineUrl);
 
+SIPXTAPI_API SIPX_RESULT sipxConfigSetAutoRetryRegister(SIPX_INST hInst, bool enabled);
+
 
 SIPXTAPI_API SIPX_RESULT sipxFieldWatchAdd(SIPX_INST hInst, const char* field);
 SIPXTAPI_API SIPX_RESULT sipxFieldWatchGet(SIPX_INST hInst, const char* field, char* value, int bufferSize);

@@ -7096,6 +7096,19 @@ SIPXTAPI_API SIPX_RESULT sipxConfigSetLogCallbackEx(SIPXTAPI_LOGCALLBACK_EX func
 	return SIPX_RESULT_SUCCESS;
 }
 
+SIPXTAPI_API SIPX_RESULT sipxConfigSetAutoRetryRegister(SIPX_INST hInst, bool enabled) {
+    SIPX_INSTANCE_DATA* pInst = (SIPX_INSTANCE_DATA*) hInst ;
+	
+	assert(hInst != NULL);
+
+	pInst->pRefreshManager->setAutoReschedule(enabled);
+
+	return SIPX_RESULT_SUCCESS;
+
+
+}
+
+
 SIPXTAPI_API SIPX_RESULT sipxConfigSetConnectionIdleTimeout(const SIPX_INST hInst,
                                                             const int idleTimeout)
 {

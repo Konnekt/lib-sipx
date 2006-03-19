@@ -147,6 +147,15 @@ public:
       //: Get the nat mapped address (if available)
 
 	/*RL*/
+	void setAutoReschedule(UtlBoolean value) {
+		this->mAutoReschedule = value;
+	}
+	/*RL*/
+	UtlBoolean getAutoReschedule() {
+		return this->mAutoReschedule;
+	}
+
+	/*RL*/
 	/** Removes all pending register messages for specified url. 
 	It's here to prevent old register messages to interfere with new ones...
 	*/
@@ -313,6 +322,8 @@ protected:
     int mRestartCount;
     UtlRandom mRandomNumGenerator ;
 
+	/*RL*/
+	UtlBoolean mAutoReschedule;
 };
 
 #endif // SIPREFRESHMGR_H

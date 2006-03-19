@@ -63,6 +63,7 @@ SipRefreshMgr::SipRefreshMgr():
     mObserverMutex(OsRWMutex::Q_FIFO),
     mUAReadyMutex(OsRWMutex::Q_FIFO),
     mMyUserAgent(NULL)  
+	, mAutoReschedule(TRUE) /*RL*/
 {
 }
 
@@ -669,12 +670,14 @@ SipRefreshMgr::sendRequest (
             }
         }
 
-        // Reschedule in case of failure
-        rescheduleRequest(
-                &request,
-                refreshPeriod,
-                method,
-                FAILED_PERCENTAGE_TIMEOUT );
+		if (this->mAutoReschedule) { /*RL*/
+	        // Reschedule in case of failure
+	        rescheduleRequest(
+	                &request,
+	                refreshPeriod,
+	                method,
+	                FAILED_PERCENTAGE_TIMEOUT );
+    	}
     }
 
     return retval;
@@ -890,6 +893,11 @@ SipRefreshMgr::processResponse(
             }
             else // it is a register or subscribe
             {
+				/*RL CHECK!*/
+				if (this->mAutoReschedule) {
+					rescheduleAfterTime(request, FAILED_PERCENTAGE_TIMEOUT);
+				}
+
                 if ( method.compareTo(SIP_REGISTER_METHOD) == 0 )
                 {
                     Url url;
@@ -916,7 +924,7 @@ SipRefreshMgr::processResponse(
                         fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_CAUSE_UNKNOWN);
                     }
                 }
-                rescheduleAfterTime(request, FAILED_PERCENTAGE_TIMEOUT);
+                // /*RL*/ rescheduleAfterTime(request, FAILED_PERCENTAGE_TIMEOUT);
             }
         }
     }
@@ -1007,7 +1015,8 @@ SipRefreshMgr::processOKResponse(
             {
                 request->setToFieldTag(toTag);
             }
-
+			/*RL*/
+            rescheduleRequest(request, responseRefreshPeriod, SIP_REGISTER_METHOD);
                 Url url;
                 UtlString lineId;
                 request->getToUrl(url);
@@ -1015,12 +1024,38 @@ SipRefreshMgr::processOKResponse(
                 lineId = "sip:" + lineId; 
                 fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTERED, LINESTATE_REGISTERED_NORMAL);
 
-            rescheduleRequest(request, responseRefreshPeriod, SIP_REGISTER_METHOD);
+            // /*RL*/ rescheduleRequest(request, responseRefreshPeriod, SIP_REGISTER_METHOD);
         }
         else // could not find expires in 200 ok response , reschedule after default time
         {   // copying from response (this is why we set the To Field
-            request->setToFieldTag(toTag);
-            rescheduleAfterTime(request);
+			/*RL { CHECK!*/
+			// We need to check if response is 200 OK... If it's not, it's failed!
+			UtlString statusText;
+			response->getResponseStatusText(&statusText);
+			if (statusText.compareTo("OK", UtlString::ignoreCase)) {
+                Url url;
+                UtlString lineId;
+                request->getToUrl(url);
+                url.getIdentity(lineId);            
+                lineId = "sip:" + lineId; 
+				fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_REGISTER_FAILED_NOT_AUTHORIZED);
+			} else {
+				if (this->mAutoReschedule) {
+					// copying from response (this is why we set the To Field
+					/*RL } */
+		            request->setToFieldTag(toTag);
+		            rescheduleAfterTime(request);
+				/*RL { */
+				} else {
+					Url url;
+					UtlString lineId;
+					request->getToUrl(url);
+					url.getIdentity(lineId);            
+					lineId = "sip:" + lineId; 
+					fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_REGISTER_FAILED_TIMEOUT);
+        		}
+			}
+			/*RL } */
         }
     } else // subscribe
     {
@@ -1279,9 +1314,11 @@ SipRefreshMgr::handleMessage( OsMsg& eventMessage )
             if ( !isExpiresZero(sipMsg) )
             {
                sendToObservers(eventMessage, msgInList);
-                    
-               // try again after default time out
-               rescheduleAfterTime(msgInList, FAILED_PERCENTAGE_TIMEOUT);
+				/*RL*/                    
+			   if (this->mAutoReschedule) {
+	               // try again after default time out
+	               rescheduleAfterTime(msgInList, FAILED_PERCENTAGE_TIMEOUT);
+               }
             }
             messageProcessed = TRUE;
         }
