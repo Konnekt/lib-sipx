@@ -28,6 +28,7 @@
 #endif
 
 #include <utl/UtlHashBagIterator.h>
+#include <utl/UtlHashMapIterator.h>
 #include <net/SipSrvLookup.h>
 #include <net/SipUserAgent.h>
 #include <net/SipSession.h>
@@ -43,6 +44,7 @@
 #include <net/SipUdpServer.h>
 #include <net/SipLineMgr.h>
 #include <tapi/sipXtapiEvents.h>
+#include <net/TapiMgr.h>
 #include <os/OsDateTime.h>
 #include <os/OsEvent.h>
 #include <os/OsQueuedEvent.h>
@@ -139,6 +141,7 @@ SipUserAgent::SipUserAgent(int sipTcpPort,
         , mbIncludePlatformInUserAgentName(TRUE)
         , mbShuttingDown(FALSE)
         , mbShutdownDone(FALSE)
+		, watchHeadersMutex(OsRWMutex::Q_FIFO) /*RL*/
         , mRegisterTimeoutSeconds(4)        
         , mbAllowHeader(true)
         , mbDateHeader(true)
@@ -441,7 +444,8 @@ SipUserAgent::SipUserAgent(int sipTcpPort,
 // Copy constructor
 SipUserAgent::SipUserAgent(const SipUserAgent& rSipUserAgent) :
         mMessageLogRMutex(OsRWMutex::Q_FIFO),
-        mMessageLogWMutex(OsRWMutex::Q_FIFO)
+        mMessageLogWMutex(OsRWMutex::Q_FIFO),
+		watchHeadersMutex(OsRWMutex::Q_FIFO) /*RL*/
         , mbAllowHeader(false)
         , mbDateHeader(false)
         , mbShortNames(false)
@@ -1499,6 +1503,9 @@ void SipUserAgent::dispatch(SipMessage* message, int messageType)
       message->getBytes(&msgBytes, &len);
    }
 
+	/*RL*/
+   // Monitoring of header fields...
+   this->checkWatchedFields(message);
 
    if(messageType == SipMessageEvent::APPLICATION)
    {
@@ -3999,3 +4006,76 @@ bool SipUserAgent::onTlsEvent(int cause)
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 
 /* ============================ FUNCTIONS ================================= */
+
+/*RL*/
+// Field Watch
+
+void SipUserAgent::addFieldWatch(const char* field) {
+	UtlString* fieldStr = new UtlString(field);
+	UtlString* valueStr = new UtlString();
+	this->watchHeadersMutex.acquireWrite();
+	if (!this->watchHeaders.insertKeyAndValue(fieldStr, valueStr)) {
+		delete valueStr;
+		delete fieldStr;
+	}
+	this->watchHeadersMutex.releaseWrite();
+}
+
+/*RL*/
+bool SipUserAgent::getFieldWatch(const char* field, UtlString& value) {
+	UtlString* fieldStr = new UtlString(field);
+	this->watchHeadersMutex.acquireRead();
+	UtlString* valueStr = static_cast<UtlString*>( this->watchHeaders.findValue(fieldStr) );
+	delete fieldStr;
+	if (valueStr) {
+		value = *valueStr;
+	}
+	this->watchHeadersMutex.releaseRead();
+	return valueStr != 0;
+}
+
+
+/*RL*/
+void SipUserAgent::checkWatchedFields(SipMessage* message) {
+	if (this->watchHeaders.isEmpty()) return;
+	this->watchHeadersMutex.acquireRead();
+	UtlHashMapIterator it (this->watchHeaders);
+	UtlString* key;// = static_cast<UtlString*>( it.key() );
+	this->watchHeadersMutex.releaseRead();
+	bool gotNew = false;
+
+	SIPX_HEADERWATCH_INFO info;
+	info.nSize = 0;
+
+	while ( (key = static_cast<UtlString*>( it() )) ) {
+		this->watchHeadersMutex.acquireWrite();
+		UtlString* valueStr = static_cast<UtlString*>(it.value());
+		const char* value = message->getHeaderValue(0, key->data());
+		if (value) {
+			if (valueStr->compareTo(value)) {
+				if (this->mpLineMgr) {
+					/* We fill this up now and once, for optimization... */
+					if (info.nSize == 0) {
+						Url url;
+						UtlString lineId;
+						message->getToUrl(url);
+						url.getIdentity(lineId);
+						lineId = "sip:" + lineId;
+						info.nSize = sizeof(SIPX_HEADERWATCH_INFO);
+						info.hLine = TapiMgr::getInstance().getLineHandle(lineId.data());
+					}
+					info.field = key->data();
+					info.oldValue = valueStr->data();
+					info.newValue = value;
+					TapiMgr::getInstance().fireEvent(this, EVENT_CATEGORY_HEADERWATCH, &info);
+				}
+				// store the value for future compares...
+				*valueStr = value;
+			}
+		}
+		this->watchHeadersMutex.releaseWrite();
+	}
+
+
+
+}

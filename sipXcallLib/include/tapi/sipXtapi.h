@@ -8,6 +8,8 @@
 // $$
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <STDIO.H> /*RL*/
+
 /**
  * @mainpage sipXtapi SDK Overview
  * 
@@ -89,15 +91,15 @@
                                              sipXinitialize */
 
 #define SIPXTAPI_VERSION_STRING "SIPxua SDK %s.%s %s (built %s)" /**< Version string format string */
-#define SIPXTAPI_VERSION        "2.9.0"      /**< sipXtapi API version -- automatically filled in 
+#define SIPXTAPI_VERSION        "2.9.31"      /**< sipXtapi API version -- automatically filled in 
                                                   during release process */   
 #define SIPXTAPI_BUILDNUMBER    "0"          /**< Default build number -- automatically filled in 
                                                   during release process*/
-#define SIPXTAPI_BUILD_WORD     2,9,0,0      /**< Default build word -- automatically filled in 
+#define SIPXTAPI_BUILD_WORD     2,9,31,0      /**< Default build word -- automatically filled in 
                                                   during release process */
-#define SIPXTAPI_FULL_VERSION   "2.9.0.X"    /**< Default full version number -- automatically filled in 
+#define SIPXTAPI_FULL_VERSION   "2.9.31.0"    /**< Default full version number -- automatically filled in 
                                                   during release process*/
-#define SIPXTAPI_BUILDDATE      "2005-03-23" /**< Default build date -- automatically filled in 
+#define SIPXTAPI_BUILDDATE      "2005-11-15" /**< Default build date -- automatically filled in 
                                                   during release process*/
 #define SIPX_MAX_ADAPTER_NAME_LENGTH 256	 /**< Max length of an adapter name */
 
@@ -279,6 +281,7 @@ typedef enum SIPX_RESULT
  */
 typedef enum TONE_ID
 {
+	ID_TONE_NONE, /*RL*/
     ID_DTMF_0              = '0',   /**< DMTF 0 */
     ID_DTMF_1              = '1',   /**< DMTF 1 */
     ID_DTMF_2              = '2',   /**< DMTF 2 */

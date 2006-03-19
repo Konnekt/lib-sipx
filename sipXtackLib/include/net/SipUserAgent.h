@@ -17,6 +17,7 @@
 
 // APPLICATION INCLUDES
 #include <utl/UtlHashBag.h>
+#include <utl/UtlHashMap.h>
 #include <os/OsServerTask.h>
 #include <net/SipUserAgentBase.h>
 #include <net/SipMessage.h>
@@ -255,6 +256,8 @@ public:
     ~SipUserAgent();
 
 /* ============================ MANIPULATORS ============================== */
+	/*RL:*/
+	void initializeLineMgr(SipLineMgr* lineMgr);
 
     //! Cleanly shuts down SipUserAgent.
     /*! This method can block until the shutdown is complete, or it can be
@@ -551,6 +554,12 @@ public:
      // Set if location header is enabled or not
 
 
+	/*RL*/
+	void addFieldWatch(const char* field);
+
+	/*RL*/
+	bool getFieldWatch(const char* field, UtlString& value);
+
 /* ============================ INQUIRY =================================== */
 
     virtual UtlBoolean isMessageLoggingEnabled();
@@ -660,6 +669,9 @@ protected:
                                        int* messageType,
                                        int authorizationEntity);
    
+	/*RL*/
+	void checkWatchedFields(SipMessage* message);
+
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
 
@@ -687,7 +699,11 @@ private:
     UtlHashBag mMessageObservers;
     OsRWMutex mMessageLogRMutex;
     OsRWMutex mMessageLogWMutex;
-    
+
+	/*RL*/
+	UtlHashMap watchHeaders;
+	OsRWMutex watchHeadersMutex;
+
     //times
     int mFirstResendTimeoutMs; //intialtimeout
     int mLastResendTimeoutMs; //timeout between last 2 resends
