@@ -1359,6 +1359,20 @@ SipRefreshMgr::handleMessage( OsMsg& eventMessage )
                     request = new SipMessage(*requestFound);
             }
 
+			/*RL*/
+			// Let's handle 408 internal responses...
+			if (!request && sipMsg->getResponseStatusCode() == 408) {
+				SipMessage* response408 = new SipMessage(*sipMsg);
+				response408->incrementCSeqNumber();
+                OsReadLock readlock(mRegisterListMutexR);
+                // Find the request which goes with this response
+                requestFound = mRegisterList.getRequestFor(response408);
+                //make a dupe
+                if ( requestFound )
+                    request = new SipMessage(*requestFound);
+				delete response408;
+			}
+
             if ( request )
             {
                 UtlBoolean retryWithAuthentication = FALSE;
