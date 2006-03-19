@@ -93,7 +93,7 @@ typedef enum SIPX_EVENT_CATEGORY
     EVENT_CATEGORY_SECURITY,        /**< SECURITY events signify occurences in call security 
                                          processing.  These events are only sent when using
                                          S/MIME or TLS. */
-    EVENT_CATEGORY_MEDIA            /**< MEDIA events signify changes in the audio state for
+    EVENT_CATEGORY_MEDIA,            /**< MEDIA events signify changes in the audio state for
                                          sipXtapi or a particular call. */
                                          
 	/*RL*/
