@@ -251,7 +251,7 @@ class SipUserAgent;
 #define SIP_TRANSPORT_TLS "TLS"
 #define SIP_URL_TYPE "SIP:"
 #define SIPS_URL_TYPE "SIPS:"
-#define SIP_DEFAULT_MAX_FORWARDS 20
+#define SIP_DEFAULT_MAX_FORWARDS 70
 
 // Caller preference request dispostions tokens
 #define SIP_DISPOSITION_QUEUE "QUEUE"
