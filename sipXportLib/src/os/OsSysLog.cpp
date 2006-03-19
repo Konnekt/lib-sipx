@@ -886,7 +886,7 @@ void myvsprintf(UtlString& results, const char* format, OS_VA_ARG_CONST va_list 
     {
         /* Try to print in the allocated space. */
 #ifdef _WIN32
-        n = _vsnprintf (p, size, format, args);
+        n = _vsnprintf (p, size - 1, format, args); /*RL*/
 #else
         n = vsnprintf (p, size, format, args);
 #endif
@@ -894,6 +894,7 @@ void myvsprintf(UtlString& results, const char* format, OS_VA_ARG_CONST va_list 
         /* If that worked, return the string. */
         if (n > -1 && n < size)
         {
+			p[n] = 0; /*RL*/
             break;
         }
         /* Else try again with more space. */

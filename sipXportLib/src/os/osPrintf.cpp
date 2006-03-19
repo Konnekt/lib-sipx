@@ -85,7 +85,7 @@ extern "C" void osPrintf(const char* format, ...)
         {
             /* Try to print in the allocated space. */
 #ifdef _WIN32
-            n = _vsnprintf (p, size, format, args);
+            n = _vsnprintf (p, size-1, format, args); /*RL*/
 #else
             n = vsnprintf (p, size, format, args);
 #endif
@@ -93,6 +93,7 @@ extern "C" void osPrintf(const char* format, ...)
             /* If that worked, return the string. */
             if (n > -1 && n < size)
             {
+				p[n] = 0; /*RL*/
                 break;
             }
             /* Else try again with more space. */
