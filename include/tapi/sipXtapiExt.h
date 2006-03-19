@@ -15,7 +15,4 @@ SIPXTAPI_API void sipxStopMedia();
 
 
 
-SIPXTAPI_API SIPX_RESULT sipxLineGetByUrl(const char* szLineUrl, SIPX_LINE* phLine);
-
-
 #endif
