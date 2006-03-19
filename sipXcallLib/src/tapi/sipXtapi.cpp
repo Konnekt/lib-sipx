@@ -4571,6 +4571,14 @@ SIPXTAPI_API SIPX_RESULT sipxAudioSetCallInputDevice(const SIPX_INST hInst,
     SIPX_RESULT rc = SIPX_RESULT_INVALID_ARGS ;    
     SIPX_INSTANCE_DATA* pInst = (SIPX_INSTANCE_DATA*) hInst ;
 
+	/*RL*/
+	if (*szDevice == 0) {
+		if (pInst->inputAudioDevices[0]) {
+			szDevice = pInst->inputAudioDevices[0];
+		} else {
+			szDevice = "NONE";
+		}
+	}
     if (pInst)
     {
         CpMediaInterfaceFactoryImpl* pInterface = 
@@ -4637,6 +4645,14 @@ SIPXTAPI_API SIPX_RESULT sipxAudioSetRingerOutputDevice(const SIPX_INST hInst,
     SIPX_INSTANCE_DATA* pInst = (SIPX_INSTANCE_DATA*) hInst ;
     UtlString oldDevice ; 
 
+	/*RL*/
+	if (*szDevice == 0) {
+		if (pInst->outputAudioDevices[0]) {
+			szDevice = pInst->outputAudioDevices[0];
+		} else {
+			szDevice = "NONE";
+		}
+	}
     if (pInst)
     {
         CpMediaInterfaceFactoryImpl* pInterface = 
@@ -4701,7 +4717,14 @@ SIPXTAPI_API SIPX_RESULT sipxAudioSetCallOutputDevice(const SIPX_INST hInst,
     SIPX_RESULT rc = SIPX_RESULT_INVALID_ARGS ;
     SIPX_INSTANCE_DATA* pInst = (SIPX_INSTANCE_DATA*) hInst ;
     UtlString oldDevice ; 
-
+	/*RL*/
+	if (*szDevice == 0) {
+		if (pInst->outputAudioDevices[0]) {
+			szDevice = pInst->outputAudioDevices[0];
+		} else {
+			szDevice = "NONE";
+		}
+	}
     if (pInst)
     {
         CpMediaInterfaceFactoryImpl* pInterface = 
