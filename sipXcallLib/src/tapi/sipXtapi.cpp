@@ -107,6 +107,16 @@ BOOL APIENTRY DllMain( HANDLE hModule,
 
 #endif /* defined(_WIN32) */
 
+
+#define EXCEPTION_PURE_VIRTUAL_CALL 0xE0006001
+
+int _purecall() {
+	const char* args [] = {"SipXTAPI"};
+	RaiseException(EXCEPTION_PURE_VIRTUAL_CALL, 0, 1, (ULONG_PTR*)args);
+	return 0;
+}
+
+
 static void initLogger()
 {
     OsSysLog::initialize(0, // do not cache any log messages in memory
