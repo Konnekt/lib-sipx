@@ -52,9 +52,9 @@ int SipServerBroker::run(void *pNotUsed)
 
         // post a message, containing the the client socket,
         // to the owner
-        if(clientSocket)
+        if(!isShuttingDown() && mpSocket && clientSocket)
         {
-            OsPtrMsg ptrMsg(OsMsg::OS_EVENT, SipTcpServer::SIP_SERVER_BROKER_NOTIFY, (void*)clientSocket);
+            OsPtrMsg ptrMsg(OsMsg::OS_EVENT, SIP_SERVER_BROKER_NOTIFY, (void*)clientSocket);
             mpOwnerTask->postMessage(ptrMsg);
         }
     }
@@ -64,6 +64,7 @@ int SipServerBroker::run(void *pNotUsed)
 // Destructor
 SipServerBroker::~SipServerBroker()
 {
+    requestShutdown();
     if (mpSocket)
     {
         mpSocket->close();

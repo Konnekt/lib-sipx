@@ -1,10 +1,12 @@
 //
-// Copyright (C) 2004, 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
-//////
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef _SipUdpServer_h_
 #define _SipUdpServer_h_
@@ -25,7 +27,7 @@
 // TYPEDEFS
 // FORWARD DECLARATIONS
 class SipUserAgent;
-class OsStunDatagramSocket ;
+class OsNatDatagramSocket ;
 class OsNotification ;
 
 //:Class short description which may consist of multiple lines (note the ':')
@@ -59,9 +61,9 @@ public:
     void shutdownListener();
 
     void enableStun(const char* szStunServer, 
+                    int iStunPort,
                     const char* szLocalIp, 
                     int refreshPeriodInSecs, 
-                    int stunOptions,
                     OsNotification* pNotification) ;
       //:Enable stun lookups for UDP signaling
       // Use a NULL szStunServer to disable
@@ -70,6 +72,25 @@ public:
                      const char* address,
                      int port,
                      const char* szLocalSipIp = NULL);
+
+
+    UtlBoolean addCrLfKeepAlive(const char* szLocalIp,
+                                const char* szRemoteIp,
+                                const int   remotePort,
+                                const int   keepAliveSecs) ;
+
+    UtlBoolean removeCrLfKeepAlive(const char* szLocalIp,
+                                   const char* szRemoteIp,
+                                   const int   remotePort) ;
+
+    UtlBoolean addStunKeepAlive(const char* szLocalIp,
+                                const char* szRemoteIp,
+                                const int   remotePort,
+                                const int   keepAliveSecs) ;
+
+    UtlBoolean removeStunKeepAlive(const char* szLocalIp,
+                                   const char* szRemoteIp,
+                                   const int   remotePort) ;
 
 /* ============================ ACCESSORS ================================= */
 
@@ -98,7 +119,7 @@ private:
     UtlString mNatPingMethod;
     UtlString mStunServer ;
     int mStunRefreshSecs ;
-    int mStunOptions ;
+    int mStunPort ;
     OsStatus createServerSocket(const char* localIp,
                                  int& localPort,
                                  const UtlBoolean& bUseNextAvailablePort,

@@ -134,6 +134,8 @@ void SdpCodecFactory::bindPayloadTypes()
     int unusedDynamicPayloadId = 
         SdpCodec::SDP_CODEC_MAXIMUM_STATIC_CODEC + 1;
     SdpCodec* codecWithoutPayloadId = NULL;
+    UtlString prevSubmimeType = "none";
+    UtlString actualSubmimeType;
 
     // Find a codec which does not have its payload type set
     // Cheat a little and make the codec writeable
@@ -142,7 +144,20 @@ void SdpCodecFactory::bindPayloadTypes()
         // Find an unused dynamic payload type id
         while(getCodecByType(unusedDynamicPayloadId))
         {
-            unusedDynamicPayloadId++;
+            // Assuming all codecs with same submime type are stored
+            // sequentially, only increment payload id for different submime types
+            codecWithoutPayloadId->getEncodingName(actualSubmimeType);
+            if (prevSubmimeType.compareTo(actualSubmimeType, UtlString::ignoreCase) != 0)
+            {
+                // Increment payload id for new submime type
+                unusedDynamicPayloadId++;
+                prevSubmimeType = actualSubmimeType;
+            }
+            else
+            {
+                // Just break if we have the same submime type
+                break;
+            }
         }
 
         codecWithoutPayloadId->setCodecPayloadFormat(unusedDynamicPayloadId);
@@ -264,6 +279,9 @@ SdpCodec::SdpCodecTypes SdpCodecFactory::getCodecType(const char* pCodecName)
     if (strcmp(compareString,"VP71-SQCIF") == 0)
         retType = SdpCodec::SDP_CODEC_VP71_SQCIF;
    else
+    if (strcmp(compareString,"VP71-QVGA") == 0)
+        retType = SdpCodec::SDP_CODEC_VP71_QVGA;
+   else
     if (strcmp(compareString,"IYUV-CIF") == 0)
         retType = SdpCodec::SDP_CODEC_IYUV_CIF;
    else
@@ -272,6 +290,9 @@ SdpCodec::SdpCodecTypes SdpCodecFactory::getCodecType(const char* pCodecName)
    else
     if (strcmp(compareString,"IYUV-SQCIF") == 0)
         retType = SdpCodec::SDP_CODEC_IYUV_SQCIF;
+   else
+    if (strcmp(compareString,"IYUV-QVGA") == 0)
+        retType = SdpCodec::SDP_CODEC_IYUV_QVGA;
    else
     if (strcmp(compareString,"I420-CIF") == 0)
         retType = SdpCodec::SDP_CODEC_I420_CIF;
@@ -282,6 +303,21 @@ SdpCodec::SdpCodecTypes SdpCodecFactory::getCodecType(const char* pCodecName)
     if (strcmp(compareString,"I420-SQCIF") == 0)
         retType = SdpCodec::SDP_CODEC_I420_SQCIF;
    else
+    if (strcmp(compareString,"I420-QVGA") == 0)
+        retType = SdpCodec::SDP_CODEC_I420_QVGA;
+   else
+    if (strcmp(compareString,"H263-CIF") == 0)
+        retType = SdpCodec::SDP_CODEC_H263_CIF;
+   else
+    if (strcmp(compareString,"H263-QCIF") == 0)
+        retType = SdpCodec::SDP_CODEC_H263_QCIF;
+   else
+    if (strcmp(compareString,"H263-SQCIF") == 0)
+        retType = SdpCodec::SDP_CODEC_H263_SQCIF;
+   else
+    if (strcmp(compareString,"H263-QVGA") == 0)
+        retType = SdpCodec::SDP_CODEC_H263_QVGA;
+   else
     if (strcmp(compareString,"RGB24-CIF") == 0)
         retType = SdpCodec::SDP_CODEC_RGB24_CIF;
    else
@@ -290,6 +326,9 @@ SdpCodec::SdpCodecTypes SdpCodecFactory::getCodecType(const char* pCodecName)
    else
     if (strcmp(compareString,"RGB24-SQCIF") == 0)
         retType = SdpCodec::SDP_CODEC_RGB24_SQCIF;
+   else
+    if (strcmp(compareString,"RGB24-QVGA") == 0)
+        retType = SdpCodec::SDP_CODEC_RGB24_QVGA;
     else
        retType = SdpCodec::SDP_CODEC_UNKNOWN;
     return retType;
@@ -589,7 +628,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_HIGH,
-                            SDP_CODEC_BANDWIDTH_VARIABLE); // $$$ ???
+                            SDP_CODEC_BANDWIDTH_VARIABLE);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
             aCodec.getEncodingName(codecEncodingName);
@@ -607,7 +646,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_HIGH,
-                            SDP_CODEC_BANDWIDTH_NORMAL); // $$$ ???
+                            SDP_CODEC_BANDWIDTH_LOW);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
             aCodec.getEncodingName(codecEncodingName);
@@ -625,7 +664,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_HIGH,
-                            SDP_CODEC_BANDWIDTH_NORMAL); // $$$ ???
+                            SDP_CODEC_BANDWIDTH_LOW); 
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
             aCodec.getEncodingName(codecEncodingName);
@@ -662,7 +701,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "size=CIF/QCIF/SQCIF",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_HIGH,
+                            SDP_CODEC_BANDWIDTH_NORMAL,
                             SDP_VIDEO_FORMAT_CIF);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
@@ -681,7 +720,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_HIGH,
+                            SDP_CODEC_BANDWIDTH_NORMAL,
                             SDP_VIDEO_FORMAT_QCIF);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
@@ -700,8 +739,27 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_HIGH,
+                            SDP_CODEC_BANDWIDTH_NORMAL,
                             SDP_VIDEO_FORMAT_SQCIF);
+            addCodec(aCodec);
+            aCodec.getMediaType(codecMediaType);
+            aCodec.getEncodingName(codecEncodingName);
+         }
+         break;
+
+      case SdpCodec::SDP_CODEC_VP71_QVGA:
+         {
+            SdpCodec aCodec(SdpCodec::SDP_CODEC_VP71_QVGA,
+                            SdpCodec::SDP_CODEC_UNKNOWN,
+                            MIME_TYPE_VIDEO,
+                            MIME_SUBTYPE_VP71,
+                            90000,
+                            20000,
+                            1,
+                            "",
+                            SdpCodec::SDP_CODEC_CPU_LOW,
+                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_VIDEO_FORMAT_QVGA);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
             aCodec.getEncodingName(codecEncodingName);
@@ -719,7 +777,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "size=CIF/QCIF/SQCIF",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_CODEC_BANDWIDTH_HIGH,
                             SDP_VIDEO_FORMAT_CIF);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
@@ -738,7 +796,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_CODEC_BANDWIDTH_HIGH,
                             SDP_VIDEO_FORMAT_QCIF);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
@@ -757,8 +815,27 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_CODEC_BANDWIDTH_HIGH,
                             SDP_VIDEO_FORMAT_SQCIF);
+            addCodec(aCodec);
+            aCodec.getMediaType(codecMediaType);
+            aCodec.getEncodingName(codecEncodingName);
+         }
+         break;
+
+      case SdpCodec::SDP_CODEC_IYUV_QVGA:
+         {
+            SdpCodec aCodec(SdpCodec::SDP_CODEC_IYUV_QVGA,
+                            SdpCodec::SDP_CODEC_UNKNOWN,
+                            MIME_TYPE_VIDEO,
+                            MIME_SUBTYPE_IYUV,
+                            90000,
+                            20000,
+                            1,
+                            "",
+                            SdpCodec::SDP_CODEC_CPU_LOW,
+                            SDP_CODEC_BANDWIDTH_HIGH,
+                            SDP_VIDEO_FORMAT_QVGA);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
             aCodec.getEncodingName(codecEncodingName);
@@ -776,7 +853,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "size=CIF/QCIF/SQCIF",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_CODEC_BANDWIDTH_HIGH,
                             SDP_VIDEO_FORMAT_CIF);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
@@ -795,7 +872,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_CODEC_BANDWIDTH_HIGH,
                             SDP_VIDEO_FORMAT_QCIF);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
@@ -814,8 +891,27 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_CODEC_BANDWIDTH_HIGH,
                             SDP_VIDEO_FORMAT_SQCIF);
+            addCodec(aCodec);
+            aCodec.getMediaType(codecMediaType);
+            aCodec.getEncodingName(codecEncodingName);
+         }
+         break;
+
+      case SdpCodec::SDP_CODEC_I420_QVGA:
+         {
+            SdpCodec aCodec(SdpCodec::SDP_CODEC_I420_QVGA,
+                            SdpCodec::SDP_CODEC_UNKNOWN,
+                            MIME_TYPE_VIDEO,
+                            MIME_SUBTYPE_I420,
+                            90000,
+                            20000,
+                            1,
+                            "",
+                            SdpCodec::SDP_CODEC_CPU_LOW,
+                            SDP_CODEC_BANDWIDTH_HIGH,
+                            SDP_VIDEO_FORMAT_QVGA);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
             aCodec.getEncodingName(codecEncodingName);
@@ -833,7 +929,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "size=CIF/QCIF/SQCIF",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_CODEC_BANDWIDTH_HIGH,
                             SDP_VIDEO_FORMAT_CIF);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
@@ -852,7 +948,7 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_LOW,
-                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_CODEC_BANDWIDTH_HIGH,
                             SDP_VIDEO_FORMAT_QCIF);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
@@ -871,8 +967,103 @@ int SdpCodecFactory::buildSdpCodecFactory(int codecCount, SdpCodec::SdpCodecType
                             1,
                             "",
                             SdpCodec::SDP_CODEC_CPU_LOW,
+                            SDP_CODEC_BANDWIDTH_HIGH,
+                            SDP_VIDEO_FORMAT_SQCIF);
+            addCodec(aCodec);
+            aCodec.getMediaType(codecMediaType);
+            aCodec.getEncodingName(codecEncodingName);
+         }
+         break;
+
+      case SdpCodec::SDP_CODEC_H263_CIF:
+         {
+            SdpCodec aCodec(SdpCodec::SDP_CODEC_H263_CIF,
+                            SdpCodec::SDP_CODEC_H263,
+                            MIME_TYPE_VIDEO,
+                            MIME_SUBTYPE_H263,
+                            90000,
+                            20000,
+                            1,
+                            "",
+                            SdpCodec::SDP_CODEC_CPU_LOW,
+                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_VIDEO_FORMAT_CIF);
+            addCodec(aCodec);
+            aCodec.getMediaType(codecMediaType);
+            aCodec.getEncodingName(codecEncodingName);
+         }
+         break;
+
+      case SdpCodec::SDP_CODEC_H263_QCIF:
+         {
+            SdpCodec aCodec(SdpCodec::SDP_CODEC_H263_QCIF,
+                            SdpCodec::SDP_CODEC_H263,
+                            MIME_TYPE_VIDEO,
+                            MIME_SUBTYPE_H263,
+                            90000,
+                            20000,
+                            1,
+                            "",
+                            SdpCodec::SDP_CODEC_CPU_LOW,
+                            SDP_CODEC_BANDWIDTH_NORMAL,
+                            SDP_VIDEO_FORMAT_QCIF);
+            addCodec(aCodec);
+            aCodec.getMediaType(codecMediaType);
+            aCodec.getEncodingName(codecEncodingName);
+         }
+         break;
+
+      case SdpCodec::SDP_CODEC_H263_SQCIF:
+         {
+            SdpCodec aCodec(SdpCodec::SDP_CODEC_H263_SQCIF,
+                            SdpCodec::SDP_CODEC_H263,
+                            MIME_TYPE_VIDEO,
+                            MIME_SUBTYPE_H263,
+                            90000,
+                            20000,
+                            1,
+                            "",
+                            SdpCodec::SDP_CODEC_CPU_LOW,
                             SDP_CODEC_BANDWIDTH_NORMAL,
                             SDP_VIDEO_FORMAT_SQCIF);
+            addCodec(aCodec);
+            aCodec.getMediaType(codecMediaType);
+            aCodec.getEncodingName(codecEncodingName);
+         }
+         break;
+
+      case SdpCodec::SDP_CODEC_H263_QVGA:
+         {
+            SdpCodec aCodec(SdpCodec::SDP_CODEC_H263_QVGA,
+                            SdpCodec::SDP_CODEC_H263,
+                            MIME_TYPE_VIDEO,
+                            MIME_SUBTYPE_H263,
+                            90000,
+                            20000,
+                            1,
+                            "",
+                            SdpCodec::SDP_CODEC_CPU_LOW,
+                            SDP_CODEC_BANDWIDTH_HIGH,
+                            SDP_VIDEO_FORMAT_QVGA);
+            addCodec(aCodec);
+            aCodec.getMediaType(codecMediaType);
+            aCodec.getEncodingName(codecEncodingName);
+         }
+         break;
+
+      case SdpCodec::SDP_CODEC_RGB24_QVGA:
+         {
+            SdpCodec aCodec(SdpCodec::SDP_CODEC_RGB24_QVGA,
+                            SdpCodec::SDP_CODEC_UNKNOWN,
+                            MIME_TYPE_VIDEO,
+                            MIME_SUBTYPE_RGB24,
+                            90000,
+                            20000,
+                            1,
+                            "",
+                            SdpCodec::SDP_CODEC_CPU_LOW,
+                            SDP_CODEC_BANDWIDTH_HIGH,
+                            SDP_VIDEO_FORMAT_QVGA);
             addCodec(aCodec);
             aCodec.getMediaType(codecMediaType);
             aCodec.getEncodingName(codecEncodingName);
@@ -977,11 +1168,11 @@ const SdpCodec* SdpCodecFactory::getCodec(const char* mimeType,
     {
         // If the mime type matches
         codecFound->getMediaType(foundMimeType);
-        if(foundMimeType.compareTo(mimeTypeString) == 0)
+        if(foundMimeType.compareTo(mimeTypeString, UtlString::ignoreCase) == 0)
         {
             // and if the mime subtype matches
             codecFound->getEncodingName(foundMimeSubType);
-            if((foundMimeSubType.compareTo(mimeSubTypeString) == 0) &&
+            if((foundMimeSubType.compareTo(mimeSubTypeString, UtlString::ignoreCase) == 0) &&
                (codecFound->getCPUCost() <= mCodecCPULimit))
             {
                 // we found a match
@@ -1014,6 +1205,28 @@ int SdpCodecFactory::getCodecCount()
     while((codecFound = (SdpCodec*) iterator()))
     {
         if (codecFound->getCPUCost() <= mCodecCPULimit)
+        {
+            iCount++;
+        }        
+    }
+
+    return iCount;
+}
+
+int SdpCodecFactory::getCodecCount(const char* mimetype)
+{
+    OsReadLock lock(mReadWriteMutex);
+    SdpCodec* codecFound = NULL;
+    UtlString foundMimeType;
+    
+    // Find all codecs, where the CPU cost is tolerable.
+    int iCount = 0;    
+    UtlDListIterator iterator(mCodecs);
+    while((codecFound = (SdpCodec*) iterator()))
+    {
+        codecFound->getMediaType(foundMimeType);
+        if (codecFound->getCPUCost() <= mCodecCPULimit && 
+                foundMimeType.compareTo(mimetype, UtlString::ignoreCase) == 0)
         {
             iCount++;
         }        
@@ -1062,7 +1275,8 @@ void SdpCodecFactory::getCodecs(int& numCodecs,
           (codecFound = (SdpCodec*) iterator()) != NULL)
     {
         codecFound->getMediaType(sMimeType);
-        if (codecFound->getCPUCost() <= mCodecCPULimit && sMimeType.compareTo(mimeType) == 0)
+        if (codecFound->getCPUCost() <= mCodecCPULimit && 
+                sMimeType.compareTo(mimeType, UtlString::ignoreCase) == 0)
         {
             codecArray[index] = new SdpCodec(*codecFound);
             index++;
@@ -1091,7 +1305,9 @@ void SdpCodecFactory::getCodecs(int& numCodecs,
     {
         codecFound->getMediaType(sMimeType);
         codecFound->getEncodingName(sSubMimeType);
-        if (codecFound->getCPUCost() <= mCodecCPULimit && sMimeType.compareTo(mimeType) == 0 && sSubMimeType.compareTo(subMimeType) == 0)
+        if (    codecFound->getCPUCost() <= mCodecCPULimit && 
+                sMimeType.compareTo(mimeType, UtlString::ignoreCase) == 0 && 
+                sSubMimeType.compareTo(subMimeType, UtlString::ignoreCase) == 0)
         {
             codecArray[index] = new SdpCodec(*codecFound);
             index++;

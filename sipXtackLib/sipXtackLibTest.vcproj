@@ -4,6 +4,7 @@
 	Version="7.10"
 	Name="sipXtackLibTest"
 	ProjectGUID="{AB8F7343-BC81-4077-B1A5-37CA389FCA93}"
+	RootNamespace="sipXtackLibTest"
 	Keyword="Win32Proj">
 	<Platforms>
 		<Platform
@@ -19,8 +20,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\include;..\sipXportLib\include;..\sipXportLib\src\test"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
+				AdditionalIncludeDirectories=".\include;.\include\nss;..\sipXportLib\include;..\sipXportLib\src\test;..\sipXbuild\vendors\Mozilla\wnt\nspr-4.4.1_dbg\include,..\sipXbuild\vendors\Mozilla\wnt\nss-3.9_dbg\include"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;SIP_TLS;SIP_TLS_NSS;HAVE_NSS"
 				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -30,13 +31,19 @@
 				Detect64BitPortabilityProblems="TRUE"
 				DebugInformationFormat="4"/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCCustomBuildTool"
+				CommandLine="copy ..\sipXbuild\vendors\Mozilla\wnt\nss-3.9_dbg\lib\*.dll
+copy ..\sipXbuild\vendors\Mozilla\wnt\nspr-4.4.1_dbg\lib\*.dll
+"
+				Outputs="nss3.dll;smime3.dll"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrtd.lib MSVCPRTD.lib wsock32.lib cppunitd.lib sipXportLib.lib sipXtackLib.lib libpcre.a"
+				AdditionalDependencies="msvcrtd.lib MSVCPRTd.lib wsock32.lib cppunitd.lib sipXtackLib.lib sipXportLib.lib libpcre.a nss3.lib smime3.lib nspr4.lib plc4.lib ssl3.lib"
 				OutputFile="$(OutDir)/sipXtackLibTest.exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories=".\Debug;..\sipXportLib\debug"
+				AdditionalLibraryDirectories=".\Debug;..\sipXportLib\debug;..\sipXbuild\Vendors\Mozilla\wnt\nspr-3.4_dbg\lib;..\sipXbuild\Vendors\Mozilla\wnt\nss-3.9_dbg\lib;..\sipXbuild\vendors\Mozilla\wnt\nspr-4.4.1_dbg\lib"
+				IgnoreDefaultLibraryNames="msvcrt.lib;msvcprt.lib;msvcrt"
+				DelayLoadDLLs="nss3.dll;smime3.dll;nspr4.dll;plc4.dll;ssl3.dll"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/sipXtackLibTest.pdb"
 				SubSystem="1"
@@ -70,9 +77,10 @@
 			CharacterSet="2">
 			<Tool
 				Name="VCCLCompilerTool"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
-				RuntimeLibrary="4"
-				UsePrecompiledHeader="3"
+				AdditionalIncludeDirectories=".\include;.\include\nss;..\sipXportLib\include;..\sipXportLib\src\test;..\sipXbuild\vendors\Mozilla\wnt\nspr-4.4.1\include,..\sipXbuild\vendors\Mozilla\wnt\nss-3.9\include"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;SIP_TLS;SIP_TLS_NSS"
+				RuntimeLibrary="2"
+				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="TRUE"
 				DebugInformationFormat="3"/>
@@ -80,8 +88,11 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)/sipXportLibTest.exe"
+				AdditionalDependencies="msvcrt.lib MSVCPRT.lib wsock32.lib cppunit.lib sipXportLib.lib sipXtackLib.lib libpcre.a nss3.lib smime3.lib nspr4.lib plc4.lib ssl3.lib"
+				OutputFile="$(OutDir)/sipXtackLibTest.exe"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories=".\Release;..\sipXportLib\release;..\sipXbuild\Vendors\Mozilla\wnt\nspr-3.4\lib;..\sipXbuild\Vendors\Mozilla\wnt\nss-3.9\lib;..\sipXbuild\vendors\Mozilla\wnt\nspr-4.4.1\lib"
+				IgnoreDefaultLibraryNames="libcpmtd.lib;LIBCMTD.lib;libprt.lib;msvcrtd.lib;msvcprtd.lib"
 				GenerateDebugInformation="TRUE"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -177,28 +188,16 @@
 				RelativePath="..\sipXportLib\src\test\sipxunit\TestMonitor.cpp">
 			</File>
 			<File
-				RelativePath="..\sipXportLib\src\test\sipxunit\TestMonitor.h">
-			</File>
-			<File
 				RelativePath="..\sipXportLib\src\test\sipxunit\TestOutputter.cpp">
 			</File>
 			<File
-				RelativePath="..\sipXportLib\src\test\sipxunit\TestOutputter.h">
-			</File>
-			<File
 				RelativePath="..\sipXportLib\src\test\sipxunit\TestRunner.cpp">
-			</File>
-			<File
-				RelativePath="..\sipXportLib\src\test\sipxunit\TestRunner.h">
 			</File>
 			<File
 				RelativePath="..\sipXportLib\src\test\sipxunit\TestTemplate.cpp">
 			</File>
 			<File
 				RelativePath="..\sipXportLib\src\test\sipxunit\TestUtilities.cpp">
-			</File>
-			<File
-				RelativePath="..\sipXportLib\src\test\sipxunit\TestUtilities.h">
 			</File>
 			<File
 				RelativePath="..\sipXportLib\src\test\sipxunit\unitmain.cpp">

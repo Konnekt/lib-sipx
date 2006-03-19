@@ -8,8 +8,6 @@
 // $$
 ///////////////////////////////////////////////////////////////////////////////
 
-// Author: Daniel Petrie (dpetrie AT SIPez DOT com)
-
 #ifndef _SdpBody_h_
 #define _SdpBody_h_
 
@@ -23,14 +21,23 @@
 #include <net/SdpCodec.h>
 
 // DEFINES
+#define SDP_AUDIO_MEDIA_TYPE "audio"
+#define SDP_VIDEO_MEDIA_TYPE "video"
+#define SDP_APPLICATION_MEDIA_TYPE "application"
+
 // Crypto suites
 #define AES_CM_128_HMAC_SHA1_80   1
-#define AES_CM_128_HMAC_SHA1_32   2
+#define AES_CM_128_HAMC_SHA1_32   2
 #define F8_128_HMAC_SHA1_80       3
 // Protection level
-#define ENCRYPTION                1
-#define AUTHENTICATION            2
-// Key length
+#define SRTP_ENCRYPTION           0x0001
+#define SRTP_AUTHENTICATION       0x0002
+#define SRTP_SEND                 0x0004
+#define SRTP_RECEIVE              0x0008
+#define SRTP_OFF                  0
+#define SRTP_ON                   (SRTP_ENCRYPTION|SRTP_AUTHENTICATION|SRTP_SEND|SRTP_RECEIVE)
+#define SRTP_SECURITY_MASK        (SRTP_ENCRYPTION|SRTP_AUTHENTICATION)
+// Key length       
 #define SRTP_KEY_LENGTH          30
 
 // MACROS
@@ -165,25 +172,36 @@ class SdpBody : public HttpBody
  */
 
    /// Create a set of media codec and address entries
-   void addAudioCodecs(const char* rtpAddress,
-                       int rtpPort,
-                       int rtcpPort,
-                       int videoRtpPort,
-                       int videoRtcpPort,
+   void addAudioCodecs(int iNumAddresses,
+                       UtlString hostAddresses[],
+                       int rtpAudioPorts[],
+                       int rtcpAudioPorts[],
+                       int rtpVideoPorts[],
+                       int rtcpVideoPorts[],
                        int numRtpCodecs,
                        SdpCodec* rtpCodecs[],
-                       SdpSrtpParameters& srtpParams 
+                       SdpSrtpParameters& srtpParams,
+                       int videoBandwidth,
+                       int videoFramerate
                        );
 
+   /**<
+    * This method is for building a SdpBody which is in response
+    * to a SdpBody send from the other side
+    */
+
    /// Create a response to a set of media codec and address entries.
-   void addAudioCodecs(const char* rtpAddress, 
-                       int rtpAudioPort,
-                       int rtcpAudioPort,
-                       int rtpVideoPort,
-                       int rtcpVideoPort,
+   void addAudioCodecs(int iNumAddresses,
+                       UtlString hostAddresses[],
+                       int rtpAudioPorts[],
+                       int rtcpAudioPorts[],
+                       int rtpVideoPorts[],
+                       int rtcpVideoPorts[],
                        int numRtpCodecs, 
                        SdpCodec* rtpCodecs[],
                        SdpSrtpParameters& srtpParams,
+                       int videoBandwidth,
+                       int videoFramerate,
                        const SdpBody* sdpRequest ///< Sdp we are responding to
                        );
    /**<
@@ -192,9 +210,10 @@ class SdpBody : public HttpBody
     */
 
 
+
    /// Create a new media set for SDP message.
    void addMediaData(const char* mediaType, ///< "audio", "video", "application", "data", "control"
-                     int portNumber,        ///< TCP or UDP poart number for the media stream
+                     int portNumber,        ///< TCP or UDP port number for the media stream
                      int portPairCount,     ///< the number of PAIRS of ports to be used for the media stream.
                      const char* mediaTransportType, ///< i.e. "RTP/AVP"
                      int numPayloadTypes,   ///< entries in the payloadType parameter 
@@ -207,7 +226,8 @@ class SdpBody : public HttpBody
 
    void addCodecParameters(int numRtpCodecs,
                            SdpCodec* rtpCodecs[],
-                           const char* szMimeType = "audio"
+                           const char* szMimeType = "audio",
+                           const int videoFramerate = 0
                            );
 
    /// Set address.
@@ -238,16 +258,14 @@ class SdpBody : public HttpBody
 
 
     /**
-     * Set the candidate attribute per draft-ietf-mmusic-ice-04
+     * Set the candidate attribute per draft-ietf-mmusic-ice-05
      */
-    void addCandidateAttribute(const char* id, 
-                               double qValue, 
-                               const char* userFrag, 
-                               const char* password, 
-                               const char* unicastIp, 
-                               int unicastPort, 
+    void addCandidateAttribute(int         candidateId, 
+                               const char* transportId, 
+                               const char* transportType,
+                               double      qValue, 
                                const char* candidateIp, 
-                               int candidatePort) ;
+                               int         candidatePort) ;
 
 ///@}
    
@@ -341,12 +359,20 @@ class SdpBody : public HttpBody
    // Get the fmtp parameter
    UtlBoolean getPayloadFormat(int payloadType,
                                UtlString& fmtp,
-                               int& videoFmtp) const;
+                               int& valueFmtp,
+                               int& numVideoSizes,
+                               int videoSizes[]) const;
 
    // Get the crypto field for SRTP
    UtlBoolean SdpBody::getSrtpCryptoField(int mediaIndex,                  ///< mediaIndex of crypto field
                                           int index,                       ///< Index inside of media type
                                           SdpSrtpParameters& params) const;
+
+   // Get the framerate field if there
+   UtlBoolean SdpBody::getFramerateField(int mediaIndex,
+                                         int& videoFramerate) const;
+
+   UtlBoolean SdpBody::getBandwidthField(int& bandwidth) const;
 
    /**<
     * Find the "a" record containing an rtpmap for the given
@@ -373,36 +399,63 @@ class SdpBody : public HttpBody
                            int& rtpPort,
                            int& rtcpPort,
                            int& videoRtpPort,
-                           int& videoRtcpPort) const;
+                           int& videoRtcpPort,
+                           SdpSrtpParameters& localSrtpParams,
+                           SdpSrtpParameters& matchingSrtpParams,
+                           int localBandwidth,
+                           int& matchingBandwidth,
+                           int localVideoFramerate,
+                           int& matchingVideoFramerate) const;
+             
    ///< It is assumed that the best are matches are first in the body.
-
 
    void getCodecsInCommon(int audioPayloadIdCount,
                           int videoPayloadCount,
                           int audioPayloadTypes[],
                           int videoPayloadTypes[],
+                          int videoRtpPort,
                           SdpCodecFactory& codecFactory,
                           int& numCodecsInCommon,
                           SdpCodec* codecs[]) const;
 
    // Find common encryption suites
    void getEncryptionInCommon(SdpSrtpParameters& audioParams,
-                              SdpSrtpParameters& videoParams,
-                              SdpSrtpParameters& commonAudioParms,
-                              SdpSrtpParameters& commonVideoParms);
+                              SdpSrtpParameters& remoteParams,
+                              SdpSrtpParameters& commonAudioParms) const;
+
+   // Find common bandwidth
+   void getBandwidthInCommon(int localBandwidth,
+                             int remoteBandwidth,
+                             int& commonBandwidth) const;
+
+   // Find a common video framerate
+   void getVideoFramerateInCommon(int localVideoFramerate,
+                                  int remoteVideoFramerate,
+                                  int& commonVideoFramerate) const;
 
     /**
-     * Get the candidate attribute per draft-ietf-mmusic-ice-04
+     * Get the candidate attribute per draft-ietf-mmusic-ice-05
      */
-    UtlBoolean getCandidateAttribute(int index,
-                                     UtlString& rId,
+    UtlBoolean getCandidateAttribute(int mediaIndex,
+                                     int candidateIndex,
+                                     int& rCandidateId,
+                                     UtlString& rTransportId,
+                                     UtlString& rTransportType,
                                      double& rQvalue, 
-                                     UtlString& rUserFrag, 
-                                     UtlString& rPassword, 
-                                     UtlString& rUnicastIp, 
-                                     int& rUnicastPort, 
                                      UtlString& rCandidateIp, 
                                      int& rCandidatePort) const ;
+
+
+   UtlBoolean getCandidateAttributes(const char* szMimeType,
+                                     int         nMaxAddresses,                                     
+                                     int         candidateIds[],
+                                     UtlString   transportIds[],
+                                     UtlString   transportTypes[],
+                                     double      qvalues[], 
+                                     UtlString   candidateIps[], 
+                                     int         candidatePorts[],
+                                     int&        nActualAddresses) const ;
+
 
 ///@}
 

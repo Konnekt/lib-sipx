@@ -136,7 +136,7 @@ public:
         const Url& identity,
         const UtlString strRealm,
         const UtlString strUserID,
-        const UtlString md5Token,
+        const UtlString strPasswd,
         const UtlString type);
 
    UtlBoolean deleteCredentialForLine(const Url& identity,
@@ -302,6 +302,8 @@ protected:
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
+    void dumpLines();
+
     // MsgType categories defined for use by the system
     enum LineMsgTypes
     {

@@ -55,10 +55,12 @@ public:
                             ///< SIP domain name or host name
                             const char *service,
                             ///< "sip" or "sips"
-                            OsSocket::IpProtocolSocketType socketType,
+                            OsSocket::SocketProtocolTypes socketType,
                             ///< types of transport
-                            int port
+                            int port,
                             ///< port number from URI, or PORT_NONE
+                            const char* srcIp
+                            ///< the outgoing interface ip to send the request on
       );
    /**<
     * Returns the list of server entries for SIP domain name 'domain'.
@@ -74,7 +76,7 @@ public:
     * "sips" service.
     *
     * The 'socketType' restricts the search to that sort of transport,
-    * and may have the values (within IpProtocolSocketType):
+    * and may have the values (within enum SocketProtocolTypes):
     *    TCP
     *    UDP
     *    SSL_SOCKET
@@ -174,7 +176,7 @@ class server_t {
    static void setDnsSrvResolveEnabled(UtlBoolean& enabled);   
 
    char *host;                  ///< Host name. (Owned by this object.)
-   OsSocket::IpProtocolSocketType type;
+   OsSocket::SocketProtocolTypes type;
                                 ///< OsSocket:{TCP,UDP,SSL_SOCKET}
    struct sockaddr_in sin;      ///< IP address and port
    unsigned int priority;       ///< SRV priority value
@@ -218,7 +220,7 @@ class server_t {
    unsigned int getPriorityFromServerT();
 
    /// Accessor for protocol
-   OsSocket::IpProtocolSocketType getProtocolFromServerT();
+   OsSocket::SocketProtocolTypes getProtocolFromServerT();
 };
 
 #endif  // _SipSrvLookup_h_

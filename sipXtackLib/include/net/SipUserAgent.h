@@ -1,10 +1,12 @@
 //
-// Copyright (C) 2004, 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
-//////
+///////////////////////////////////////////////////////////////////////////////
 
 
 #ifndef _SipUserAgent_h_
@@ -22,7 +24,9 @@
 #include <net/SipTransactionList.h>
 #include <net/SipUdpServer.h>
 #include <os/OsQueuedEvent.h>
-
+#ifdef SIP_TLS
+#include <net/SipTlsServer.h>
+#endif
 
 // DEFINES
 #define SIP_DEFAULT_RTT     500
@@ -36,7 +40,7 @@
 #define SIPUA_DEFAULT_SERVER_UDP_BUFFER_SIZE 1000000
 
 // proxy, registrar, etc. OsServerTask OsMsg queue size
-#define SIPUA_DEFAULT_SERVER_OSMSG_QUEUE_SIZE 10000
+#define SIPUA_DEFAULT_SERVER_OSMSG_QUEUE_SIZE 1000
 
 // MACROS
 // EXTERNAL FUNCTIONS
@@ -50,9 +54,6 @@ class OsQueuedEvent;
 class OsTimer;
 class SipSession;
 class SipTcpServer;
-#ifdef SIP_TLS
-class SipTlsServer;
-#endif
 class SipLineMgr;
 
 //! Transaction and Transport manager for SIP stack
@@ -149,7 +150,10 @@ class SipLineMgr;
  *    the message is sent to the interested observers
  */
 
-class SipUserAgent : public SipUserAgentBase
+class SipUserAgent : public SipUserAgentBase 
+#ifdef SIP_TLS
+                     , public ITlsSink
+#endif 
 {
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
 public:
@@ -218,12 +222,6 @@ public:
      *        ports, select the next available port if the supplied
      *        port is busy.  If enable, this will attempt at most
      *        10 sequential ports.
-     * \param doUaMessageChecks - check the acceptability of method,
-     *        extensions, and encoding.  The default is TRUE; it may 
-     *        be set to false in applications such as a redirect server
-     *        that will never actually send a 2xx response, so the
-     *        checks might cause errors that the application should
-     *        never generate.
      */
     SipUserAgent(int sipTcpPort = SIP_PORT,
                 int sipUdpPort = SIP_PORT,
@@ -248,8 +246,9 @@ public:
                 int readBufferSize = -1,
                 int queueSize = OsServerTask::DEF_MAX_MSGS,
                 UtlBoolean bUseNextAvailablePort = FALSE,
-                UtlBoolean doUaMessageChecks = TRUE
-                 );
+                UtlString certNickname = "",
+                UtlString certPassword = "",
+                UtlString dbLocation = ".");
 
     //! Destructor
     virtual
@@ -270,15 +269,15 @@ public:
     //! Enable stun lookups for UDP signaling.  Use a NULL szStunServer to 
     //! disable
     virtual void enableStun(const char* szStunServer, 
+                            int iStunPort,
                             int refreshPeriodInSecs, 
-                            int stunOptions,
                             OsNotification* pNotification = NULL,
                             const char* szIp = NULL) ;
 
     //! For internal use only
     virtual UtlBoolean handleMessage(OsMsg& eventMessage);
 
-    //! Deprecated (Add a SIP message recipient)
+    //! Depricated (Add a SIP message recipient)
     virtual void addMessageConsumer(OsServerTask* messageConsumer);
 
     //! Add a SIP message observer for receiving SIP messages meeting the
@@ -314,6 +313,8 @@ public:
                               SipSession* pSession = NULL,
                               void* observerData = NULL);
 
+    //void removeMessageConsumer(OsServerTask* messageConsumer);
+    //: Remove a SIP message recipient
 
     //! Removes all SIP message observers for the given message/queue
     //! observer
@@ -377,6 +378,26 @@ public:
      */
     void setProxyServers(const char* sipProxyServers);
 
+
+    UtlBoolean addCrLfKeepAlive(const char* szLocalIp,
+                                const char* szRemoteIp,
+                                const int   remotePort,
+                                const int   keepAliveSecs) ;
+
+    UtlBoolean removeCrLfKeepAlive(const char* szLocalIp,
+                                   const char* szRemoteIp,
+                                   const int   remotePort) ;
+ 
+    UtlBoolean addStunKeepAlive(const char* szLocalIp,
+                                const char* szRemoteIp,
+                                const int   remotePort,
+                                const int   keepAliveSecs) ;
+
+    UtlBoolean removeStunKeepAlive(const char* szLocalIp,
+                                   const char* szRemoteIp,
+                                   const int   remotePort) ;
+
+
 /* ============================ ACCESSORS ================================= */
 
     //! Enable or disable the outbound use of rport (send packet to actual
@@ -390,7 +411,9 @@ public:
     UtlBoolean getConfiguredPublicAddress(UtlString* pIpAddress, int* pPort) ;
 
     //! Get the local address and port
-    UtlBoolean getLocalAddress(UtlString* pIpAddress, int* pPort) ;
+    UtlBoolean getLocalAddress(UtlString* pIpAddress,
+                               int* pPort,
+                               OsSocket::SocketProtocolTypes protocol = OsSocket::UDP) ;
 
     //! Get the NAT mapped address and port
     UtlBoolean getNatMappedAddress(UtlString* pIpAddress, int* pPort) ;
@@ -441,10 +464,15 @@ public:
     int getSipStateTransactionTimeout();
 
     int getDefaultExpiresSeconds() const;
+    
+    const int getRegisterResponseTimeout() const { return mRegisterTimeoutSeconds; }
+    void setRegisterResponseTimeout(const int seconds) { mRegisterTimeoutSeconds = seconds; }
 
     void setDefaultExpiresSeconds(int expiresSeconds);
 
     int getDefaultSerialExpiresSeconds() const;
+
+    void setLocationHeader(const char* szHeader);
 
     //! Tells the User Agent whether or not to append
     //! the platform name onto the User Agent string
@@ -507,6 +535,22 @@ public:
     const UtlString& getUserAgentName() const;
       //! Sets the User Agent name sent with outgoing sip messages.
 
+    
+    void setHeaderOptions(const bool bAllowHeader,
+                          const bool bDateHeader,
+                          const bool bShortNames,
+                          const UtlString& acceptLanguage);                                   
+     //! Sets header options - send or not send
+
+    bool getEnabledShortNames()
+        {return mbShortNames;}
+     // Return enabled state of short names
+
+    void setEnableLocationHeader(const bool bLocationHeader)
+        {mbUseLocationHeader=bLocationHeader;}
+     // Set if location header is enabled or not
+
+
 /* ============================ INQUIRY =================================== */
 
     virtual UtlBoolean isMessageLoggingEnabled();
@@ -517,7 +561,7 @@ public:
     virtual UtlBoolean waitUntilReady();
     //: Block and wait until the UA is started and initialized
 
-    UtlBoolean isMethodAllowed(const char* method);
+    UtlBoolean isMethodAllowed(const char* method) const;
 
     UtlBoolean isExtensionAllowed(const char* extension) const;
 
@@ -527,7 +571,7 @@ public:
 
     UtlBoolean recurseOnlyOne300Contact();
 
-    UtlBoolean isOk(OsSocket::IpProtocolSocketType socketType);
+    UtlBoolean isOk(OsSocket::SocketProtocolTypes socketType);
 
     //! Find out if SipUserAgent has finished shutting down.
     /*! Useful when using the non-blocking form of \ref shutdown.
@@ -546,6 +590,16 @@ public:
     //! Gets all contact addresses for this user agent
     void getContactAddresses(CONTACT_ADDRESS* pContacts[], int &numContacts);
 
+    void prepareVia(SipMessage& message,
+                    UtlString&  branchId, 
+                    OsSocket::SocketProtocolTypes& toProtocol);
+#ifdef SIP_TLS    
+    SipTlsServer* getTlsServer() { return mSipTlsServer; }
+    // ITlsSink implementation
+    bool onServerCertificate(void* pCert, char* serverHostName);
+    bool onTlsEvent(int cause);
+#endif
+
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
 
@@ -563,7 +617,7 @@ protected:
     UtlBoolean sendStatelessRequest(SipMessage& request,
                                     UtlString& address,
                                     int port,
-                                    OsSocket::IpProtocolSocketType protocol,
+                                    enum OsSocket::SocketProtocolTypes protocol,
                                     UtlString& branchId);
 
     UtlBoolean sendTls(SipMessage* message,
@@ -585,7 +639,8 @@ protected:
     //! DNS SRV lookup for to address
     void lookupSRVSipAddress(UtlString protocol,
                              UtlString& sipAddress,
-                             int& port);
+                             int& port,
+                             UtlString& srcIp);
 
     int getReliableTransportTimeout();
 
@@ -604,7 +659,7 @@ protected:
                                        SipMessage* request,
                                        int* messageType,
                                        int authorizationEntity);
-
+   
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
 
@@ -645,7 +700,7 @@ private:
     int mMaxSrvRecords; // Max num of DNS SRV records to use before giving up
     int mDnsSrvTimeout; // second to give up & try the next DNS SRV record
 
-
+    SipMessage* mpLastSipMessage;
     UtlString defaultUserAgentName;
     long mLastCleanUpTime;
     UtlString mAuthenticationScheme;
@@ -658,6 +713,7 @@ private:
     UtlString mMessageLog;
     UtlString mNatPingUrl;
     UtlString mNatPingMethod;
+    UtlString mLocationHeader;
     int mNatPingPeriod;
     UtlBoolean mPingLock;
     UtlBoolean mIsUaTransactionByDefault;
@@ -666,15 +722,9 @@ private:
     UtlBoolean mRecurseOnlyOne300Contact;
     UtlBoolean mReturnViasForMaxForwards;
     UtlBoolean mbUseRport;
+    UtlBoolean mbUseLocationHeader;
     bool mbIncludePlatformInUserAgentName;  // whether or not the platform name should
                                             // be appended to the user agent name
-
-    /** check the acceptability of method, extensions, and encoding.
-     * The default is TRUE; it may be set to false in applications such as a redirect server
-     * that will never actually send a 2xx response, so the checks might cause errors that
-     * the application should never generate.
-     */
-    UtlBoolean mDoUaMessageChecks;
 
     void garbageCollection();
 
@@ -690,6 +740,13 @@ private:
     UtlBoolean mbShuttingDown;
     UtlBoolean mbShutdownDone;
     UtlBoolean mbBlockingShutdown;
+    
+    bool mbAllowHeader;
+    bool mbDateHeader;
+    bool mbShortNames;
+    UtlString mAcceptLanguage;
+
+    int mRegisterTimeoutSeconds;    
 
     //! Disabled copy constructor
     SipUserAgent(const SipUserAgent& rSipUserAgent);

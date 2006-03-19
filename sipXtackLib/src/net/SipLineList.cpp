@@ -10,7 +10,7 @@
 
 
 #include "net/SipLineList.h"
-
+#include "os/OsSysLog.h"
 //#define TEST_PRINT
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -373,4 +373,20 @@ SipLine* SipLineList::findLine(const char* lineId,
       return pLineMatchingDefault ;
    else
       return NULL ;
+   
+}
+
+void SipLineList::dumpLines()
+{
+   SipLine* nextline = NULL;
+   int iteratorHandle = m_LineList.getIteratorHandle();
+   int i = 0;
+   while(NULL != (nextline = (SipLine*) m_LineList.next(iteratorHandle)))
+   {
+      // compare the line identities
+      Url nextLineUrl = nextline->getIdentity();
+      OsSysLog::add(FAC_LINE_MGR, PRI_DEBUG, "LineList %x [%d]: %s",
+            this, i++, nextLineUrl.toString().data() ) ;
+   }
+   m_LineList.releaseIteratorHandle(iteratorHandle);
 }

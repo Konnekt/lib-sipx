@@ -311,12 +311,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\src\net\HttpConnection.cpp">
-			</File>
-			<File
-				RelativePath=".\src\net\HttpConnectionMap.cpp">
-			</File>
-			<File
 				RelativePath="src\net\HttpMessage.cpp">
 				<FileConfiguration
 					Name="Release|Win32">
@@ -438,84 +432,6 @@
 			</File>
 			<File
 				RelativePath="src\resparse\wnt\inet_addr.c">
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="SSL-Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="SSL-Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="src\net\MailAttachment.cpp">
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="SSL-Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="SSL-Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="src\net\MailMessage.cpp">
 				<FileConfiguration
 					Name="Release|Win32">
 					<Tool
@@ -908,7 +824,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="src\net\PidfBody.cpp">
+				RelativePath=".\src\net\pk12wrapper.cpp">
 				<FileConfiguration
 					Name="Release|Win32">
 					<Tool
@@ -3079,81 +2995,6 @@
 						BrowseInformation="1"/>
 				</FileConfiguration>
 			</File>
-			<File
-				RelativePath=".\src\net\XmlRpcBody.cpp">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\src\net\XmlRpcDispatch.cpp">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\src\net\XmlRpcMethod.cpp">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\src\net\XmlRpcRequest.cpp">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\src\net\XmlRpcResponse.cpp">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -3166,12 +3007,6 @@
 			</File>
 			<File
 				RelativePath="include\net\HttpBody.h">
-			</File>
-			<File
-				RelativePath=".\include\net\HttpConnection.h">
-			</File>
-			<File
-				RelativePath=".\include\net\HttpConnectionMap.h">
 			</File>
 			<File
 				RelativePath="include\net\HttpMessage.h">
@@ -3193,12 +3028,6 @@
 			</File>
 			<File
 				RelativePath="include\resparse\sys\isa_defs.h">
-			</File>
-			<File
-				RelativePath="include\net\MailAttachment.h">
-			</File>
-			<File
-				RelativePath="include\net\MailMessage.h">
 			</File>
 			<File
 				RelativePath="include\net\MimeBodyPart.h">
@@ -3229,9 +3058,6 @@
 			</File>
 			<File
 				RelativePath="include\resparse\wnt\sys\param.h">
-			</File>
-			<File
-				RelativePath="include\net\PidfBody.h">
 			</File>
 			<File
 				RelativePath="include\resparse\poll.h">
@@ -3375,6 +3201,9 @@
 				RelativePath="include\net\SipUserAgentStateless.h">
 			</File>
 			<File
+				RelativePath=".\include\net\SmimeBody.h">
+			</File>
+			<File
 				RelativePath="include\resparse\wnt\sol_search.h">
 			</File>
 			<File
@@ -3397,81 +3226,6 @@
 			</File>
 			<File
 				RelativePath="include\net\version.h">
-			</File>
-			<File
-				RelativePath=".\include\net\XmlRpcBody.h">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\include\net\XmlRpcDispatch.h">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\include\net\XmlRpcMethod.h">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\include\net\XmlRpcRequest.h">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\include\net\XmlRpcResponse.h">
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
 			</File>
 		</Filter>
 	</Files>

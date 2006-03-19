@@ -59,6 +59,7 @@ public:
 
         SipLineList();
         virtual ~SipLineList();
+        void dumpLines();
 
 protected:
         OsLockingList m_LineList;

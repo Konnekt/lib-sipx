@@ -21,11 +21,9 @@
 #include <utl/UtlHashBag.h>
 #include <os/OsTask.h>
 #include <os/OsConfigDb.h>
-#include <net/HttpConnection.h>
+
 
 // DEFINES
-#define MAX_PERSISTENT_HTTP_CONNECTIONS  5
-
 // MACROS
 // EXTERNAL FUNCTIONS
 // EXTERNAL VARIABLES
@@ -36,10 +34,8 @@
 class HttpMessage;
 class HttpBody;
 class OsServerSocket;
-class OsConnectionSocket;
 class HttpRequestContext;
 class HttpService;
-class HttpConnection;
 
 //:Class short description which may consist of multiple lines (note the ':')
 // Class detailed description which may extend to multiple lines
@@ -47,13 +43,11 @@ class HttpServer : public OsTask
 {
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
 public:
-   friend class HttpConnection;
 
 /* ============================ CREATORS ================================== */
 
    HttpServer(OsServerSocket *pSocket, OsConfigDb* userPasswordDb,
-                       const char* realm, OsConfigDb* validIpAddressDB = NULL,
-                       bool bPersistentConnection = true);
+                       const char* realm, OsConfigDb* validIpAddressDB = NULL);
      //:Default constructor
 
    virtual
@@ -85,7 +79,7 @@ public:
                                 const HttpMessage& request,
                                 HttpMessage*& response);
 
-    static void processUserNotAuthorized(const HttpRequestContext& requestContext,
+        static void processUserNotAuthorized(const HttpRequestContext& requestContext,
                                      const HttpMessage& request,
                                      HttpMessage*& response,
                                      const char* text = 0);
@@ -101,12 +95,8 @@ public:
 
     void addUriMap(const char* fromUri, const char* toUri);
 
-    typedef void RequestProcessor(const HttpRequestContext& requestContext,
-                                  const HttpMessage& request,
-                                  HttpMessage*& response
-                                  );
-    
-    void addRequestProcessor(const char* fileUrl, RequestProcessor* requestProcessor);
+    void addRequestProcessor(const char* fileUrl, void (*requestProcessor)(const HttpRequestContext& requestContext,
+                const HttpMessage& request, HttpMessage*& response));
 
     void addHttpService(const char* fileUrl, HttpService* service);
 
@@ -139,10 +129,7 @@ public:
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
 
-    void processRequest(const HttpMessage& request,          ///< request to be dispatched
-                        HttpMessage*& response,              ///< build response in this message
-                        const OsConnectionSocket* connection ///< for access to security info
-                        );
+    void processRequest(const HttpMessage& request, HttpMessage*& response);
 
     UtlBoolean processRequestIpAddr(const UtlString& remoteIp,
        const HttpMessage& request,
@@ -162,13 +149,12 @@ protected:
     void putFile(const char* fileName, HttpBody& body);
 
     UtlBoolean findRequestProcessor(const char* fileUri,
-                                    RequestProcessor*& requestProcessor
-                                    );
+            void (*&requestProcessor)(const HttpRequestContext& requestContext,
+                const HttpMessage& request, HttpMessage*& response));
 
     UtlBoolean findHttpService(const char* fileUri, HttpService*& service);
 
     void loadValidIpAddrList();
-    
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
    HttpServer(const HttpServer& rHttpServer);
@@ -188,9 +174,8 @@ private:
    UtlHashMap mHttpServices;
 
         UtlHashBag mValidIpAddrList;
-   UtlBoolean mbPersistentConnection;
-   int mHttpConnections;
-   UtlSList* mpHttpConnectionList;
+
+
 };
 
 /* ============================ INLINE METHODS ============================ */

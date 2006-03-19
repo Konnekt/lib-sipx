@@ -109,6 +109,9 @@ public:
    int getCodecCount();
    //: Get the number of codecs
 
+   int getCodecCount(const char* mimeType);
+   //: Get the number of codecs by mime type
+
    void getCodecs(int& numCodecs,
                   SdpCodec**& codecArray);
 

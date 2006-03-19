@@ -124,7 +124,6 @@ class SipDialogMonitor
 
    UtlHashMap mMonitoredLists;
    UtlHashMap mDialogEventList;
-   UtlHashMap mDialogHandleList;
    UtlHashMap mStateChangeNotifiers;   
 
    /// Disabled copy constructor

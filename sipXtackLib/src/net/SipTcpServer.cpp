@@ -47,6 +47,10 @@ SipTcpServer::SipTcpServer(int port,
    mServerPort = port ;
    mpServerBrokerListener = new SipServerBrokerListener(this);
 
+#ifdef _DISABLE_MULTIPLE_INTERFACE_SUPPORT
+   szBindAddr = "0.0.0.0" ;
+#endif
+
     if (szBindAddr && 0 != strcmp(szBindAddr, "0.0.0.0"))
     {
         mDefaultIp = szBindAddr;
@@ -139,9 +143,10 @@ OsStatus SipTcpServer::createServerSocket(const char* szBindAddr, int& port, con
             char szAdapterName[16];
             memset((void*)szAdapterName, 0, sizeof(szAdapterName)); // null out the string
             
-            getContactAdapterName(szAdapterName, contact.cIpAddress);
 
+            getContactAdapterName(szAdapterName, contact.cIpAddress, false);
             strcpy(contact.cInterface, szAdapterName);
+            contact.transportType = OsSocket::TCP;
             mSipUserAgent->addContactAddress(contact);
        
             // add address and port to the maps
@@ -236,12 +241,7 @@ int SipTcpServer::run(void* runArgument)
 
 void SipTcpServer::shutdownListener()
 {
-#   ifdef TEST_PRINT
-    osPrintf("Sip%sServer::shutdownListener() - before requestShutDown\n",
-        mProtocolString.data());
-#   endif
     requestShutdown();
-
     shutdownClients();
 }
 
@@ -250,7 +250,10 @@ OsSocket* SipTcpServer::buildClientSocket(int hostPort, const char* hostAddress,
 {
     // Create a socket in non-blocking mode while connecting
     OsConnectionSocket* socket = new OsConnectionSocket(hostPort, hostAddress, FALSE, localIp);
-    socket->makeBlocking();
+    if (socket)
+    {
+        socket->makeBlocking();
+    }
     return(socket);
 }
 
@@ -273,7 +276,7 @@ int SipTcpServer::getServerPort() const
 
 }
 
-UtlBoolean SipTcpServer::SipServerBrokerListener::handleMessage(OsMsg& eventMessage)
+UtlBoolean SipServerBrokerListener::handleMessage(OsMsg& eventMessage)
 {
     UtlBoolean bRet(FALSE);
     int msgType = eventMessage.getMsgType();

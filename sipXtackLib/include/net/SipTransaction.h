@@ -1,10 +1,12 @@
 //
-// Copyright (C) 2004, 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
-//////
+///////////////////////////////////////////////////////////////////////////////
 
 
 #ifndef _SipTransaction_h_
@@ -317,14 +319,14 @@ private:
                           SipUserAgent& userAgent,
                           UtlString& toAddress,
                           int& port,
-                          OsSocket::IpProtocolSocketType& toProtocol);
+                          enum OsSocket::SocketProtocolTypes& toProtocol);
 
     void prepareRequestForSend(SipMessage& request,
                                SipUserAgent& userAgent,
                                UtlBoolean& addressRequiresDnsSrvLookup,
                                UtlString& toAddress,
                                int& port,
-                               OsSocket::IpProtocolSocketType& toProtocol);
+                               enum OsSocket::SocketProtocolTypes& toProtocol);
 
     // CallId  + 's' or 'c' (for server or client) is used as
     // the key for the hash (i.e. stored as the string/data in
@@ -342,7 +344,7 @@ private:
     // Address and transport that have been established for this transaction.
     UtlString mSendToAddress;
     int mSendToPort;
-    OsSocket::IpProtocolSocketType mSendToProtocol;
+    enum OsSocket::SocketProtocolTypes mSendToProtocol;
 
     server_t* mpDnsSrvRecords;
     SipMessage* mpRequest;

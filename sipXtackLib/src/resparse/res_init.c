@@ -197,8 +197,22 @@ res_init()
  *
  * Return 0 if completes successfully, -1 on error
  */
-int
-res_init()
+ 
+int res_init()
+{
+    char* szBuff = NULL;
+    int ret = 0;
+    unsigned long addr = osSocketGetDefaultBindAddress();
+    struct in_addr naddr;
+    
+    naddr.S_un.S_addr = addr;
+    szBuff = inet_ntoa(naddr);
+    ret = res_init_ip(szBuff);
+    
+    return ret;
+}
+
+int res_init_ip(const char* localIp)
 {
         char DNSServers[6][MAXIPLEN];
         int dnsSvrCnt;
@@ -216,7 +230,29 @@ res_init()
 #ifndef RFC1535
         int dots;
 #endif
-
+        static char szLocalIp[32] = "";
+        char* szBuff = NULL;
+        unsigned long defaultAddr = osSocketGetDefaultBindAddress();
+        struct in_addr naddr;
+    
+        if (localIp || localIp[0] == 0)
+        {
+            //osSocketGetHostIp(szBuff);
+            naddr.S_un.S_addr = defaultAddr;
+            szBuff = inet_ntoa(naddr);
+            strncpy(szLocalIp, szBuff, 32);
+        }
+        else
+        {
+            if (localIp && localIp[0] != 0 && strcmp(szLocalIp, localIp) == 0)
+            {
+                return 0; // no need to init again if the ip
+                        // address is the same as the last call
+                        // to this function.
+            }
+            strncpy(szLocalIp, localIp, 32);
+        }
+     
         /*
          * These three fields used to be statically initialized.  This made
          * it hard to use this code in a shared library.  It is necessary,
@@ -257,7 +293,7 @@ res_init()
         _res.nsaddr.sin_addr = inet_makeaddr(IN_LOOPBACKNET, 1);
 #endif
 #else
-        _res.nsaddr.sin_addr.s_addr = osSocketGetDefaultBindAddress();
+        _res.nsaddr.sin_addr.s_addr = inet_addr(szLocalIp);
 #endif
         _res.nsaddr.sin_family = AF_INET;
         _res.nsaddr.sin_port = htons(NAMESERVER_PORT);
@@ -265,7 +301,7 @@ res_init()
         _res.ndots = 1;
         _res.pfcode = 0;
 
-        if (dnsSvrCnt = getWindowsDNSServers(DNSServers, 6))
+        if (dnsSvrCnt = getWindowsDNSServers(DNSServers, 6, szLocalIp))
         {
                 struct in_addr a;
         int nservIndex = 0;

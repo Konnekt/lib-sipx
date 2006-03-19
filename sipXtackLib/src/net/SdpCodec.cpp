@@ -51,6 +51,7 @@ SdpCodec::SdpCodec(enum SdpCodecTypes sdpCodecType,
    mBWCost = BWCost;
    mVideoFormat = videoFormat;
    mVideoFmtp = videoFmtp;
+   mVideoFmtpString = NULL;
 }
 
 // Copy constructor
@@ -68,6 +69,7 @@ SdpCodec::SdpCodec(const SdpCodec& rSdpCodec)
     mBWCost  = rSdpCodec.mBWCost;
     mVideoFormat = rSdpCodec.mVideoFormat;
     mVideoFmtp = rSdpCodec.mVideoFmtp;
+    mVideoFmtpString = rSdpCodec.mVideoFmtpString;
 }
 
 // Destructor
@@ -96,6 +98,7 @@ SdpCodec::operator=(const SdpCodec& rhs)
     mBWCost = rhs.mBWCost;
     mVideoFormat = rhs.mVideoFormat;
     mVideoFmtp = rhs.mVideoFmtp;
+    mVideoFmtpString = rhs.mVideoFmtpString;
 
    return *this;
 }
@@ -160,6 +163,44 @@ void SdpCodec::setVideoFmtp(const int videoFmtp)
 int SdpCodec::getVideoFmtp() const
 {
     return mVideoFmtp;
+}
+
+void SdpCodec::setPacketSize(const int packetSize)
+{
+    mPacketLength = packetSize;
+}
+
+void SdpCodec::getVideoFmtpString(UtlString& fmtpString) const
+{
+    fmtpString = mVideoFmtpString;
+}
+
+void SdpCodec::setVideoFmtpString(int videoFmtp)
+{
+    UtlString tempFmtp(NULL);
+
+    switch (videoFmtp)
+    {
+    case SDP_VIDEO_FORMAT_SQCIF:
+        mVideoFmtpString.append("SQCIF/");
+        break;
+    case SDP_VIDEO_FORMAT_QCIF:
+        mVideoFmtpString.append("QCIF/");
+        break;
+    case SDP_VIDEO_FORMAT_CIF:
+        mVideoFmtpString.append("CIF/");
+        break;
+    case SDP_VIDEO_FORMAT_QVGA:
+        mVideoFmtpString.append("QVGA/");
+        break;
+    default:
+        break;
+    }
+}
+
+void SdpCodec::clearVideoFmtpString()
+{
+    mVideoFmtpString = "";
 }
 
 void SdpCodec::toString(UtlString& sdpCodecContents) const

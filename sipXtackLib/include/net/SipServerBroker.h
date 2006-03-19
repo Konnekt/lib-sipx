@@ -19,6 +19,8 @@
 #include "os/OsSocket.h"
 #include "os/OsRWMutex.h"
 #include "os/OsProtectEvent.h"
+#include "os/OsServerSocket.h"
+#include "os/OsServerTask.h"
 
 class OsNotification;
 // DEFINES

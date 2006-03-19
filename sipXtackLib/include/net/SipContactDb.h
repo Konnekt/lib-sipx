@@ -69,22 +69,22 @@ public:
      */
     CONTACT_ADDRESS* find(CONTACT_ID id);
 
-    /**
-     * Finds the first contact by a given contact type
-     */
-    CONTACT_ADDRESS* findByType(CONTACT_TYPE type) ;
-
-    /*
-     * Find the local contact from a contact id.
-     */
-    CONTACT_ADDRESS* getLocalContact(CONTACT_ID id) ;
-
     /** 
      * Finds a contact in the DB, by IP address.
      *
      * @param id The IP Address of the record to find.
      */    
-    CONTACT_ADDRESS* find(const UtlString szIpAddress, const int port);
+    CONTACT_ADDRESS* find(const UtlString szIpAddress, const int port, CONTACT_TYPE type);
+
+    /**
+     * Finds the first contact by a given contact type
+     */
+    CONTACT_ADDRESS* findByType(CONTACT_TYPE type, OsSocket::SocketProtocolTypes transportType = OsSocket::UNKNOWN) ;
+
+    /*
+     * Find the local contact from a contact id.
+     */
+    CONTACT_ADDRESS* getLocalContact(CONTACT_ID id) ;
     
     /**
      * Populates a CONTACT_ADDRESS array with all of the contacts
@@ -118,6 +118,8 @@ public:
 
 /* ============================ MANIPULATORS ============================== */
 
+    void enableTurn(bool bEnable) ;
+
 
 /* ============================ ACCESSORS ================================= */
 
@@ -143,8 +145,8 @@ private:
     const bool isDuplicate(const CONTACT_ID id);
     
     /** Checks this database for a duplicate record by ipAddress and port */
-    const bool isDuplicate(const UtlString& ipAddress, const int port);
-    
+    const bool isDuplicate(const UtlString& ipAddress, const int port, CONTACT_TYPE type, OsSocket::SocketProtocolTypes transportType);
+
     /**
      * Given a contact record containing an ID which is set
      * to a value less than 1, this method will generate a contact 
@@ -161,6 +163,8 @@ private:
     int mNextContactId;
     
     mutable OsMutex mLock;
+
+    bool mbTurnEnabled ;
 };
 
 /* ============================ INLINE METHODS ============================ */

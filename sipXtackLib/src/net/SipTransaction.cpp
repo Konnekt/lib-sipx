@@ -38,7 +38,8 @@ int SipTransaction::smTransactionNum = 0;
 UtlString SipTransaction::smBranchIdBase;
 //#define TEST_PRINT
 //#define LOG_FORKING
-//#define ROUTE_DEBUG
+
+#define ROUTE_DEBUG 1
 
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
 
@@ -279,6 +280,9 @@ void SipTransaction::getNewBranchId(SipMessage& request,
 
     NetMd5Codec::encode(branchSeed.data(), branchUniqCode);
 
+    // MD5 component of branchId to 16 bytes
+    branchUniqCode.remove(16) ;
+
     branchId.append(branchUniqCode);
 }
 
@@ -335,7 +339,7 @@ SipTransaction::addResponse(SipMessage*& response,
         // was early media or not.
         if(!mProvisionalSdp)
         {
-            if((response->getSdpBody()))
+            if((response->getSdpBody(response->getSecurityAttributes())))
             {
                 mProvisionalSdp = TRUE;
             }
@@ -455,7 +459,7 @@ UtlBoolean SipTransaction::handleOutgoing(SipMessage& outgoingMessage,
     UtlBoolean addressRequiresDnsSrvLookup(FALSE);
     UtlString toAddress;
     int port = PORT_NONE;
-    OsSocket::IpProtocolSocketType protocol = OsSocket::UNKNOWN;
+    enum OsSocket::SocketProtocolTypes protocol = OsSocket::UNKNOWN;
 
     if(isResponse)
     {
@@ -463,11 +467,6 @@ UtlBoolean SipTransaction::handleOutgoing(SipMessage& outgoingMessage,
         message->getResponseSendAddress(toAddress,
                                         port,
                                         protocolString);
-#       ifdef ROUTE_DEBUG
-        OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                      "SipTransaction::handleOutgoing called getResponseSendAddress, returned toAddress = '%s', port = %d, protocolString = '%s'",
-                      toAddress.data(), port, protocolString.data());
-#       endif
         SipMessage::convertProtocolStringToEnum(protocolString.data(),
                                         protocol);
     }
@@ -480,19 +479,9 @@ UtlBoolean SipTransaction::handleOutgoing(SipMessage& outgoingMessage,
                               toAddress,
                               port,
                               protocol);
-#       ifdef ROUTE_DEBUG
-        OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                      "SipTransaction::handleOutgoing called prepareRequestForSend, returned toAddress = '%s', port = %d, protocol = OsSocket::SocketProtocolTypes(%d), addressRequiresDnsSrvLookup = %d",
-                      toAddress.data(), port, protocol,
-                      addressRequiresDnsSrvLookup);
-#       endif
 
         if(mSendToAddress.isNull())
         {
-#       ifdef ROUTE_DEBUG
-           OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                         "SipTransaction::handleOutgoing setting mSendTo* variables");
-#       endif
             mSendToAddress = toAddress;
             mSendToPort = port;
             mSendToProtocol = protocol;
@@ -579,6 +568,18 @@ UtlBoolean SipTransaction::handleOutgoing(SipMessage& outgoingMessage,
 
     else
     {
+        // check the message's URI - 
+        // if "sips" is the scheme, 
+        // use SSL_SOCKET as the protocol
+        UtlString toUrl;
+        message->getToField(&toUrl);
+        Url parsedUri(toUrl);
+        Url::Scheme scheme = parsedUri.getScheme();
+        if (scheme == Url::SipsUrlScheme)
+        {
+            protocol = OsSocket::SSL_SOCKET;
+        }
+
         sendSucceeded = doFirstSend(*message,
                                     relationship,
                                     userAgent,
@@ -597,7 +598,7 @@ void SipTransaction::prepareRequestForSend(SipMessage& request,
                                            UtlBoolean& addressRequiresDnsSrvLookup,
                                            UtlString& toAddress,
                                            int& port,
-                                           OsSocket::IpProtocolSocketType& toProtocol)
+                                           enum OsSocket::SocketProtocolTypes& toProtocol)
 {
     UtlString protocol;
 
@@ -659,9 +660,9 @@ void SipTransaction::prepareRequestForSend(SipMessage& request,
        // For INVITE, process header parameters in the request uri
        if (0 == method.compareTo(SIP_INVITE_METHOD))
        {
-          UtlString uriWithHeaderParams;
-          request.getRequestUri(&uriWithHeaderParams);
-          Url requestUri(uriWithHeaderParams, TRUE);
+                    UtlString uriWithHeaderParams;
+                    request.getRequestUri(&uriWithHeaderParams);
+                    Url requestUri(uriWithHeaderParams, TRUE);
 
           int header;
           UtlString hdrName;
@@ -708,8 +709,8 @@ void SipTransaction::prepareRequestForSend(SipMessage& request,
         userAgent.getProxyServer(0, &toAddress, &port, &protocol);
 #       ifdef ROUTE_DEBUG
         OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                      "SipTransaction::prepareRequestForSend %p got proxy toAddress '%s', port %d, protocol '%s'",
-                      &request, toAddress.data(), port, protocol.data());
+                      "SipTransaction::prepareRequestForSend %p got proxy address: '%s'",
+                      &request, toAddress.data());
 #       endif
 
         // See if there is a route
@@ -730,7 +731,7 @@ void SipTransaction::prepareRequestForSend(SipMessage& request,
 
         // All of this URL maipulation should be done via
         // the Url (routeUrlParser) object.  However to
-        // be safe, we are only using it to
+        // be safe, impact wise, we are only using it to
         // get the maddr If the maddr is present use it as the address
         if(!maddr.isNull())
         {
@@ -914,7 +915,7 @@ UtlBoolean SipTransaction::doFirstSend(SipMessage& message,
                                       SipUserAgent& userAgent,
                                       UtlString& toAddress,
                                       int& port,
-                                      OsSocket::IpProtocolSocketType& toProtocol)
+                                      enum OsSocket::SocketProtocolTypes& toProtocol)
 {
     UtlBoolean sendSucceeded = FALSE;
     UtlBoolean isResponse = message.isResponse();
@@ -922,7 +923,8 @@ UtlBoolean SipTransaction::doFirstSend(SipMessage& message,
     UtlString seqMethod;
     int responseCode = -1;
 
-    OsSocket::IpProtocolSocketType lastSentProtocol = message.getSendProtocol();
+    enum OsSocket::SocketProtocolTypes lastSentProtocol =
+        (enum OsSocket::SocketProtocolTypes) message.getSendProtocol();
     int resendDuration;
     int resendTime;
 
@@ -941,27 +943,11 @@ UtlBoolean SipTransaction::doFirstSend(SipMessage& message,
 
     if(toProtocol == OsSocket::UNKNOWN)
     {
-       if ( lastSentProtocol == OsSocket::UNKNOWN )
-       {
-          /*
-           * :HACK: This is a problem, and a more comprehensive fix is still needed. [XSL-49]
-           *
-           * We get to here when sending an ACK to 2xx responses, and we shouldn't;
-           * those really should be going through the normal routing to determine the
-           * protocol using DNS SRV lookups, but there is code elsewhere that prevents
-           * that from happening. 
-           *
-           * Forcing UDP may not always be correct, but it's the best we can do now.
-           */
-          toProtocol = OsSocket::UDP;
-          OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                        "SipTransaction::doFirstSend protocol not explicitly set - using UDP"
-                        );
-       }
-       else
-       {
-          toProtocol = lastSentProtocol;
-       }
+       OsSysLog::add(FAC_SIP, PRI_DEBUG,
+                     "SipTransaction::doFirstSend %p send protocol not explicitly set - using UDP",
+                     &message);
+
+        toProtocol = lastSentProtocol;
     }
 
     // Responses:
@@ -996,30 +982,7 @@ UtlBoolean SipTransaction::doFirstSend(SipMessage& message,
         message.getRequestMethod(&method);
 
         // Add a via to requests, now that we know the protocol
-
-        // Get the via info
-        UtlString viaAddress;
-        UtlString viaProtocolString;
-        SipMessage::convertProtocolEnumToString(toProtocol, viaProtocolString);
-        int viaPort;
-
-        userAgent.getViaInfo(toProtocol,
-                            viaAddress,
-                            viaPort);
-
-        // Add the via field data
-        message.addVia(viaAddress.data(),
-                       viaPort,
-                       viaProtocolString,
-                       mBranchId.data(),
-                       (toProtocol == OsSocket::UDP) && userAgent.getUseRport());
-
-#       ifdef ROUTE_DEBUG
-        OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                      "SipTransaction::doFirstSend message send %s:%d via %s",
-                      toAddress.data(), port, viaProtocolString.data());
-#       endif
-
+        userAgent.prepareVia(message, mBranchId, toProtocol);
     }
 
     if(toProtocol == OsSocket::TCP)
@@ -1040,7 +1003,7 @@ UtlBoolean SipTransaction::doFirstSend(SipMessage& message,
     {
         if(toProtocol != OsSocket::UDP)
         {
-            OsSysLog::add(FAC_SIP, PRI_WARNING,
+            OsSysLog::add(FAC_SIP, PRI_ERR,
                 "SipTransaction::doFirstSend %p unknown protocol: %d using UDP",
                 &message, toProtocol);
 
@@ -1192,7 +1155,17 @@ UtlBoolean SipTransaction::doFirstSend(SipMessage& message,
                    mpParentTransaction &&
                    mpParentTransaction->isChildSerial())
                 {
-                    expireSeconds = userAgent.getDnsSrvTimeout();
+                    UtlString method;
+                    int dummyNum;
+                    message.getCSeqField(&dummyNum, &method);
+                    if (strcmp(method.data(), SIP_REGISTER_METHOD) == 0)
+                    {
+                        expireSeconds = userAgent.getRegisterResponseTimeout();
+                    }
+                    else
+                    {
+                        expireSeconds = userAgent.getDnsSrvTimeout();
+                    }
                 }
 
                 // Normal client transaction
@@ -1225,6 +1198,7 @@ UtlBoolean SipTransaction::doFirstSend(SipMessage& message,
 
                 OsTimer* expiresTimer = new OsTimer(incomingQ,
                         (int)expiresEvent);
+                OsQueuedEvent* expiresQueuedEvent = (OsQueuedEvent*)expiresTimer->getNotifier();
                 mTimers.append(expiresTimer);
 #ifdef TEST_PRINT
                 osPrintf("SipTransaction::doFirstSend added timer %p to timer list.\n", expiresTimer);
@@ -1820,11 +1794,7 @@ UtlBoolean SipTransaction::handleChildIncoming(//SipTransaction& child,
             // there is no parent server transaction should get dispatched
             else if(mpParentTransaction == NULL)
             {
-               // xmlscott: despite the comment above, this happens a lot, 
-               //           and seems to not always be bad,
-               //           so I'm changing the priority to get it out of
-               //           the logs.
-                OsSysLog::add(FAC_SIP, PRI_DEBUG,
+                OsSysLog::add(FAC_SIP, PRI_CRIT,
                               "SipTransaction::handleChildIncoming "
                               "%d response with parent client transaction NOT dispatched",
                               responseCode);
@@ -1832,9 +1802,14 @@ UtlBoolean SipTransaction::handleChildIncoming(//SipTransaction& child,
         }
         else
         {
-            // 3XX class responses
-            if(responseCode <= SIP_4XX_CLASS_CODE)
+            if (responseCode < SIP_2XX_CLASS_CODE)
             {
+                // no op
+            }
+            // 3XX class responses
+            else if(responseCode <= SIP_4XX_CLASS_CODE)
+            {
+
                 // Recursion is handled by the child
 #               ifdef TEST_PRINT
                 osPrintf( "SipTransaction::handleChildIncoming %p"
@@ -2027,8 +2002,7 @@ UtlBoolean SipTransaction::handleChildIncoming(//SipTransaction& child,
                 // occur.  For now log some noise and
                 // drop the delayed response, if this ever
                 // occurs
-                // xmlscott: lowered priority 
-                OsSysLog::add(FAC_SIP, PRI_DEBUG,
+                OsSysLog::add(FAC_SIP, PRI_CRIT,
                     "sipTransaction::handleChildIncoming %p dropping delayed response", this);
                 delete delayedDispatchedMessage;
                 delayedDispatchedMessage = NULL;
@@ -2456,9 +2430,10 @@ UtlBoolean SipTransaction::recurseDnsSrvChildren(SipUserAgent& userAgent,
 
             // Do the DNS SRV lookup for the request destination
             mpDnsSrvRecords = SipSrvLookup::servers(mSendToAddress.data(),
-                                                    "sip", // TODO - should be from the request URI
-                                                    mSendToProtocol,
-                                                    mSendToPort);
+                                                "sip",
+                                                 mSendToProtocol,
+                                                 mSendToPort,
+                                                 this->getRequest()->getLocalIp().data());
 
             // HACK:
             // Add a via to this request so when we set a timer it is
@@ -2750,7 +2725,7 @@ UtlBoolean SipTransaction::recurseChildren(SipUserAgent& userAgent,
                 {
                     childTransaction = new SipTransaction(mpRequest,
                         TRUE, // outgoing
-                        FALSE); // proxy transactions
+                        mIsUaTransaction); // proxy transactions
 
 #ifdef LOG_FORKING
                     OsSysLog::add(FAC_SIP, PRI_DEBUG, "SipTransaction::recurseChildren %p adding child %p for contact: %s",
@@ -3136,7 +3111,7 @@ UtlBoolean SipTransaction::doResend(SipMessage& resendMessage,
     // Find out how many times we have tried
     nextTimeout = 0;
     int numTries = resendMessage.getTimesSent();
-    OsSocket::IpProtocolSocketType protocol = resendMessage.getSendProtocol();
+    int protocol = resendMessage.getSendProtocol();
     int lastTimeout = resendMessage.getResendDuration();
     UtlString sendAddress;
 
@@ -3305,7 +3280,7 @@ UtlBoolean SipTransaction::handleIncoming(SipMessage& incomingMessage,
 {
     if(delayedDispatchedMessage)
     {
-        OsSysLog::add(FAC_SIP, PRI_DEBUG,
+        OsSysLog::add(FAC_SIP, PRI_CRIT,
                       "SipTransaction::handleIncoming delayedDispatchedMessage not NULL");
         delayedDispatchedMessage = NULL;
     }
@@ -3639,21 +3614,27 @@ UtlBoolean SipTransaction::handleIncoming(SipMessage& incomingMessage,
                     }
 
                 }
+				else
+				{
+					// Erik Fournier 16/09/2005
+					// The 200 response should only be sent here if the CANCEL request
+					// is not going to be dispatched to the application layer.
 
-                // Too late to cancel, non-INVITE request and
-                // successfully canceled INVITEs all get a
-                // 200 response to the CANCEL
-                SipMessage cancelResponse;
-                cancelResponse.setResponseData(&incomingMessage,
+					// Too late to cancel, non-INVITE request and
+					// successfully canceled INVITEs all get a
+					// 200 response to the CANCEL
+					SipMessage cancelResponse;
+					cancelResponse.setResponseData(&incomingMessage,
                                     SIP_OK_CODE,
                                     SIP_OK_TEXT);
 #ifdef TEST_PRINT
-                osPrintf("SipTransaction::handleIncoming sending CANCEL response\n");
+					osPrintf("SipTransaction::handleIncoming sending CANCEL response\n");
 #endif
-                handleOutgoing(cancelResponse,
-                               userAgent,
-                               transactionList,
-                               MESSAGE_CANCEL_RESPONSE);
+					handleOutgoing(cancelResponse,
+								   userAgent,
+                                   transactionList,
+                                   MESSAGE_CANCEL_RESPONSE);
+				}
             }
 
             // No request for to cancel

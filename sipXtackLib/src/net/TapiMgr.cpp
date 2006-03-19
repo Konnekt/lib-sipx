@@ -19,8 +19,9 @@ TapiMgr* TapiMgr::spTapiMgr = 0;
 
 // Constructor - private, this is a singleton
 TapiMgr::TapiMgr() :
-    sipxCallEventCallbackPtr(0),
-    sipxLineEventCallbackPtr(0)
+    sipxCallEventCallbackPtr(NULL),
+    sipxLineEventCallbackPtr(NULL),
+    sipxMediaCallbackPtr(NULL)
 {
 }
 
@@ -45,6 +46,11 @@ void TapiMgr::setTapiCallCallback(sipxCallEventCallbackFn fp)
     sipxCallEventCallbackPtr = fp;
 }
 
+void TapiMgr::setTapiMediaCallback(sipxMediaCallbackFn fp) 
+{
+    sipxMediaCallbackPtr = fp;
+}
+
 // setting the Line event callback pointer
 void TapiMgr::setTapiLineCallback(sipxLineEventCallbackFn fp)
 {
@@ -57,20 +63,63 @@ void TapiMgr::setTapiCallback(sipxEventCallbackFn fp)
 }
 
 void TapiMgr::fireCallEvent(const void*          pSrc,
-                       const char*		    szCallId,
-                       SipSession*          pSession,
-				       const char*          szRemoteAddress,                   
-				       SIPX_CALLSTATE_EVENT eMajorState,
-				       SIPX_CALLSTATE_CAUSE eMinorState,
-                       void*                pEventData)
+                            const char*		     szCallId,
+                            SipSession*          pSession,
+				            const char*          szRemoteAddress,                   
+				            SIPX_CALLSTATE_EVENT event,
+				            SIPX_CALLSTATE_CAUSE cause,
+                            void*                pEventData)
 {
     if (sipxCallEventCallbackPtr)
     {
-        (*sipxCallEventCallbackPtr)(pSrc, szCallId, pSession, szRemoteAddress, 
-                                    (SIPX_CALLSTATE_MAJOR)(int)eMajorState, (SIPX_CALLSTATE_MINOR)(int)eMinorState, pEventData);
+        (*sipxCallEventCallbackPtr)(pSrc, szCallId, pSession, szRemoteAddress,
+                                    event, cause, pEventData);
     }
     return;
 }
+
+
+void TapiMgr::fireMediaEvent(const void*         pSrc,
+                             const char*         szCallId,
+                             const char*         szRemoteAddress,
+                             SIPX_MEDIA_EVENT    event,
+                             SIPX_MEDIA_CAUSE    cause,
+                             SIPX_MEDIA_TYPE     type,
+                             void*               pEventData) 
+{
+    static void* lastSrc;
+    static char lastCallId[256];
+    static char lastRemoteAddress[256];
+    static SIPX_MEDIA_EVENT lastEvent;
+    static SIPX_MEDIA_CAUSE lastCause;
+    static SIPX_MEDIA_TYPE lastType;
+    static void* lastEventData;
+
+    if (sipxMediaCallbackPtr)
+    {
+        // Commenting out for now - detection of duplicate events is handled in tapi layer
+        /*if (lastSrc != pSrc ||
+            strcmp(lastCallId, szCallId) != 0 ||
+            strcmp(lastRemoteAddress, szRemoteAddress) != 0 ||
+            lastEvent != event ||
+            lastCause != cause ||
+            lastType != type ||
+            lastEventData != pEventData)
+        {*/
+            (*sipxMediaCallbackPtr)(pSrc, szCallId, szRemoteAddress, event, 
+                    cause, type, pEventData);
+
+            lastSrc = (void*)pSrc;
+            strncpy(lastCallId, szCallId, sizeof(lastCallId));
+            strncpy(lastRemoteAddress, szRemoteAddress, sizeof(lastRemoteAddress));
+            lastEvent = event;
+            lastCause = cause;
+            lastType = type;
+            lastEventData = pEventData;
+        //}
+    }
+}
+    
 
 void TapiMgr::fireLineEvent(const void* pSrc,
                         const char* szLineIdentifier,
@@ -79,16 +128,18 @@ void TapiMgr::fireLineEvent(const void* pSrc,
 {
     if (sipxLineEventCallbackPtr)
     {
-        (*sipxLineEventCallbackPtr)(pSrc, szLineIdentifier,
-                                    (SIPX_LINE_EVENT_TYPE_MAJOR)(int)event,
-                                    (SIPX_LINE_EVENT_TYPE_MINOR)(int)cause);
+        (*sipxLineEventCallbackPtr)(pSrc, szLineIdentifier, event, cause);
     }
 }
 
-void TapiMgr::fireEvent(const void* pSrc, const SIPX_EVENT_CATEGORY event, void *pInfo)
+bool TapiMgr::fireEvent(const void* pSrc, const SIPX_EVENT_CATEGORY event, void *pInfo)
 {
     if (sipxEventCallbackPtr)
     {
-        (*sipxEventCallbackPtr)(pSrc, event, pInfo);
+        return (*sipxEventCallbackPtr)(pSrc, event, pInfo);
+    }
+    else
+    {
+        return false;
     }
 }

@@ -74,11 +74,21 @@ SipLineMgr::SipLineMgr(const char* authenticationScheme) :
 
 SipLineMgr::~SipLineMgr()
 {
+    dumpLines();
     waitUntilShutDown();
 
     // Do not delete the refresh manager as it was
     // created in another context and we do not know
     // who else may be using it
+}
+
+void SipLineMgr::dumpLines()
+{
+
+    sLineList.dumpLines();
+    // now for sTempLineList
+    sLineList.dumpLines();
+
 }
 
 void
@@ -234,6 +244,7 @@ SipLineMgr::addLine(SipLine&   line,
                 line.getIdentity().toString().data()) ;
     }
 
+    dumpLines();
     return added;
 }
 
@@ -251,15 +262,17 @@ SipLineMgr::deleteLine(const Url& identity)
        return;
     }
 
-    if (line->getState() == SipLine::LINE_STATE_REGISTERED )
-    {
-        //add to temporary list - needed if chanllenged for credentials
-        addToTempList(line);
-        disableLine(identity, 0, identity.toString());
-    }
+    // we don't un-register any more
+//    if (line->getState() == SipLine::LINE_STATE_REGISTERED )
+//    {
+//        //add to temporary list - needed if chanllenged for credentials
+//        addToTempList(line);
+//        disableLine(identity, 0, identity.toString());
+//    }
     else
     {
         removeFromList(line);
+        removeFromTempList(line);
         pDeleteLine = line ;
     }
 
@@ -274,6 +287,7 @@ SipLineMgr::deleteLine(const Url& identity)
     {
         delete pDeleteLine ;
     }
+    dumpLines();
 }
 
 void SipLineMgr::lineHasBeenUnregistered(const Url& identity)
@@ -287,7 +301,8 @@ void SipLineMgr::lineHasBeenUnregistered(const Url& identity)
                 identity.toString().data()) ;
        return;
     }
-    removeFromList(line);
+    //removeFromList(line);
+    //delete line;
 }
 
 UtlBoolean
@@ -341,7 +356,8 @@ SipLineMgr::disableLine(
         syslog(FAC_LINE_MGR, PRI_ERR, "unable to disable line (not found): %s",
                 identity.toString().data()) ;
     }
-    
+
+    // we don't implicitly un-register any more
     if (line->getState() == SipLine::LINE_STATE_REGISTERED ||
         line->getState() == SipLine::LINE_STATE_TRYING)
     {
@@ -607,14 +623,24 @@ SipLineMgr::getLineforAuthentication(
    toFromUrl.removeAngleBrackets();
 
 
+   UtlString emptyRealm(NULL);
+
    if (fromTempList)
    {
       line = sTempLineList.findLine(lineId.data(), realm.data(), toFromUrl, userId.data(), mOutboundLine) ;
+      if (line == NULL)
+      {
+         line = sTempLineList.findLine(lineId.data(), emptyRealm.data(), toFromUrl, userId.data(), mOutboundLine) ;
+      }
    }
 
    if (line == NULL)
    {
       line = sLineList.findLine(lineId.data(), realm.data(), toFromUrl, userId.data(), mOutboundLine) ;
+      if (line == NULL)
+      {
+         line = sLineList.findLine(lineId.data(), emptyRealm.data(), toFromUrl, userId.data(), mOutboundLine) ;
+      }
    }
 
    if (line == NULL)
@@ -628,11 +654,19 @@ SipLineMgr::getLineforAuthentication(
        if (fromTempList)
        {
           line = sTempLineList.findLine(lineId.data(), realm.data(), toFromUrl, userId.data(), mOutboundLine) ;
+          if (line == NULL)
+          {
+             line = sTempLineList.findLine(lineId.data(), emptyRealm.data(), toFromUrl, userId.data(), mOutboundLine) ;
+          }
        }
 
        if (line == NULL)
        {
           line = sLineList.findLine(lineId.data(), realm.data(), toFromUrl, userId.data(), mOutboundLine) ;
+          if (line == NULL)
+          {
+             line = sLineList.findLine(lineId.data(), emptyRealm.data(), toFromUrl, userId.data(), mOutboundLine) ;
+          }
        }
    }
 
@@ -1081,7 +1115,7 @@ SipLineMgr::addCredentialForLine(
     const Url& identity,
     const UtlString strRealm,
     const UtlString strUserID,
-    const UtlString md5Token,
+    const UtlString strPasswd,
     const UtlString type)
 {
     SipLine *line = NULL;
@@ -1091,7 +1125,7 @@ SipLineMgr::addCredentialForLine(
         return false;
     }
 
-    if (!line->addCredentials(strRealm , strUserID, md5Token, type))
+    if (!line->addCredentials(strRealm , strUserID, strPasswd, type))
     {
         line = NULL;
         osPrintf("ERROR::SipLineMgr::addCredentialForLine() - Duplicate Realm\n");
@@ -1244,7 +1278,8 @@ SipLineMgr::setStateForLine(
 
     if ( previousState != SipLine::LINE_STATE_PROVISIONED && state == SipLine::LINE_STATE_PROVISIONED)
     {
-        disableLine(identity);
+        /* We no longer implicitly unregister */
+        //disableLine(identity);
     }
     else if( previousState == SipLine::LINE_STATE_PROVISIONED && state == SipLine::LINE_STATE_REGISTERED)
     {
@@ -1668,7 +1703,8 @@ void SipLineMgr::enableAllLines()
       {
          if ( lines[i].getState() == SipLine::LINE_STATE_REGISTERED)
          {
-            disableLine(lines[i].getIdentity(), TRUE, lines[i].getLineId());//unregister for startup
+            /* We no longer implicitly unregister */
+            //disableLine(lines[i].getIdentity(), TRUE, lines[i].getLineId());//unregister for startup
          }
       }
    }
@@ -1687,3 +1723,5 @@ void SipLineMgr::enableAllLines()
     // Free Lines
     delete []lines ;
 }
+
+

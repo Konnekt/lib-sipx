@@ -29,14 +29,10 @@
 // Constructor
 SipContactDb::SipContactDb() : 
     mNextContactId(1),
-    mLock(OsMutex::Q_FIFO)
+    mLock(OsMutex::Q_FIFO),
+    mbTurnEnabled(FALSE)
 {
-}
-
-// Copy constructor
-SipContactDb::SipContactDb(const SipContactDb& SipContactDb) : 
-    mLock(OsMutex::Q_FIFO)
-{
+    
 }
 
 // Destructor
@@ -57,17 +53,8 @@ SipContactDb::~SipContactDb()
     mContacts.destroyAll();
 }
 
+
 /* ============================ MANIPULATORS ============================== */
-
-// Assignment operator
-SipContactDb&
-SipContactDb::operator=(const SipContactDb& rhs)
-{
-   if (this == &rhs)            // handle the assignment to self case
-      return *this;
-
-   return *this;
-}
 
 const bool SipContactDb::addContact(CONTACT_ADDRESS& contact)
 {
@@ -76,19 +63,28 @@ const bool SipContactDb::addContact(CONTACT_ADDRESS& contact)
     
     assert (contact.id < 1);
     
-    if (!isDuplicate(contact.cIpAddress, contact.iPort))
+    if (!isDuplicate(contact.cIpAddress, contact.iPort, contact.eContactType, contact.transportType))
     {
         assignContactId(contact);
 
         CONTACT_ADDRESS* pContactCopy = new CONTACT_ADDRESS(contact);
         mContacts.insertKeyAndValue(new UtlInt(pContactCopy->id), new UtlVoidPtr(pContactCopy));
+
+        // If turn is enabled, duplicate the contact with a relay type
+        if (mbTurnEnabled)
+        {
+            pContactCopy = new CONTACT_ADDRESS(contact);
+            pContactCopy->eContactType = RELAY ;
+            assignContactId(*pContactCopy) ;
+            mContacts.insertKeyAndValue(new UtlInt(pContactCopy->id), new UtlVoidPtr(pContactCopy));
+        }
         bRet = true;
     }
     else
     {
         // fill out the information in the contact,
         // to match what is already in the database
-        contact = *(find(contact.cIpAddress, contact.iPort));
+        contact = *(find(contact.cIpAddress, contact.iPort, contact.eContactType));
     }
     return bRet;
 }
@@ -117,7 +113,7 @@ CONTACT_ADDRESS* SipContactDb::find(CONTACT_ID id)
 
 
 // Finds the first contact by a given contact type
-CONTACT_ADDRESS* SipContactDb::findByType(CONTACT_TYPE type) 
+CONTACT_ADDRESS* SipContactDb::findByType(CONTACT_TYPE type, OsSocket::SocketProtocolTypes transportType) 
 {
     OsLock lock(mLock);
     UtlHashMapIterator iterator(mContacts);
@@ -133,10 +129,13 @@ CONTACT_ADDRESS* SipContactDb::findByType(CONTACT_TYPE type)
         
         pContact = (CONTACT_ADDRESS*)pValue->getValue();
         assert(pContact) ;
-        if (pContact->eContactType == type)
+        if (transportType != OsSocket::UNKNOWN && transportType == pContact->transportType)
         {
-            pRC = pContact ;
-            break ;
+            if (pContact->eContactType == type)
+            {
+                pRC = pContact ;
+                break ;
+            }
         }
     }
 
@@ -183,7 +182,7 @@ CONTACT_ADDRESS* SipContactDb::getLocalContact(CONTACT_ID id)
 }
 
 
-CONTACT_ADDRESS* SipContactDb::find(const UtlString ipAddress, const int port)
+CONTACT_ADDRESS* SipContactDb::find(const UtlString ipAddress, const int port, CONTACT_TYPE type)
 {
     OsLock lock(mLock);
     bool bFound = false;
@@ -198,7 +197,8 @@ CONTACT_ADDRESS* SipContactDb::find(const UtlString ipAddress, const int port)
         assert(pValue);
         
         pContact = (CONTACT_ADDRESS*)pValue->getValue();
-        if (strcmp(pContact->cIpAddress, ipAddress.data()) == 0)
+        if (    (pContact->eContactType == type) &&
+                (strcmp(pContact->cIpAddress, ipAddress.data()) == 0))
         {
             if (port < 0 || port == pContact->iPort)
             {
@@ -310,6 +310,45 @@ void SipContactDb::getAllForAdapter(const CONTACT_ADDRESS* contacts[],
 }
 
 
+void SipContactDb::enableTurn(bool bEnable) 
+{
+    OsLock lock(mLock);
+    UtlHashMapIterator iterator(mContacts);
+
+    mbTurnEnabled = bEnable ;    
+
+    UtlVoidPtr* pValue = NULL;
+    CONTACT_ADDRESS* pContact = NULL;
+    UtlInt* pKey;
+    while (pKey = (UtlInt*)iterator())
+    {
+        pValue = (UtlVoidPtr*)mContacts.findValue(pKey);
+        assert(pValue);
+        
+        pContact = (CONTACT_ADDRESS*)pValue->getValue();
+        if (pContact)
+        {
+            if (mbTurnEnabled)
+            {
+                if (pContact->eContactType != RELAY)
+                {
+                    CONTACT_ADDRESS* pContactCopy = new CONTACT_ADDRESS(*pContact);
+                    pContactCopy->eContactType = RELAY ;
+                    assignContactId(*pContactCopy) ;
+                    mContacts.insertKeyAndValue(new UtlInt(pContactCopy->id), new UtlVoidPtr(pContactCopy));
+                }
+            }
+            else
+            {
+                if (pContact->eContactType == RELAY)
+                {
+                    deleteContact(pContact->id) ;
+                }
+            }
+        }        
+    }
+}
+
 /* ============================ ACCESSORS ================================= */
 
 /* ============================ INQUIRY =================================== */
@@ -335,7 +374,9 @@ const bool SipContactDb::isDuplicate(const CONTACT_ID id)
     return bRet;
 }
 
-const bool SipContactDb::isDuplicate(const UtlString& ipAddress, const int port)
+const bool SipContactDb::isDuplicate(const UtlString& ipAddress, 
+                                     const int port, CONTACT_TYPE type, 
+                                     OsSocket::SocketProtocolTypes transportType)
 {
     OsLock lock(mLock);
     bool bRet = false;
@@ -350,7 +391,9 @@ const bool SipContactDb::isDuplicate(const UtlString& ipAddress, const int port)
         assert(pValue);
         
         pContact = (CONTACT_ADDRESS*)pValue->getValue();
-        if (strcmp(pContact->cIpAddress, ipAddress.data()) == 0)
+        if (    (pContact->eContactType == type) &&
+                (strcmp(pContact->cIpAddress, ipAddress.data()) == 0) &&
+                pContact->transportType == transportType)
         {
             if (port < 0 || port == pContact->iPort)
             {

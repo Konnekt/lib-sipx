@@ -148,7 +148,7 @@ UtlBoolean SipNonceDb::isNonceValid(const UtlString& nonce,
          }
          else
          {
-            OsSysLog::add(FAC_SIP,PRI_INFO,
+            OsSysLog::add(FAC_SIP,PRI_ERR,
                           "SipNonceDB::isNonceValid expired nonce: created %d+%ld < %ld"
                           ,nonceCreated, expiredTime, now
                           );

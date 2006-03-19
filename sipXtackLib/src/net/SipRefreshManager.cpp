@@ -304,6 +304,9 @@ UtlBoolean SipRefreshManager::initiateRefresh(SipMessage& subscribeOrRegisterReq
                         TRUE); // Resend with successful timeout
         OsTimer* resendTimer = state->mpRefreshTimer;
 
+        OsSysLog::add(FAC_SIP, PRI_DEBUG,
+                      "SipRefreshManager::initiateRefresh refreshTimer just being set.");
+
         // Mark the refresh state as having an outstanding request
         // and make a copy of the request.  The copy needs to be
         // attached to the state before the send incase the response
@@ -505,6 +508,8 @@ UtlBoolean SipRefreshManager::handleMessage(OsMsg &eventMessage)
                 // Create and set a new timer for the failed time out period
                 setRefreshTimer(*state, 
                                 FALSE);  // Resend with failure timeout
+                OsSysLog::add(FAC_SIP, PRI_DEBUG,
+                              "SipRefreshManager::handleMessage refreshTimer just being set for the failed timeout.");
             }
 
             // Normal timer fire, time to refresh
@@ -525,6 +530,9 @@ UtlBoolean SipRefreshManager::handleMessage(OsMsg &eventMessage)
                     setRefreshTimer(*state, 
                                     TRUE); // Resend with successful timeout
 
+                    OsSysLog::add(FAC_SIP, PRI_DEBUG,
+                                  "SipRefreshManager::handleMessage refreshTimer just being set for the normal timeout.");
+
                     // reset the message for resend
                     setForResend(*state,
                                  FALSE); // do not expire now
@@ -537,6 +545,13 @@ UtlBoolean SipRefreshManager::handleMessage(OsMsg &eventMessage)
                     // message as it could block.  Presumably it is better
                     // to incure the cost of copying the message????
                     SipMessage tempRequest(*(state->mpLastRequest));
+                    
+                    UtlString lastRequest;
+                    int length;
+                    state->mpLastRequest->getBytes(&lastRequest, &length);
+                    OsSysLog::add(FAC_SIP, PRI_DEBUG, "SipRefreshManager::handleMessage last request = \n%s",
+                                  lastRequest.data());
+                      
                     unlock();
                     mpUserAgent->send(tempRequest);
                     // do not need the lock any more, but this gives us
@@ -558,6 +573,8 @@ UtlBoolean SipRefreshManager::handleMessage(OsMsg &eventMessage)
                         // Try again later if it was pending
                         setRefreshTimer(*state, 
                                         FALSE); // Resend with failed timeout
+                        OsSysLog::add(FAC_SIP, PRI_DEBUG,
+                                      "SipRefreshManager::handleMessage refreshTimer just being resent for the failed timeout.");
                     }
                 }
             }
@@ -1060,6 +1077,13 @@ void SipRefreshManager::setForResend(RefreshDialogState& state,
 {
     if(state.mpLastRequest)
     {
+        UtlString lastRequest;
+        int length;
+        state.mpLastRequest->getBytes(&lastRequest, &length);
+        OsSysLog::add(FAC_SIP, PRI_DEBUG,
+                      "SipRefreshManager::setForResend last request = \n%s",
+                      lastRequest.data());
+       
         // Remove old vias
         state.mpLastRequest->removeLastVia();
 

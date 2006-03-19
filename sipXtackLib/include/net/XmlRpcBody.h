@@ -1,13 +1,12 @@
-// 
-// 
-// Copyright (C) 2005 SIPfoundry Inc.
+//
+// Copyright (C) 2004-2006 SIPfoundry Inc.
 // Licensed by SIPfoundry under the LGPL license.
-// 
-// Copyright (C) 2005 Pingtel Corp.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
 // Licensed to SIPfoundry under a Contributor Agreement.
-// 
+//
 // $$
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef _XMLRPCBODY_H_
 #define _XMLRPCBODY_H_
@@ -37,9 +36,6 @@
 #define BEGIN_INT "<value><int>"
 #define END_INT "</int></value>\n"
 
-#define BEGIN_I8 "<value><i8>"
-#define END_I8 "</i8></value>\n"
-
 #define BEGIN_BOOLEAN "<value><boolean>"
 #define END_BOOLEAN "</boolean></value>\n"
 
@@ -49,17 +45,17 @@
 #define BEGIN_TIME "<value><dateTime.iso8601>"
 #define END_TIME "</dataTime.iso8601></value>\n"
 
-#define BEGIN_ARRAY "<value><array><data>\n"
-#define END_ARRAY "</data></array></value>\n"
+#define BEGIN_ARRAY "<value>\n<array>\n<data>\n"
+#define END_ARRAY "</data>\n</array>\n</value>\n"
 
-#define BEGIN_STRUCT "<value><struct>\n"
-#define END_STRUCT "</struct></value>\n"
+#define BEGIN_STRUCT "<value>\n<struct>\n"
+#define END_STRUCT "</struct>\n</value>\n"
 
 #define BEGIN_MEMBER "<member>\n"
 #define END_MEMBER "</member>\n"
 
 #define BEGIN_NAME "<name>"
-#define END_NAME "</name>"
+#define END_NAME "</name>\n"
 
 #define BEGIN_RESPONSE "<methodResponse>\n"
 #define END_RESPONSE "</methodResponse>\n"
@@ -67,8 +63,8 @@
 #define BEGIN_FAULT "<fault>\n"
 #define END_FAULT "</fault>\n"
 
-#define FAULT_CODE "<name>faultCode</name>"
-#define FAULT_STRING "<name>faultString</name>"
+#define FAULT_CODE "<name>faultCode</name>\n"
+#define FAULT_STRING "<name>faultString</name>\n"
 
 // MACROS
 // EXTERNAL FUNCTIONS

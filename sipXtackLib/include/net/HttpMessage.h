@@ -23,7 +23,6 @@
 #include <os/OsSocket.h>
 #include <os/OsTimeLog.h>
 #include <os/OsMsgQ.h>
-#include <utl/UtlHashMap.h>
 
 // DEFINES
 #define HTTP_NAME_VALUE_DELIMITER ':'
@@ -61,8 +60,6 @@
 #define HTTP_PROXY_UNAUTHORIZED_TEXT "Proxy Authentication Required"
 #define HTTP_UNSUPPORTED_METHOD_CODE 501
 #define HTTP_UNSUPPORTED_METHOD_TEXT "Not Implemented"
-#define HTTP_OUT_OF_RESOURCES_CODE 503
-#define HTTP_OUT_OF_RESOURCES_TEXT "Out of Resources"
 
 // Field names
 #define HTTP_ACCEPT_LANGUAGE_FIELD "ACCEPT-LANGUAGE"
@@ -81,7 +78,6 @@
 #define HTTP_WWW_AUTHENTICATE_FIELD "WWW-AUTHENTICATE"
 #define HTTP_HOST_FIELD  "HOST"
 #define HTTP_ACCEPT_FIELD "ACCEPT"
-#define HTTP_CONNECTION_FIELD "CONNECTION"
 
 // Authentication Constants
 //    these are by specification case-independant tokens,
@@ -113,8 +109,6 @@
 // EXTERNAL FUNCTIONS
 // EXTERNAL VARIABLES
 // CONSTANTS
-const int HttpMessageRetries = 2;
-   
 // STRUCTS
 
 // FORWARD DECLARATIONS
@@ -180,6 +174,7 @@ class HttpMessage
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
 public:
 
+
     enum HttpEndpointEnum
     {
         SERVER = 0,
@@ -212,23 +207,18 @@ public:
     /*! \param httpUrl - the url to get from the HTTP server.  The URL
      *         may contain a password & user id.
      * \param maxWaitMillSeconds - the maximum time to wait for the response
-     * \param bPersistent - use persistent connections if true
      */
     int get(Url& httpUrl,
-            int maxWaitMilliSeconds,
-            bool bPersistent=true);
+            int maxWaitMilliSeconds);
 
     //! Do an HTTP GET on the given URL
     /*! \param httpUrl - the url to get from the HTTP server.  The URL may contain a password & user id.  Note the only thing that may be required of the URL is the host and port as well as the user ID and password if there is a authentication challenge.
      * \param request - the complete HTTP request that will be sent to the HTTP server including the body.
      * \param maxWaitMillSeconds - the maximum time to wait for the response
-     * \param bPersistent - use persistent connections if true
      */
     int get(Url& httpUrl,
             HttpMessage& request,
-            int maxWaitMilliSeconds,
-            bool bPersistent=true);
-            
+            int maxWaitMilliSeconds);
 
     //!Perform an HTTP GET on the specified URL and pass data to the
     //! specified callbackProc.
@@ -266,12 +256,9 @@ public:
      *   from inSocket.
      * \param maxContentLength - this is the maximum message size that
      *   will be read.  If the message content-length is larger, the
-     *   socket is closed and the buffer is cleared.  (This is to protect
-     *   against abusive senders.)
-     * \return the number of bytes in the message that was read,
-     *   or 0 to indicate an error.  If it is less than
-     *   externalBuffer.length(), the remaining bytes are the start of
-     *   another message.
+     *   socket is closed and the buffer is cleared.
+     * \return the number of bytes read from the socket, or 0 to
+     *   indicate an error
      */
     int read(OsSocket* inSocket,
              int bufferSize = HTTP_DEFAULT_SOCKET_BUFFER_SIZE,
@@ -387,8 +374,8 @@ public:
 
     // Used by the tranport to track reliably which protocol the
     // message was sent over
-    void setSendProtocol(OsSocket::IpProtocolSocketType protocol = OsSocket::TCP);
-    OsSocket::IpProtocolSocketType getSendProtocol() const;
+    void setSendProtocol(int protocol = OsSocket::TCP);
+    int getSendProtocol() const;
 
     void setFirstSent();
     void setSendAddress(const char* address, int port);
@@ -698,10 +685,11 @@ protected:
 
 /* //////////////////////////// PRIVATE /////////////////////////////////// */
 private:
+
    HttpBody* body;
    long transportTimeStamp;
    int lastResendDuration;
-   OsSocket::IpProtocolSocketType transportProtocol;
+   int transportProtocol;
    int timesSent;
    UtlBoolean mFirstSent;
    UtlString mSendAddress;
@@ -711,7 +699,8 @@ private:
 #ifdef HTTP_TIMELOG
    OsTimeLog mTimeLog;
 #endif
- 
+
+
    //! Internal utility
    NameValuePair* getHeaderField(int index, const char* name = NULL) const;
 

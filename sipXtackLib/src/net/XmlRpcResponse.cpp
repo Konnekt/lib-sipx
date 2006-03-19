@@ -12,7 +12,6 @@
 
 // APPLICATION INCLUDES
 #include <utl/UtlInt.h>
-#include <utl/UtlLongLongInt.h>
 #include <utl/UtlBool.h>
 #include <utl/UtlDateTime.h>
 #include <utl/UtlSListIterator.h>
@@ -31,11 +30,18 @@
 /* ============================ CREATORS ================================== */
 
 // Constructor
-XmlRpcResponse::XmlRpcResponse() :
-   mpResponseBody(NULL),
-   mResponseValue(NULL),   
-   mFaultCode(ILL_FORMED_CONTENTS_FAULT_CODE),
-   mFaultString(ILL_FORMED_CONTENTS_FAULT_STRING)
+XmlRpcResponse::XmlRpcResponse()
+{
+   mFaultCode = ILL_FORMED_CONTENTS_FAULT_CODE;
+   mFaultString = ILL_FORMED_CONTENTS_FAULT_STRING;
+   mResponseValue = NULL;
+
+   // Start to construct the XML-RPC body
+   mpResponseBody = new XmlRpcBody();
+}
+
+// Copy constructor
+XmlRpcResponse::XmlRpcResponse(const XmlRpcResponse& rXmlRpcResponse)
 {
 }
 
@@ -198,18 +204,19 @@ bool XmlRpcResponse::parseXmlRpcResponse(UtlString& responseContent)
 /* ============================ MANIPULATORS ============================== */
 
 
+// Assignment operator
+XmlRpcResponse&
+XmlRpcResponse::operator=(const XmlRpcResponse& rhs)
+{
+   if (this == &rhs)            // handle the assignment to self case
+      return *this;
+}
+
 /* ============================ ACCESSORS ================================= */
 
 bool XmlRpcResponse::setResponse(UtlContainable* value)
 {
    bool result = false;
-   assert(mpResponseBody == NULL);    // response body should only be created once
-   
-
-   // Start to construct the XML-RPC body
-   mpResponseBody = new XmlRpcBody();
-   assert(mpResponseBody != NULL);    // if not true, allocation failed
-
    mpResponseBody->append(BEGIN_RESPONSE);   
    mpResponseBody->append(BEGIN_PARAMS);   
    mpResponseBody->append(BEGIN_PARAM);  
@@ -224,7 +231,7 @@ bool XmlRpcResponse::setResponse(UtlContainable* value)
    int bodyLength;
    mpResponseBody->getBytes(&bodyString, &bodyLength);
    OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                 "mpResponseBody::setResponse XML-RPC response message = \n%s", bodyString.data());
+                 "mpResponseBody::setResponse XML-RPC response message = \n%s\n", bodyString.data());
    return result;
 }
 
@@ -236,11 +243,14 @@ bool XmlRpcResponse::setFault(int faultCode, const char* faultString)
    mFaultString = faultString;
 
    // Start to construct the XML-RPC body for fault response
-   assert(mpResponseBody == NULL);    // response body should only be created once
+   if (mpResponseBody)
+   {
+      delete mpResponseBody;
+      mpResponseBody = NULL;
+   }
 
    mpResponseBody = new XmlRpcBody();
-   assert(mpResponseBody != NULL);    // if not true, allocation failed
-   
+
    // Fault response example
    //
    // <methodResponse>
@@ -290,7 +300,7 @@ bool XmlRpcResponse::setFault(int faultCode, const char* faultString)
    int bodyLength;
    mpResponseBody->getBytes(&bodyString, &bodyLength);
    OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                 "mpResponseBody::setFault XML-RPC response message = \n%s", bodyString.data());
+                 "mpResponseBody::setFault XML-RPC response message = \n%s\n", bodyString.data());
 
    return result;
 }
@@ -373,13 +383,14 @@ bool XmlRpcResponse::parseValue(TiXmlNode* subNode)
       }
       else
       {
-         valueNode = subNode->FirstChild("i8");                  
+         // boolean
+         valueNode = subNode->FirstChild("boolean");                 
          if (valueNode)
          {
             if (valueNode->FirstChild())
             {
                paramValue = valueNode->FirstChild()->Value();
-               mResponseValue = new UtlLongLongInt(strtoll(paramValue, 0, 0));
+               mResponseValue = new UtlBool((atoi(paramValue)==1));
                result = true;
             }
             else
@@ -388,98 +399,80 @@ bool XmlRpcResponse::parseValue(TiXmlNode* subNode)
             }
          }
          else
-         {
-            // boolean
-            valueNode = subNode->FirstChild("boolean");                 
+         {        
+            // string
+            valueNode = subNode->FirstChild("string");                  
             if (valueNode)
             {
                if (valueNode->FirstChild())
                {
                   paramValue = valueNode->FirstChild()->Value();
-                  mResponseValue = new UtlBool((atoi(paramValue)==1));
-                  result = true;
+                  mResponseValue = new UtlString(paramValue);
                }
                else
                {
-                  result = false;
+                  mResponseValue = NULL;
                }
+               result = true;
             }
             else
-            {        
-               // string
-               valueNode = subNode->FirstChild("string");                  
+            {                  
+               // dateTime.iso8601
+               valueNode = subNode->FirstChild("dateTime.iso8601");                 
                if (valueNode)
                {
                   if (valueNode->FirstChild())
                   {
                      paramValue = valueNode->FirstChild()->Value();
-                     mResponseValue = new UtlString(paramValue);
+                     //mResponseValue = new UtlDateTime(paramValue);
+                     result = true;
                   }
                   else
                   {
-                     mResponseValue = NULL;
+                     result = false;
                   }
-                  result = true;
                }
                else
                {                  
-                  // dateTime.iso8601
-                  valueNode = subNode->FirstChild("dateTime.iso8601");                 
+                  // struct
+                  valueNode = subNode->FirstChild("struct");                  
                   if (valueNode)
                   {
-                     if (valueNode->FirstChild())
+                     UtlHashMap* map = new UtlHashMap();
+                     if (parseStruct(valueNode, map))
                      {
-                        paramValue = valueNode->FirstChild()->Value();
-                        //mResponseValue = new UtlDateTime(paramValue);
+                        mResponseValue = map;
                         result = true;
-                     }
-                     else
-                     {
-                        result = false;
                      }
                   }
                   else
-                  {                  
-                     // struct
-                     valueNode = subNode->FirstChild("struct");                  
+                  {
+                     // array
+                     valueNode = subNode->FirstChild("array");                  
                      if (valueNode)
                      {
-                        UtlHashMap* map = new UtlHashMap();
-                        if (parseStruct(valueNode, map))
+                        UtlSList* list = new UtlSList();
+                        if (parseArray(valueNode, list))
                         {
-                           mResponseValue = map;
+                           mResponseValue = list;
                            result = true;
                         }
                      }
                      else
                      {
-                        // array
-                        valueNode = subNode->FirstChild("array");                  
+                        // default as string
+                        valueNode = subNode->FirstChild();                  
                         if (valueNode)
                         {
-                           UtlSList* list = new UtlSList();
-                           if (parseArray(valueNode, list))
-                           {
-                              mResponseValue = list;
-                              result = true;
-                           }
+                           paramValue = valueNode->Value();
+                           mResponseValue = new UtlString(paramValue);
                         }
                         else
                         {
-                           // default as string
-                           valueNode = subNode->FirstChild();                  
-                           if (valueNode)
-                           {
-                              paramValue = valueNode->Value();
-                              mResponseValue = new UtlString(paramValue);
-                           }
-                           else
-                           {
-                              mResponseValue = NULL;
-                           }
-                           
-                           result = true;
+                           mResponseValue = NULL;
                         }
+                        
+                        result = true;
                      }
                   }
                }
@@ -487,7 +480,7 @@ bool XmlRpcResponse::parseValue(TiXmlNode* subNode)
          }
       }
    }
-         
+      
    return result;
 }
    
@@ -554,13 +547,13 @@ bool XmlRpcResponse::parseStruct(TiXmlNode* subNode, UtlHashMap* members)
                }
                else
                {
-                  valueElement = memberValue->FirstChild("i8");
+                  valueElement = memberValue->FirstChild("boolean");
                   if (valueElement)
                   {
                      if (valueElement->FirstChild())
                      {
                         paramValue = valueElement->FirstChild()->Value();
-                        members->insertKeyAndValue(new UtlString(name), new UtlLongLongInt(strtoll(paramValue, 0, 0)));
+                        members->insertKeyAndValue(new UtlString(name), new UtlBool((atoi(paramValue)==1)));
                         result = true;
                      }
                      else
@@ -570,95 +563,77 @@ bool XmlRpcResponse::parseStruct(TiXmlNode* subNode, UtlHashMap* members)
                      }
                   }
                   else
-                  {
-                     valueElement = memberValue->FirstChild("boolean");
+                  {              
+                     valueElement = memberValue->FirstChild("string");
                      if (valueElement)
                      {
                         if (valueElement->FirstChild())
                         {
                            paramValue = valueElement->FirstChild()->Value();
-                           members->insertKeyAndValue(new UtlString(name), new UtlBool((atoi(paramValue)==1)));
-                           result = true;
+                           members->insertKeyAndValue(new UtlString(name), new UtlString(paramValue));
                         }
                         else
                         {
-                           result = false;
-                           break;
+                           members->insertKeyAndValue(new UtlString(name), new UtlString());
                         }
+                        
+                        result = true;
                      }
                      else
-                     {              
-                        valueElement = memberValue->FirstChild("string");
+                     {
+                        valueElement = memberValue->FirstChild("dateTime.iso8601");
                         if (valueElement)
                         {
                            if (valueElement->FirstChild())
                            {
                               paramValue = valueElement->FirstChild()->Value();
                               members->insertKeyAndValue(new UtlString(name), new UtlString(paramValue));
+                              result = true;
                            }
                            else
                            {
-                              members->insertKeyAndValue(new UtlString(name), new UtlString());
+                              result = false;
+                              break;
                            }
-                           
-                           result = true;
                         }
                         else
                         {
-                           valueElement = memberValue->FirstChild("dateTime.iso8601");
+                           valueElement = memberValue->FirstChild("struct");
                            if (valueElement)
                            {
-                              if (valueElement->FirstChild())
+                              UtlHashMap* members = new UtlHashMap();
+                              if (parseStruct(valueElement, members))
                               {
-                                 paramValue = valueElement->FirstChild()->Value();
-                                 members->insertKeyAndValue(new UtlString(name), new UtlString(paramValue));
+                                 members->insertKeyAndValue(new UtlString(name), members);
                                  result = true;
-                              }
-                              else
-                              {
-                                 result = false;
-                                 break;
                               }
                            }
                            else
                            {
-                              valueElement = memberValue->FirstChild("struct");
+                              valueElement = memberValue->FirstChild("array");
                               if (valueElement)
                               {
-                                 UtlHashMap* members = new UtlHashMap();
-                                 if (parseStruct(valueElement, members))
+                                 UtlSList* subArray = new UtlSList();
+                                 if (parseArray(valueElement, subArray))
                                  {
-                                    members->insertKeyAndValue(new UtlString(name), members);
+                                    members->insertKeyAndValue(new UtlString(name), subArray);
                                     result = true;
                                  }
                               }
                               else
                               {
-                                 valueElement = memberValue->FirstChild("array");
-                                 if (valueElement)
+                                 // default for string
+                                 if (memberValue->FirstChild())
                                  {
-                                    UtlSList* subArray = new UtlSList();
-                                    if (parseArray(valueElement, subArray))
-                                    {
-                                       members->insertKeyAndValue(new UtlString(name), subArray);
-                                       result = true;
-                                    }
+                                    paramValue = memberValue->FirstChild()->Value();
+                                    members->insertKeyAndValue(new UtlString(name), new UtlString(paramValue));
                                  }
                                  else
                                  {
-                                    // default for string
-                                    if (memberValue->FirstChild())
-                                    {
-                                       paramValue = memberValue->FirstChild()->Value();
-                                       members->insertKeyAndValue(new UtlString(name), new UtlString(paramValue));
-                                    }
-                                    else
-                                    {
-                                       members->insertKeyAndValue(new UtlString(name), new UtlString());
-                                    }
-                                    
-                                    result = true;
+                                    members->insertKeyAndValue(new UtlString(name), new UtlString());
                                  }
+                                 
+                                 result = true;
                               }
                            }
                         }
@@ -682,120 +657,141 @@ bool XmlRpcResponse::parseArray(TiXmlNode* subNode, UtlSList* array)
    TiXmlNode* dataNode = subNode->FirstChild("data");
    if (dataNode)
    {
-      result = true; // an empty list is ok
-
-      // see if there are values...
       for (TiXmlNode* valueNode = dataNode->FirstChild("value");
-           result && valueNode; 
-           valueNode = valueNode->NextSibling("value")
-           )
+           valueNode; 
+           valueNode = valueNode->NextSibling("value"))
       {
          // four-byte signed integer                         
-         TiXmlNode* arrayElement;;
-         if ((arrayElement = valueNode->FirstChild("i4")))
+         TiXmlNode* arrayElement = valueNode->FirstChild("i4");
+         if (arrayElement)
          {
             if (arrayElement->FirstChild())
             {
                paramValue = arrayElement->FirstChild()->Value();
                array->insert(new UtlInt(atoi(paramValue)));
+               result = true;
             }
             else
             {
                result = false;
-            }
-         }
-         else if ((arrayElement = valueNode->FirstChild("int")))
-         {
-            if (arrayElement->FirstChild())
-            {
-               paramValue = arrayElement->FirstChild()->Value();
-               array->insert(new UtlInt(atoi(paramValue)));
-            }
-            else
-            {
-               result = false;
-            }
-         }
-         else if ((arrayElement = valueNode->FirstChild("i8")))
-         {
-            if (arrayElement->FirstChild())
-            {
-               paramValue = arrayElement->FirstChild()->Value();
-               array->insert(new UtlLongLongInt(strtoll(paramValue, 0, 0)));
-            }
-            else
-            {
-               result = false;
-            }
-         }
-         else if ((arrayElement = valueNode->FirstChild("boolean")))
-         {
-            if (arrayElement->FirstChild())
-            {
-               paramValue = arrayElement->FirstChild()->Value();
-               array->insert(new UtlBool((atoi(paramValue)==1)));
-            }
-            else
-            {
-               result = false;
-            }
-         }
-         else if ((arrayElement = valueNode->FirstChild("string")))
-         {
-            if (arrayElement->FirstChild())
-            {
-               paramValue = arrayElement->FirstChild()->Value();
-               array->insert(new UtlString(paramValue));
-            }
-            else
-            {
-               array->insert(new UtlString());
-            }
-         }
-         else if ((arrayElement = valueNode->FirstChild("dateTime.iso8601")))
-         {
-            if (arrayElement->FirstChild())
-            {
-               paramValue = arrayElement->FirstChild()->Value();
-               array->insert(new UtlString(paramValue));
-            }
-            else
-            {
-               result = false;
-            }
-         }
-         else if ((arrayElement = valueNode->FirstChild("struct")))
-         {
-            UtlHashMap* members = new UtlHashMap();
-            if (parseStruct(arrayElement, members))
-            {
-               array->insert(members);
-            }
-         }
-         else if ((arrayElement = valueNode->FirstChild("array")))
-         {
-            UtlSList* subArray = new UtlSList();
-            if (parseArray(arrayElement, subArray))
-            {
-               array->insert(subArray);
+               break;
             }
          }
          else
          {
-            // default for string
-            if (valueNode->FirstChild())
+            arrayElement = valueNode->FirstChild("int");
+            if (arrayElement)
             {
-               paramValue = valueNode->FirstChild()->Value();
-               array->insert(new UtlString(paramValue));
+               if (arrayElement->FirstChild())
+               {
+                  paramValue = arrayElement->FirstChild()->Value();
+                  array->insert(new UtlInt(atoi(paramValue)));
+                  result = true;
+               }
+               else
+               {
+                  result = false;
+                  break;
+               }
             }
             else
             {
-               array->insert(new UtlString());
+               arrayElement = valueNode->FirstChild("boolean");
+               if (arrayElement)
+               {
+                  if (arrayElement->FirstChild())
+                  {
+                     paramValue = arrayElement->FirstChild()->Value();
+                     array->insert(new UtlBool((atoi(paramValue)==1)));
+                     result = true;
+                  }
+                  else
+                  {
+                     result = false;
+                     break;
+                  }
+               }
+               else
+               {              
+                  arrayElement = valueNode->FirstChild("string");
+                  if (arrayElement)
+                  {
+                     if (arrayElement->FirstChild())
+                     {
+                        paramValue = arrayElement->FirstChild()->Value();
+                        array->insert(new UtlString(paramValue));
+                     }
+                     else
+                     {
+                        array->insert(new UtlString());
+                     }
+                     result = true;
+                  }
+                  else
+                  {
+                     arrayElement = valueNode->FirstChild("dateTime.iso8601");
+                     if (arrayElement)
+                     {
+                        if (arrayElement->FirstChild())
+                        {
+                           paramValue = arrayElement->FirstChild()->Value();
+                           array->insert(new UtlString(paramValue));
+                           result = true;
+                        }
+                        else
+                        {
+                           result = false;
+                           break;
+                        }
+                     }
+                     else
+                     {
+                        arrayElement = valueNode->FirstChild("struct");
+                        if (arrayElement)
+                        {
+                           UtlHashMap* members = new UtlHashMap();
+                           if (parseStruct(arrayElement, members))
+                           {
+                              array->insert(members);
+                              result = true;
+                           }
+                        }
+                        else
+                        {
+                           arrayElement = valueNode->FirstChild("array");
+                           if (arrayElement)
+                           {
+                              UtlSList* subArray = new UtlSList();
+                              if (parseArray(arrayElement, subArray))
+                              {
+                                 array->insert(subArray);
+                                 result = true;
+                              }
+                           }
+                           else
+                           {
+                              // default for string
+                              if (valueNode->FirstChild())
+                              {
+                                 paramValue = valueNode->FirstChild()->Value();
+                                 array->insert(new UtlString(paramValue));
+                              }
+                              else
+                              {
+                                 array->insert(new UtlString());
+                              }
+                              
+                              result = true;
+                           }
+                        }
+                     }
+                  }
+               }
             }
          }
-      } // end of for loop over values
+      }
    }
-
+   
    return result;
 }
 
@@ -825,23 +821,19 @@ void XmlRpcResponse::cleanUp(UtlHashMap* map)
    UtlString* pName;
    UtlContainable *key;
    UtlContainable *value;
-   while ((pName = (UtlString *) iterator()))
+   while (pName = (UtlString *) iterator())
    {
       key = map->removeKeyAndValue(pName, value);
       UtlString paramType(value->getContainableType());
       if (paramType.compareTo("UtlHashMap") == 0)
       {
-         UtlHashMap* pMap = (UtlHashMap *) value;
-         cleanUp(pMap);
-         delete pMap;
+         cleanUp((UtlHashMap *)value);
       }
       else
       {
          if (paramType.compareTo("UtlSList") == 0)
          {
-            UtlSList* pList = (UtlSList *) value;
-            cleanUp(pList);
-            delete pList;
+            cleanUp((UtlSList *)value);
          }
          else
          {
@@ -849,7 +841,7 @@ void XmlRpcResponse::cleanUp(UtlHashMap* map)
          }
       }
       
-      delete pName;
+      delete key;
    }
 }
 
@@ -857,23 +849,19 @@ void XmlRpcResponse::cleanUp(UtlSList* array)
 {
    UtlSListIterator iterator(*array);
    UtlContainable *value;
-   while ((value = iterator()))
+   while (value = iterator())
    {
       value = array->remove(value);
       UtlString paramType(value->getContainableType());
       if (paramType.compareTo("UtlHashMap") == 0)
       {
-         UtlHashMap* pMap = (UtlHashMap *) value;
-         cleanUp(pMap);
-         delete pMap;
+         cleanUp((UtlHashMap *)value);
       }
       else
       {
          if (paramType.compareTo("UtlSList") == 0)
          {
-            UtlSList* pList = (UtlSList *) value;
-            cleanUp(pList);
-            delete pList;
+            cleanUp((UtlSList *)value);
          }
          else
          {
@@ -881,14 +869,6 @@ void XmlRpcResponse::cleanUp(UtlSList* array)
          }
       }
    }
-}
-
-/// Get the content of the response
-XmlRpcBody* XmlRpcResponse::getBody()
-{
-   assert(mpResponseBody); // if false, no response was set
-   
-   return mpResponseBody;
 }
 
 /* ============================ FUNCTIONS ================================= */

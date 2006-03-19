@@ -122,13 +122,16 @@ public:
 
         UtlBoolean addCredentials(const UtlString& strRealm,
                 const UtlString& strUserID,
-                const UtlString& strPassword ,
+                const UtlString& strPassword,
                 const UtlString& Type);
 
         UtlBoolean getCredentials(const UtlString& type /*[in]*/,
                 const UtlString& realm /*[in]*/,
                 UtlString* userID /*[out]*/,
                 UtlString* MD5_token /*[out]*/);
+
+   UtlBoolean getDuplicateCredentials(const UtlString& type /*[in]*/,
+                                      const UtlString& realm /*[in]*/);
 
    UtlBoolean getAllCredentials( int MaxEnteries/*[in]*/ ,
       int& actualEnteries /*[out/int]*/,

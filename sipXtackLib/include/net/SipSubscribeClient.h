@@ -1,15 +1,12 @@
-// 
-// 
-// Copyright (C) 2005 SIPez LLC.
-// Licensed to SIPfoundry under a Contributor Agreement.
-// 
-// Copyright (C) 2004 SIPfoundry Inc.
+//
+// Copyright (C) 2004-2006 SIPfoundry Inc.
 // Licensed by SIPfoundry under the LGPL license.
-// 
-// Copyright (C) 2004 Pingtel Corp.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
 // Licensed to SIPfoundry under a Contributor Agreement.
-// 
+//
 // $$
+///////////////////////////////////////////////////////////////////////////////
 // Author: Dan Petrie (dpetrie AT SIPez DOT com)
 
 //////////////////////////////////////////////////////////////////////////////
@@ -91,9 +88,6 @@ typedef void (*NotifyEventCallback) (const char* earlyDialogHandle,
 
 /* ============================ CREATORS ================================== */
 
-    //! Create a SipDialogMgr, SipRefreshManager and construct a SipSubscribeClient
-    static SipSubscribeClient* buildBasicClient(SipUserAgent& userAgent);
-
     //! Default Dialog constructor
     SipSubscribeClient(SipUserAgent& userAgent, 
                        SipDialogMgr& dialogMgr,
@@ -116,6 +110,7 @@ typedef void (*NotifyEventCallback) (const char* earlyDialogHandle,
      */
     UtlBoolean addSubscription(const char* resourceId,
                                const char* eventHeaderValue,
+                               const char* acceptHeaderValue,
                                const char* fromFieldValue,
                                const char* toFieldValue,
                                const char* contactFieldValue,

@@ -27,6 +27,11 @@ HttpService::HttpService()
 {
 }
 
+// Copy constructor
+HttpService::HttpService(const HttpService& rHttpService)
+{
+}
+
 // Destructor
 HttpService::~HttpService()
 {
@@ -34,6 +39,14 @@ HttpService::~HttpService()
 
 /* ============================ MANIPULATORS ============================== */
 
+
+// Assignment operator
+HttpService&
+HttpService::operator=(const HttpService& rhs)
+{
+   if (this == &rhs)            // handle the assignment to self case
+      return *this;
+}
 
 /* ============================ ACCESSORS ================================= */
 

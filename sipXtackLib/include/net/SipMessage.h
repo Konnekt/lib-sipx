@@ -7,6 +7,7 @@
 //
 // $$
 ///////////////////////////////////////////////////////////////////////////////
+
 // Author: Dan Petrie (dpetrie AT SIPez DOT com)
 
 #ifndef _SipMessage_h_
@@ -22,6 +23,10 @@
 #include <net/SdpBody.h>
 #include <net/SdpCodec.h>
 #include <net/Url.h>
+#include <net/SmimeBody.h>
+#include <tapi/sipXtapi.h>
+#include <tapi/sipXtapiEvents.h>
+
 
 class UtlHashMap;
 class SipUserAgent;
@@ -59,28 +64,28 @@ class SipUserAgent;
 #define SIP_CALLID_FIELD "CALL-ID"
 #define SIP_CONFIG_ALLOW_FIELD "CONFIG_ALLOW"
 #define SIP_CONFIG_REQUIRE_FIELD "CONFIG_REQUIRE"
-#define SIP_SHORT_CALLID_FIELD "I"
+#define SIP_SHORT_CALLID_FIELD "i"
 #define SIP_CONTACT_FIELD "CONTACT"
-#define SIP_SHORT_CONTACT_FIELD "M"
+#define SIP_SHORT_CONTACT_FIELD "m"
 #define SIP_CONTENT_LENGTH_FIELD HTTP_CONTENT_LENGTH_FIELD
-#define SIP_SHORT_CONTENT_LENGTH_FIELD "L"
+#define SIP_SHORT_CONTENT_LENGTH_FIELD "l"
 #define SIP_CONTENT_TYPE_FIELD HTTP_CONTENT_TYPE_FIELD
-#define SIP_SHORT_CONTENT_TYPE_FIELD "C"
+#define SIP_SHORT_CONTENT_TYPE_FIELD "c"
 #define SIP_CONTENT_ENCODING_FIELD "CONTENT-ENCODING"
-#define SIP_SHORT_CONTENT_ENCODING_FIELD "E"
+#define SIP_SHORT_CONTENT_ENCODING_FIELD "e"
 #define SIP_CSEQ_FIELD "CSEQ"
 #define SIP_EVENT_FIELD "EVENT"
-#define SIP_SHORT_EVENT_FIELD "O"
+#define SIP_SHORT_EVENT_FIELD "o"
 #define SIP_EXPIRES_FIELD "EXPIRES"
 #define SIP_Q_FIELD "Q"
 #define SIP_FROM_FIELD "FROM"
-#define SIP_SHORT_FROM_FIELD "F"
+#define SIP_SHORT_FROM_FIELD "f"
 #define SIP_MAX_FORWARDS_FIELD "MAX-FORWARDS"
 #define SIP_RECORD_ROUTE_FIELD "RECORD-ROUTE"
 #define SIP_REFER_TO_FIELD "REFER-TO"
-#define SIP_SHORT_REFER_TO_FIELD "R"
+#define SIP_SHORT_REFER_TO_FIELD "r"
 #define SIP_REFERRED_BY_FIELD "REFERRED-BY"
-#define SIP_SHORT_REFERRED_BY_FIELD "B"
+#define SIP_SHORT_REFERRED_BY_FIELD "b"
 #define SIP_REPLACES_FIELD "REPLACES"
 #define SIP_REQUEST_DISPOSITION_FIELD "REQUEST-DISPOSITION"
 #define SIP_REQUESTED_BY_FIELD "REQUESTED-BY"
@@ -90,22 +95,22 @@ class SipUserAgent;
 #define SIP_IF_MATCH_FIELD "SIP-IF-MATCH"
 #define SIP_ETAG_FIELD "SIP-ETAG"
 #define SIP_SUBJECT_FIELD "SUBJECT"
-#define SIP_SHORT_SUBJECT_FIELD "S"
+#define SIP_SHORT_SUBJECT_FIELD "s"
 #define SIP_SUBSCRIPTION_STATE_FIELD "SUBSCRIPTION-STATE"
 #define SIP_SUPPORTED_FIELD "SUPPORTED"
-#define SIP_SHORT_SUPPORTED_FIELD "K"
+#define SIP_SHORT_SUPPORTED_FIELD "k"
 #define SIP_TO_FIELD "TO"
-#define SIP_SHORT_TO_FIELD "T"
+#define SIP_SHORT_TO_FIELD "t"
 #define SIP_UNSUPPORTED_FIELD "UNSUPPORTED"
 #define SIP_USER_AGENT_FIELD HTTP_USER_AGENT_FIELD
 #define SIP_VIA_FIELD "VIA"
-#define SIP_SHORT_VIA_FIELD "V"
+#define SIP_SHORT_VIA_FIELD "v"
 #define SIP_WARNING_FIELD "WARNING"
 #define SIP_MIN_EXPIRES_FIELD "MIN-EXPIRES"
 
 ///custom fields
 #define SIP_LINE_IDENTIFIER "LINEID"
-#define SIPX_IMPLIED_SUB "sipx-implied" ///< integer expiration duration for subscription
+
 // Response codes and text
 #define SIP_TRYING_CODE 100
 #define SIP_TRYING_TEXT "Trying"
@@ -168,7 +173,7 @@ class SipUserAgent;
 #define SIP_UNSUPPORTED_URI_SCHEME_TEXT "Unsupported URI Scheme"
 
 #define SIP_BAD_EXTENSION_CODE 420
-#define SIP_BAD_EXTENSION_TEXT "Extension Not Supported"
+#define SIP_BAD_EXTENSION_TEXT "Bad Extension"
 
 #define SIP_TOO_BRIEF_CODE 423
 #define SIP_TOO_BRIEF_TEXT "Registration Too Brief"
@@ -197,6 +202,12 @@ class SipUserAgent;
 
 #define SIP_BAD_EVENT_CODE 489
 #define SIP_BAD_EVENT_TEXT "Requested Event Type Is Not Supported"
+
+#define SIP_REQUEST_PENDING_CODE 491
+#define SIP_REQUEST_PENDING_TEXT "Request Pending"   
+
+#define SIP_REQUEST_UNDECIPHERABLE_CODE 493
+#define SIP_REQUEST_UNDECIPHERABLE_TEXT "Request Contained an Undecipherable S/MIME body"
 
 #define SIP_5XX_CLASS_CODE 500
 
@@ -252,7 +263,6 @@ class SipUserAgent;
 #define SIP_EVENT_REFER                     "refer"
 #define SIP_EVENT_CONFIG                    "sip-config"
 #define SIP_EVENT_UA_PROFILE                "ua-profile"
-#define SIP_EVENT_PRESENCE                  "presence"
 
 // NOTIFY Subscription-State values
 #define SIP_SUBSCRIPTION_ACTIVE             "active"
@@ -283,7 +293,7 @@ class SipTransaction;
  * message.  A message can be queried as to whether it is a request or a
  * response via the isResponse method.
  */
-class SipMessage : public HttpMessage
+class SipMessage : public HttpMessage, public ISmimeNotifySink
 {
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
 public:
@@ -299,7 +309,7 @@ public:
 
     //! Construct from a buffer
     SipMessage(const char* messageBytes = NULL,
-              int byteCount = -1);
+               int byteCount = -1);
 
     //! Construct from bytes read from a socket
     SipMessage(OsSocket* inSocket,
@@ -325,6 +335,7 @@ public:
 
     void replaceShortFieldNames();
 
+    void replaceLongFieldNames();
 /* ============================ ACCESSORS ================================= */
 
     //! @name SIP URL manipulators
@@ -423,16 +434,8 @@ public:
                        const char* toAddress,
                        const char * farEndContact,
                        const char* contactUrl,
-                       const char* callId,
-                       const char* rtpAddress,
-                       int rtpAudioPort,
-                       int rtcpAudioPort,
-                       int rtpVideoPort,
-                       int rtcpVideoPort,
-                       SdpSrtpParameters* srtpParams,
+                       const char* callId,                       
                        int sequenceNumber = 1,
-                       int numRtpCodecs = 0,
-                       SdpCodec* rtpCodecs[] = NULL,
                        int sessionReinviteTimer = 0);
 
     void setInviteData(const SipMessage* previousInvite,
@@ -443,15 +446,7 @@ public:
                          const char* contactUrl,
                          UtlBoolean inviteFromThisSide,
                          const char* routeField,
-                         const char* rtpAddress,
-                         int rtpAudioPort,
-                         int rtcpaudioPort,
-                         int rtpVideoPort,
-                         int rtcpVideoPort,
                          int sequenceNumber,
-                         int numRtpCodecs,
-                         SdpCodec* rtpCodecs[],
-                         SdpSrtpParameters* srtpParams,
                          int sessionReinviteTimer);
 
     void setOptionsData(const SipMessage* inviteRequest,
@@ -485,6 +480,7 @@ public:
                         const char* callId,
                         int cseq,
                         const char* eventField,
+                        const char* acceptField,
                         const char* id,
                         const char* contact,
                         const char* routeField,
@@ -547,30 +543,31 @@ public:
 
     //@}
 
-    void addSdpBody(const char* rtpAddress,
-                    int rtpAudioPort,
-                    int rtcAudiopPort,
-                    int rtpVideoPort,
-                    int rtcpVideoPort,
+    void addSdpBody(int nRtpContacts,
+                    UtlString hostAddresses[],
+                    int rtpAudioPorts[],
+                    int rtcpAudiopPorts[],
+                    int rtpVideoPorts[],
+                    int rtcpVideoPorts[],
                     int numRtpCodecs,
                     SdpCodec* rtpCodecs[],
-                    SdpSrtpParameters* srtpParams);
+                    SdpSrtpParameters* srtpParams,
+                    int videoBandwidth,
+                    int videoFramerate,
+                    SipMessage* pRequest = NULL);
+
+    void setSecurityAttributes(const SIPXTACK_SECURITY_ATTRIBUTES* const pSecurity);
+    SIPXTACK_SECURITY_ATTRIBUTES* const getSecurityAttributes() const { return mpSecurity; } 
+    bool fireSecurityEvent(const void* pEventData,
+                           const enum SIPX_SECURITY_EVENT,
+                           const enum SIPX_SECURITY_CAUSE,
+                           SIPXTACK_SECURITY_ATTRIBUTES* const pSecurity,
+                           void* pCert = NULL,
+                           char* szSubjectAltName = NULL) const;
 
     //! Accessor to get SDP body, optionally decrypting it if key info. is provided
-    /*
-     *  \param derPkcs12PrivateKey - DER format pkcs12 container for the 
-     *         private key and public key/Certificate for a recipent who is 
-     *         allowed to decrypt this pkcs7 (S/MIME) encapsulated body.
-     *  \param derPkcs12PrivateKeyLength - length in bytes of derPkcs12PrivateKey
-     *  \param pkcs12SymmetricKey - symetric key used to protect (encrypt) the
-     *         derPkcs12PrivateKey (the private key is contained in a
-     *         pkcs12 in an encrypted format to protect it from theft).
-     *  \param pkcs12SymmetricKeyLength - the length in bytes of 
-     *         pkcs12SymmetricKey.
-     */
-    const SdpBody* getSdpBody(const char* derPkcs12 = NULL,
-                              int derPkcs12Length = 0,
-                              const char* pkcs12SymmetricKey = NULL) const;
+    const SdpBody* getSdpBody(SIPXTACK_SECURITY_ATTRIBUTES* const pSecurity = NULL,
+                              const void* pEventData = NULL) const;
 
 
     //! @name Response builders
@@ -614,6 +611,8 @@ public:
                              */
        );
 
+    void setInviteForbidden(const SipMessage* request);
+
     void setRequestBadMethod(const SipMessage* request,
                              const char* allowedMethods);
 
@@ -641,6 +640,8 @@ public:
 
     void setQueuedResponseData(const SipMessage* inviteRequest);
 
+    void setRequestPendingData(const SipMessage* inviteRequest);
+
     void setForwardResponseData(const SipMessage* inviteRequest,
                                 const char* forwardAddress);
 
@@ -654,30 +655,7 @@ public:
 
     void setInviteBusyData(const SipMessage* inviteRequest);
 
-    void setInviteOkData(const char* fromAddress,
-                         const char* toAddress,
-                         const char* callId,                         
-                         const SdpBody* inviteSdp,
-                         const char* rtpAddress,
-                         int rtpAudioPort,
-                         int rtcpAudioPort,
-                         int rtpVideoPort,
-                         int rtcpVideoPort,
-                         int numRtpCodecs,
-                         SdpCodec* rtpCodecs[],
-                         SdpSrtpParameters& srtpParams,
-                         int sequenceNumber = 1,
-                         const char* localContact = NULL);
-
     void setInviteOkData(const SipMessage* inviteRequest,                         
-                         const char* rtpAddress,
-                         int rtpAudioPort,
-                         int rtcpAudioPort,
-                         int rtpVideoPort,
-                         int rtcpVideoPort,
-                         int numRtpCodecs,
-                         SdpCodec* rtpCodecs[],
-                         SdpSrtpParameters& srtpParams,
                          int maxSessionExpiresSeconds,
                          const char* localContact = NULL);
 
@@ -689,6 +667,7 @@ public:
 
     void setReferFailedData(const SipMessage* referRequest);
 
+    void setEventData(void* pEventData) { mpEventData = pEventData; }
     //@}
 
 
@@ -777,9 +756,9 @@ public:
                                      UtlString& protocol) const;
 
     static void convertProtocolStringToEnum(const char* protocolString,
-                         OsSocket::IpProtocolSocketType& protocolEnum);
+                        enum OsSocket::SocketProtocolTypes& protocolEnum);
 
-    static void convertProtocolEnumToString(OsSocket::IpProtocolSocketType protocolEnum,
+    static void convertProtocolEnumToString(enum OsSocket::SocketProtocolTypes protocolEnum,
                                             UtlString& protocolString);
 
     UtlBoolean getWarningCode(int* warningCode, int index = 0) const;
@@ -840,16 +819,13 @@ public:
     UtlBoolean getRequestDisposition(int tokenIndex,
                                     UtlString* dispositionToken) const;
 
-    UtlBoolean getSessionExpires(int* sessionExpiresSeconds) const;
+    UtlBoolean getSessionExpires(int* sessionExpiresSeconds, UtlString* refresher) const;
 
     void setSessionExpires(int sessionExpiresSeconds);
 
     UtlBoolean getSupportedField(UtlString& supportedField) const;
 
     void setSupportedField(const char* supportedField);
-
-    //! Test whether "token" is present in the Supported: header.
-    UtlBoolean SipMessage::isInSupportedField(const char* token) const;
 
     //! Get the SIP-IF-MATCH field from the PUBLISH request
     UtlBoolean getSipIfMatchField(UtlString& sipIfMatchField) const;
@@ -1012,6 +988,8 @@ public:
 
     UtlBoolean isRequireExtensionSet(const char* extension) const;
 
+    bool smimeEncryptSdp(const void* pEventData);
+    
     //! Is this a header parameter we want to allow users or apps. to
     //  pass through in the URL
     static UtlBoolean isUrlHeaderAllowed(const char*);
@@ -1019,9 +997,14 @@ public:
     //! Does this header allow multiple values, or only one.
     static UtlBoolean isUrlHeaderUnique(const char*);
 
-    static void parseViaParameters( const char* viaField
-                                   ,UtlContainer& viaParameterList
+    static void parseViaParameters( const char* viaField,
+                                    UtlContainer& viaParameterList
                                    );
+    // ISmimeNotifySink implementations                               
+    void OnError(SIPX_SECURITY_EVENT event, SIPX_SECURITY_CAUSE cause);
+    bool OnSignature(void* pCert, char* szSubjAltName);        
+    bool getFromThisSide() const { return mbFromThisSide; }
+    void setFromThisSide(const bool bFromThisSide) { mbFromThisSide = bFromThisSide; }
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
@@ -1030,8 +1013,11 @@ protected:
 private:
 
     SipTransaction* mpSipTransaction;
-    
+    mutable SIPXTACK_SECURITY_ATTRIBUTES* mpSecurity;
+    mutable void* mpEventData;
+
     UtlString mLocalIp;
+    bool mbFromThisSide;
 
     //SDUA
     UtlString m_dnsProtocol ;
@@ -1059,7 +1045,6 @@ private:
 
     // Singleton object to carry the field properties.
     static SipMessageFieldProps* spSipMessageFieldProps;
-
 };
 
 /* ============================ INLINE METHODS ============================ */

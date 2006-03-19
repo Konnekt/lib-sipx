@@ -451,10 +451,6 @@ SipDialogEvent::operator=(const SipDialogEvent& rhs)
    if (this == &rhs)            // handle the assignment to self case
       return *this;
 
-   // TODO: need to add code to copy members here
-   OsSysLog::add(FAC_SIP, PRI_ERR,
-       "SipDialogEvent::operator= not implemented");
-
    return *this;
 }
 

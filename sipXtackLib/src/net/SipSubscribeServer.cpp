@@ -125,10 +125,9 @@ SipSubscribeServer::SipSubscribeServer(const SipSubscribeServer& rSipSubscribeSe
 // Destructor
 SipSubscribeServer::~SipSubscribeServer()
 {
-   /*
-    * Don't delete  mpDefaultContentMgr, mpDefaultSubscriptionMgr, or mpDefaultEventHandler
-    *   they are owned by whoever constructed this server.
-    */
+    delete mpDefaultContentMgr;
+    delete mpDefaultSubscriptionMgr;
+    delete mpDefaultEventHandler;
 
     // Iterate through and delete all the event data
     // TODO:

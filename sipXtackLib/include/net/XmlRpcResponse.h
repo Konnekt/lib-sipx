@@ -1,13 +1,12 @@
-// 
-// 
-// Copyright (C) 2005 SIPfoundry Inc.
+//
+// Copyright (C) 2004-2006 SIPfoundry Inc.
 // Licensed by SIPfoundry under the LGPL license.
-// 
-// Copyright (C) 2005 Pingtel Corp.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
 // Licensed to SIPfoundry under a Contributor Agreement.
-// 
+//
 // $$
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef _XMLRPCRESPPONSE_H_
 #define _XMLRPCRESPPONSE_H_
@@ -22,25 +21,25 @@
 #include "net/XmlRpcBody.h"
 
 // DEFINES
-#define ILL_FORMED_CONTENTS_FAULT_STRING "Ill-formed XML contents"
+#define ILL_FORMED_CONTENTS_FAULT_CODE -1
+#define ILL_FORMED_CONTENTS_FAULT_STRING "Ill-formed XML-RPC contents"
+
+#define METHOD_NAME_FAULT_CODE -2
 #define METHOD_NAME_FAULT_STRING "Method name is missing"
+
+#define UNREGISTERED_METHOD_FAULT_CODE -3
 #define UNREGISTERED_METHOD_FAULT_STRING "Method has not been registered"
+
+#define AUTHENTICATION_REQUIRED_FAULT_CODE -4
 #define AUTHENTICATION_REQUIRED_FAULT_STRING "Authentication is required"
+
+#define EMPTY_PARAM_VALUE_FAULT_CODE -5
 #define EMPTY_PARAM_VALUE_FAULT_STRING "Empty param value"
-#define CONNECTION_FAILURE_FAULT_STRING "Connection Failed"
 
 // MACROS
 // EXTERNAL FUNCTIONS
 // EXTERNAL VARIABLES
 // CONSTANTS
-
-// for backward compatibility with old #define codes
-#define ILL_FORMED_CONTENTS_FAULT_CODE     XmlRpcResponse::IllFormedContents
-#define METHOD_NAME_FAULT_CODE             XmlRpcResponse::InvalidMethodName
-#define UNREGISTERED_METHOD_FAULT_CODE     XmlRpcResponse::UnregisteredMethod
-#define AUTHENTICATION_REQUIRED_FAULT_CODE XmlRpcResponse::AuthenticationRequired
-#define EMPTY_PARAM_VALUE_FAULT_CODE       XmlRpcResponse::EmptyParameterValue
-
 // STRUCTS
 // TYPEDEFS
 
@@ -68,22 +67,6 @@ public:
    /// Destructor
    virtual ~XmlRpcResponse();
 
-   /// Fault code values.
-   typedef enum
-      {
-         IllFormedContents = -1,      ///< xmlrpc message was not well formed xml
-         InvalidMethodName = -2,      ///< name is not syntactically valid
-         UnregisteredMethod = -3,     ///< no server found for requested method 
-         AuthenticationRequired = -4, ///< request was not properly authenticated
-         EmptyParameterValue = -5,    ///< missing value for a required parameter
-         ConnectionFailure = -6,      ///< unable to connect to service
-         HttpFailure = -7             ///< http returned a non-2xx status
-      } FaultCode;
-   /**
-    * Values used by this subsystem in the fault code;
-    * Applications may use these or any integer value.
-    */
-
 /* ============================ MANIPULATORS ============================== */
 
    /// Set the XML-RPC response
@@ -106,7 +89,7 @@ public:
    bool parseXmlRpcResponse(UtlString& responseContent); ///< response content from XML-RPC request
    
    /// Get the content of the response
-   XmlRpcBody* getBody();
+   XmlRpcBody* getBody() { return mpResponseBody; };
          
 /* ============================ ACCESSORS ================================= */
 

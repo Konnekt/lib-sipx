@@ -1,10 +1,12 @@
 //
-// Copyright (C) 2004, 2005 Pingtel Corp.
-// 
+// Copyright (C) 2004-2006 SIPfoundry Inc.
+// Licensed by SIPfoundry under the LGPL license.
+//
+// Copyright (C) 2004-2006 Pingtel Corp.  All rights reserved.
+// Licensed to SIPfoundry under a Contributor Agreement.
 //
 // $$
-////////////////////////////////////////////////////////////////////////
-//////
+///////////////////////////////////////////////////////////////////////////////
 
 
 #ifndef _Url_h_
@@ -136,18 +138,11 @@ public:
      */
     Url& operator=(const char* urlString);
 
-    //! Serialize this URL to a string in name-addr format, suitable for use
-    //  as a field in a header.
+    //! Serialize this URL to a string
     void toString(UtlString& urlString) const;
 
-    //! Serialize this URL to a string in name-addr format, suitable for use
-    //  as a field in a header.
+    //! Serialize this URL to a string
     UtlString toString() const;
-
-    /// Gets the serialized URL as a string in addr-spec format (with
-    //  no display name or field parameters), suitable for use as a request
-    //  URI.
-    void getUri(UtlString& Uri);
 
     //! Debug dump to STDOUT
     void dump();
@@ -160,7 +155,7 @@ public:
 
 /* ============================ ACCESSORS ================================= */
 
-    /// Construct the canonical identity.
+    /// Construct the cannonical identity.
     void getIdentity(UtlString& identity) const;
     /**<
      * In some applications this is used to compare if this
@@ -244,7 +239,7 @@ public:
                                int index = 0 
                                );
     /**<
-     * Gets the index occurrence of the named parameter (the same parameter name may
+     * Gets the index occurance of the named parameter (the same parameter name may
      * occur multiple times in a URL).
      * @return TRUE if the indicated parameter exists
      */
@@ -410,13 +405,9 @@ public:
      * possible to omit them.
      */
 
-    /// Escape a string as a gen_value, which is what field-parameters
-    //! use for values.
-    static void Url::gen_value_escape(UtlString& escapedText);
-
-    /// Un-escape a string as a gen_value, which is what field-parameters
-    //! use for values.
-    static void Url::gen_value_unescape(UtlString& escapedText);
+    /// Gets the serialized URL as a string (with no display name or 
+    //! field parameters)
+    void getUri(UtlString& Uri);
 
 /* ============================ INQUIRY =================================== */
 
@@ -428,8 +419,7 @@ public:
    static UtlBoolean isDigitString(const char* dialedCharacters);
 
    /// Compare two URLs to see if the have the same user, host and port
-   /* Follows the rules of RFC 3261 section 19.1.4, especially that
-    * that no port specifies is NOT the same as the default port for
+   /* Assumes that no port set is the same as the default port for
     * the URL type/protocol.  Also assumes that host is \a not case 
     * sensative, but that user id \a is case sensative.
     * \return TRUE if the user Id, host and port are the same

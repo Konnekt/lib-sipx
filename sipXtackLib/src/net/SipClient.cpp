@@ -24,6 +24,10 @@
 #include <os/OsDatagramSocket.h>
 #include <os/OsSysLog.h>
 #include <os/OsEvent.h>
+#ifdef SIP_TLS
+#include "os/OsTLSConnectionSocket.h"
+#include "os/OsTLSClientConnectionSocket.h"
+#endif
 
 #define SIP_DEFAULT_RTT 500
 
@@ -56,24 +60,25 @@ l: 0 \n\r
 
 // Constructor
 SipClient::SipClient(OsSocket* socket) :
-   OsTask("SipClient-%d"),
-   clientSocket(socket),
-   mSocketType(socket ? socket->getIpProtocol() : OsSocket::UNKNOWN),
-   sipUserAgent(NULL),
-   mRemoteViaPort(PORT_NONE),
-   mRemoteReceivedPort(PORT_NONE),
-   mSocketLock(OsBSem::Q_PRIORITY, OsBSem::FULL),
-   mFirstResendTimeoutMs(SIP_DEFAULT_RTT * 4), // for first transcation time out
-   mInUseForWrite(0),
-   mWaitingList(NULL),
-   mbSharedSocket(FALSE)
-{
+ OsTask("SipClient-%d"),
+ mSocketLock(OsBSem::Q_FIFO, OsBSem::FULL)
+ {
+   //set default value for first transcation time out
+   mFirstResendTimeoutMs = SIP_DEFAULT_RTT * 4;
+   sipUserAgent = NULL;
+   clientSocket = socket;
+   mRemoteViaPort = PORT_NONE;
+   mRemoteReceivedPort = PORT_NONE;
+   mWaitingList = NULL;
+   mInUseForWrite = 0;
+   mbSharedSocket = FALSE ;
+
    touch();
 
-   if(clientSocket)
+   if(socket)
    {
-       clientSocket->getRemoteHostName(&mRemoteHostName);
-       clientSocket->getRemoteHostIp(&mRemoteSocketAddress, &mRemoteHostPort);
+       socket->getRemoteHostName(&mRemoteHostName);
+       socket->getRemoteHostIp(&mRemoteSocketAddress, &mRemoteHostPort);
 
 #ifdef TEST_PRINT
        UtlString remoteSocketHost;
@@ -89,7 +94,7 @@ SipClient::SipClient(OsSocket* socket) :
 
 // Copy constructor
 SipClient::SipClient(const SipClient& rSipClient) 
-    : mSocketLock(OsBSem::Q_PRIORITY, OsBSem::FULL)
+    : mSocketLock(OsBSem::Q_FIFO, OsBSem::FULL)
 {
 }
 
@@ -106,12 +111,12 @@ SipClient::~SipClient()
     if(clientSocket)
     {
         // Close the socket to unblock the run method
-        // in case it is blocked in a waitForReadyToRead or
+        // in case it is blocked in a isReadyToRead or
         // a read on the clientSocket.  This should also
         // cause the run method to exit.
 #ifdef TEST_PRINT
-        OsSysLog::add(FAC_SIP, PRI_DEBUG, "SipClient::~SipClient 0%x socket 0%x closing %s socket",
-            this, clientSocket, ipProtocolString(mSocketType));
+        OsSysLog::add(FAC_SIP, PRI_DEBUG, "SipClient::~SipClient 0%x socket 0%x closing socket type: %d",
+            this, clientSocket, clientSocket->getIpProtocol());
 
         osPrintf("SipClient::~SipClient closing socket\n");
 #endif
@@ -189,7 +194,7 @@ int SipClient::run(void* runArg)
     
     int readBufferSize = HTTP_DEFAULT_SOCKET_BUFFER_SIZE;
 
-    if(mSocketType == OsSocket::UDP)
+    if(clientSocket->getIpProtocol() == OsSocket::UDP)
     {
         readBufferSize = MAX_UDP_PACKET_SIZE;
     }
@@ -211,16 +216,18 @@ int SipClient::run(void* runArg)
             // clientSocket shouldn't be null
             // in this case some sort of race with the destructor.  This should
             // not actually ever happen.
-#ifdef TEST_SOCKET
-            OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                          "SipClient::run readAMessage = %d, "
-                          "buffer.length() = %d, clientSocket = %p",
-                          readAMessage, buffer.length(), clientSocket);
+
+            // first, if this is a TLS socket, make sure the handshake is complete
+#ifdef SIP_TLS
+            OsTLSClientConnectionSocket* pSslSocket = dynamic_cast<OsTLSClientConnectionSocket*> (clientSocket);
+            if (pSslSocket)
+            {
+                pSslSocket->waitForHandshake(-1);
+            }
 #endif
-            if (clientSocket
-                && ((readAMessage
-                     && buffer.length() >= MINIMUM_SIP_MESSAGE_SIZE)
-                    || waitForReadyToRead()))
+            if(clientSocket 
+               && ((readAMessage && buffer.length() > MINIMUM_SIP_MESSAGE_SIZE)
+                   || isReadyToRead()))
             {
 #ifdef LOG_TIME
                 eventTimes.addEvent("locking");
@@ -236,35 +243,31 @@ int SipClient::run(void* runArg)
                 // not actually ever happen.
                 if(clientSocket)
                 {
-                   if (OsSysLog::willLog(FAC_SIP, PRI_DEBUG))
-                   {
-                      OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                                    "SipClient::run %p socket %p host: %s "
-                                    "sock addr: %s via addr: %s rcv addr: %s "
-                                    "sock type: %s read ready %s",
-                                    this, clientSocket,
-                                    mRemoteHostName.data(),
-                                    mRemoteSocketAddress.data(),
-                                    mRemoteViaAddress.data(),
-                                    mReceivedAddress.data(),
-                                    OsSocket::ipProtocolString(clientSocket->getIpProtocol()),
-                                    isReadyToRead() ? "READY" : "NOT READY"
-                         );
-                   }
+                // bandreasen 8/30/2005
+                // WARNING: calling isReadyToRead BLOCKS -- if readAMessage is true, 
+                // this gums up the works.  DO NOT UNCOMMENT THIS WITHOUT FIXING
+                // THIS CODE.
+/*
+                   OsSysLog::add(FAC_SIP, PRI_DEBUG,
+                                 "SipClient::run %p socket %p host: %s "
+                                 "sock addr: %s via addr: %s rcv addr: %s "
+                                 "sock type: %s read locked %s",
+                                 this, clientSocket,
+                                 mRemoteHostName.data(),
+                                 mRemoteSocketAddress.data(),
+                                 mRemoteViaAddress.data(),
+                                 mReceivedAddress.data(),
+                                 clientSocket->ipProtocolString(),
+                                 isReadyToRead() ? "READY" : "NOT READY"
+                                 );
+*/
+
 #ifdef LOG_TIME
                     eventTimes.addEvent("reading");
 #endif
+                    message->setFromThisSide(false);
                     bytesRead = message->read(clientSocket, readBufferSize, &buffer);
 
-#                   if 0 // turn on to check socket read problems
-                    OsSysLog::add(FAC_SIP, PRI_DEBUG,
-                                  "SipClient::run client %p read %d bytes",
-                                  this, bytesRead);
-#                   endif
-
-#ifdef LOG_TIME
-                    eventTimes.addEvent("read");
-#endif
                 }
                 else
                 {
@@ -273,7 +276,6 @@ int SipClient::run(void* runArg)
                                  this);
                     bytesRead = 0;
                 }
-
                 mSocketLock.release();
 
 #ifdef LOG_TIME
@@ -368,7 +370,7 @@ int SipClient::run(void* runArg)
                         message->setDateField();
                     }
 
-                    message->setSendProtocol(mSocketType);
+                    message->setSendProtocol(clientSocket->getIpProtocol());
                     message->setTransportTime(touchedTime);
                     clientSocket->getRemoteHostIp(&socketRemoteHost);
 
@@ -419,11 +421,11 @@ int SipClient::run(void* runArg)
                             message->setLastViaTag(portString, "rport");
                         }
 
-                        if (   (   mSocketType == OsSocket::TCP
-                                || mSocketType == OsSocket::SSL_SOCKET
-                                )
-                            && !receivedPortSet
-                            )
+                        int ipProtocolType = clientSocket->getIpProtocol();
+
+                        if(   (   ipProtocolType == OsSocket::TCP
+                               || ipProtocolType == OsSocket::SSL_SOCKET)
+                           && !receivedPortSet)
                         {
                             // we can use this socket as if it were
                             // connected to the port specified in the
@@ -491,15 +493,9 @@ int SipClient::run(void* runArg)
                 // contains only bytes which are part of the next message
                 buffer.remove(0, bytesRead);
 
-                if(   mSocketType == OsSocket::UDP
-                   && buffer.length()
-                   )
+                if(buffer.length())
                 {
-                    OsSysLog::add(FAC_SIP, 
-                                  // For UDP, this is an error, but not
-                                  // for TCP or TLS.
-                                  (clientSocket->getIpProtocol() ==
-                                   OsSocket::UDP) ? PRI_ERR : PRI_DEBUG,
+                    OsSysLog::add(FAC_SIP, PRI_ERR,
                                   "SipClient::run buffer residual bytes: %d\n===>%s<===\n",
                                   buffer.length(), buffer.data());
                 }
@@ -516,29 +512,28 @@ int SipClient::run(void* runArg)
                 delete message;
             }
             message = NULL;
-        }
-        else
-        {
-           OsSysLog::add(FAC_SIP, PRI_ERR, "SipClient::run client 0%p socket is NULL yielding",
-                         this);
-           yield();  // I do not know why this yield is here
-        }
-    } // while this client is ok
+                }
+                else
+                {
+            OsSysLog::add(FAC_SIP, PRI_ERR, "SipClient::run client 0%p socket is NULL yielding",
+                        this);
+            yield();  // I do not know why this yield is here
+                }
+        } // while this client is ok
 
     return(0);
 }
 
-// Test whether the socket is ready to read. (Does not block.)
 UtlBoolean SipClient::isReadyToRead()
 {
-   return clientSocket->isReadyToRead(0);
+    UtlBoolean readyToRead = FALSE;
+
+    readyToRead = clientSocket->isReadyToRead(-1);
+
+
+    return(readyToRead);
 }
 
-// Wait until the socket is ready to read (or has an error).
-UtlBoolean SipClient::waitForReadyToRead()
-{
-   return clientSocket->isReadyToRead(-1);
-}
 
 UtlBoolean SipClient::send(SipMessage* message)
 {
@@ -617,7 +612,9 @@ UtlBoolean SipClient::sendTo(const SipMessage& message,
 
     if(clientSocket)
     {
-       switch (mSocketType)
+       int sockType = clientSocket->getIpProtocol();
+
+       switch (sockType)
        {
        case OsSocket::UDP:
        {
@@ -657,21 +654,14 @@ UtlBoolean SipClient::sendTo(const SipMessage& message,
           break;
 
        default:
-          OsSysLog::add(FAC_SIP, PRI_CRIT,
-                        "SipClient::sendTo called for invalid socket type %d", mSocketType
+          OsSysLog::add(FAC_SIP, PRI_ERR,
+                        "SipClient::sendTo called for invalid socket type %d", sockType
                         );
           sendOk = FALSE;
        }
     }
-    else
-    {
-       OsSysLog::add(FAC_SIP, PRI_CRIT,
-                     "SipClient::sendTo called for client without socket"
-                     );
-       sendOk = FALSE;
-    }
 
-    return(sendOk);
+        return(sendOk);
 }
 
 // Assignment operator

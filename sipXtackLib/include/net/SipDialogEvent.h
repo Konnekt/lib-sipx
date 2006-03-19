@@ -25,7 +25,7 @@
 // EXTERNAL VARIABLES
 // CONSTANTS
 
-
+#define DIALOG_EVENT_CONTENT_TYPE "application/dialog-info+xml"
 #define DIALOG_EVENT_TYPE "dialog"
 
 #define BEGIN_DIALOG_INFO "<dialog-info xmlns=\"urn:ietf:params:xml:ns:dialog-info\""

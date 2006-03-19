@@ -33,6 +33,7 @@
 // TYPEDEFS
 // FORWARD DECLARATIONS
 class SipUserAgent;
+class SipServerBrokerListener;
 
 //:Class short description which may consist of multiple lines (note the ':')
 // Class detailed description which may extend to multiple lines
@@ -79,6 +80,7 @@ public:
 
 /* //////////////////////////// PROTECTED ///////////////////////////////// */
 protected:
+    friend class SipServerBrokerListener;
 
     SipClient* createClient(const char* hostAddress,
                             int hostPort,
@@ -103,6 +105,7 @@ protected:
     UtlHashMap mServerSocketMap;
     UtlHashMap mServerPortMap;
     UtlHashMap mServers;
+    SipServerBrokerListener* mpServerBrokerListener;
     
 
 

@@ -40,7 +40,7 @@
 #include "utl/UtlTokenizer.h"
 #include "net/TapiMgr.h"
 
-#define UNREGISTER_CSEQ_NUMBER      2146483648   // 2^31 - 1,000,000
+#define UNREGISTER_CSEQ_NUMBER   2146483648   // 2^31 - 1,000,000
 #define MIN_REFRESH_TIME_SECS       20 // Floor for re-subscribes/re-registers
 
 // EXTERNAL FUNCTIONS
@@ -294,7 +294,7 @@ SipRefreshMgr::newRegisterMsg(
             registerCallId );
 
         UtlString contactField;
-        getContactField(fromUrl, contactField, lineId, pPreferredContactUri);
+        getContactField( fromUrl, contactField, lineId, pPreferredContactUri);
 
         registerUrl(fromUrl.toString(), // from
                     fromUrl.toString(), // to                    
@@ -476,15 +476,34 @@ SipRefreshMgr::unRegisterUser (
             contact.setFieldParameter(SIP_EXPIRES_FIELD,"0");
             sipMsg.setContactField(contact.toString());
             sipMsg.removeHeader(SIP_EXPIRES_FIELD,0);
+    
+            UtlString localIp;
+            int localPort;
+            
+            OsSocket::SocketProtocolTypes protocol = OsSocket::UDP;
+            UtlString fromString;
+            
+            fromUrl.toString(fromString);
+            if (fromString.contains("sips:") || fromString.contains("transport=tls"))
+            {
+                protocol = OsSocket::SSL_SOCKET;
+            }
+            else if (fromString.contains("transport=tcp"))
+            {
+                protocol = OsSocket::TCP;
+            }
+            mMyUserAgent->getLocalAddress(&localIp, &localPort, protocol);
+            sipMsg.setLocalIp(localIp);
+
             fireSipXLineEvent(Uri, lineId.data(), LINESTATE_UNREGISTERING, LINESTATE_UNREGISTERING_NORMAL);
             
             // clear out any pending register requests
             this->removeAllFromRequestList(&sipMsg);
             sendRequest(sipMsg, SIP_REGISTER_METHOD);
-            addToRegisterList(&sipMsg);
+                addToRegisterList(&sipMsg);
+            }
         }
     }
-}
 
 UtlBoolean 
 SipRefreshMgr::isDuplicateRegister (
@@ -553,6 +572,22 @@ SipRefreshMgr::sendRequest (
 #endif
 
     // Keep a copy for reschedule
+    UtlString localIp;
+    int localPort;
+    OsSocket::SocketProtocolTypes protocol = OsSocket::UDP;
+    UtlString toField;
+    request.getToField(&toField);
+    if (toField.contains("sips:") || toField.contains("transport=tls"))
+    {
+        protocol = OsSocket::SSL_SOCKET;
+    }
+    if (toField.contains("transport=tcp"))
+    {
+        protocol = OsSocket::TCP;
+    }
+    
+    mMyUserAgent->getLocalAddress(&localIp, &localPort, protocol);
+    request.setLocalIp(localIp);
     if ( !mMyUserAgent->send( request, getMessageQueue() ) )
     {
         UtlString toField ;    
@@ -774,7 +809,7 @@ SipRefreshMgr::rescheduleRequest(
         // check for minumum and maximum values.
         if ( !sendImmediate )
         {
-            // mseconds to seconds
+            //mseconds to seconds
             if ( secondsFromNow < MIN_REFRESH_TIME_SECS )
             {
                 secondsFromNow = MIN_REFRESH_TIME_SECS;
@@ -951,18 +986,20 @@ SipRefreshMgr::processOKResponse(
         if ( requestRefreshPeriod == 0 )
         {
 
-                Url url;
-                UtlString lineId;
-                request->getToUrl(url);
-                url.getIdentity(lineId);
-                lineId = "sip:" + lineId; 
-                fireSipXLineEvent(url, lineId.data(), LINESTATE_UNREGISTERED, LINESTATE_UNREGISTERED_NORMAL);
-
                 // if its an unregister, remove all related messasges 
                 // from the appropriate request list
                 response->setCSeqField(-1, method);
                 this->removeAllFromRequestList(response);
                 // TODO - should also destroy the timer now
+
+                Url url;
+                UtlString lineId;
+                request->getToUrl(url);
+                url.getIdentity(lineId);
+                lineId = "sip:" + lineId; 
+
+                fireSipXLineEvent(url, lineId.data(), LINESTATE_UNREGISTERED, LINESTATE_UNREGISTERED_NORMAL);
+
         } 
         else if ( responseRefreshPeriod > 0 )
         {
@@ -1170,6 +1207,22 @@ SipRefreshMgr::registerUrl(
     // UA is started, it will kick off those registrations.
     if ( isUAStarted() )
     {       
+        UtlString localIp;
+        int localPort;
+        OsSocket::SocketProtocolTypes protocol = OsSocket::UDP;
+        
+        UtlString uri(registerUri);
+        if (uri.contains("sips:") || uri.contains("transport=tls"))
+        {
+            protocol = OsSocket::SSL_SOCKET;
+        }
+        if (uri.contains("transport=tcp"))
+        {
+            protocol = OsSocket::TCP;
+        }
+
+        mMyUserAgent->getLocalAddress(&localIp, &localPort, protocol);
+        regMessage->setLocalIp(localIp);
         if (sendRequest(*regMessage , SIP_REGISTER_METHOD) != OS_SUCCESS)
         {
             // if we couldn't send, go ahead and remove the register request from the list
@@ -1272,12 +1325,14 @@ SipRefreshMgr::handleMessage( OsMsg& eventMessage )
                     {
                         // Find the request which goes with this response
                         SipMessage* request = mRegisterList.getRequestFor(sipMsg);
-
-                        // increment the CSeq number in the stored request
-                        request->incrementCSeqNumber();
-                        addToRegisterList(request);
+                        if ( request )
+                        {
+                           // increment the CSeq number in the stored request
+                           request->incrementCSeqNumber();
+                           addToRegisterList(request);
                         
-                        retryWithAuthentication = TRUE;
+                           retryWithAuthentication = TRUE;
+                        }
                     } 
                     else if ( strcmp(method.data(), SIP_SUBSCRIBE_METHOD) == 0 )
                     {
@@ -1555,6 +1610,25 @@ void SipRefreshMgr::unSubscribeAll()
             // auth challenges
             listMessage->clearDNSField() ;
             listMessage->resetTransport() ;
+
+            UtlString localIp;
+            int localPort;
+
+            OsSocket::SocketProtocolTypes protocol = OsSocket::UDP;
+            UtlString url;
+            listMessage->getToField(&url);
+            if (url.contains("sips:") || url.contains("transport=tls"))
+            {
+                protocol = OsSocket::SSL_SOCKET;
+            }
+            if (url.contains("transport=tcp"))
+            {
+                protocol = OsSocket::TCP;
+            }
+
+            mMyUserAgent->getLocalAddress(&localIp, &localPort, protocol);
+            listMessage->setLocalIp(localIp);
+            
             mMyUserAgent->send(*listMessage);
             mSubscribeList.remove(iteratorHandle);
 
@@ -2011,8 +2085,6 @@ void SipRefreshMgr::fireSipXLineEvent(const Url& url, const UtlString& lineId, c
         }
         setLastLineEvent(lineId.data(), event);
 
-        TapiMgr::getInstance().fireLineEvent(this, lineId.data(), event, cause);
-        
         if (event == LINESTATE_UNREGISTERED)
         {
             if (getLineMgr())
@@ -2020,6 +2092,7 @@ void SipRefreshMgr::fireSipXLineEvent(const Url& url, const UtlString& lineId, c
                 mpLineMgr->lineHasBeenUnregistered(url);
             }
         }        
+        TapiMgr::getInstance().fireLineEvent(this, lineId.data(), event, cause);
     }
 }
 
@@ -2046,7 +2119,9 @@ void SipRefreshMgr::setLastLineEvent(const UtlString& lineId, const SIPX_LINESTA
     {
         mpLastLineEventMap = new UtlHashMap();
     }
-//    mLastLineEventMap.remove(& UtlString(lineId.data()));
+    if( mpLastLineEventMap->find(&lineId) )
+       mpLastLineEventMap->destroy(& UtlString(lineId.data()));
+
     mpLastLineEventMap->insertKeyAndValue(new UtlString(lineId.data()), new UtlInt(eMajor));
     return;
 }

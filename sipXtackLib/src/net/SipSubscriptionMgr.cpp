@@ -134,7 +134,7 @@ SipSubscriptionMgr::~SipSubscriptionMgr()
     // deleting mpDialogMgr causes a memory leak.
     // This is now causing a crash on Linux as well.  The whole thing
     // needs more investigation.
-    //delete mpDialogMgr ;
+    delete mpDialogMgr ;
 
     // Iterate through and delete all the dialogs
     // TODO:
@@ -206,13 +206,8 @@ UtlBoolean SipSubscriptionMgr::updateDialogInfo(const SipMessage& subscribeReque
         }
 
         // Acceptable expiration, create a subscription and dialog
-        if(expiration >= mMinExpiration ||
-           expiration == 0 ||
-           // :WORKAROUND:  Also allow expiration == 1, to support the
-           // 1-second subscriptions the pick-up agent makes because
-           // current Snom phones do not respond to 0-second subscriptions.
-           // See XPB-399 and ENG-319.
-           expiration == 1)
+        if(expiration > mMinExpiration ||
+           expiration == 0)
         {
             // Create a dialog and subscription state even if
             // the expiration is zero as we need the dialog info
@@ -255,12 +250,12 @@ UtlBoolean SipSubscriptionMgr::updateDialogInfo(const SipMessage& subscribeReque
             // Set the contact to the same request URI that came in
             UtlString contact;
             subscribeRequest.getRequestUri(&contact);
-            
+
             // Add the angle brackets for contact
             Url url(contact);
             url.includeAngleBrackets();
             contact = url.toString();
-            
+
             subscribeResponse.setResponseData(subscribeCopy, 
                                             SIP_ACCEPTED_CODE,
                                             SIP_ACCEPTED_TEXT, 
@@ -337,7 +332,9 @@ UtlBoolean SipSubscriptionMgr::updateDialogInfo(const SipMessage& subscribeReque
                 mSubscriptionStatesByDialogHandle.find(&dialogHandle);
             if(state)
             {
-                state->mExpirationDate = expiration;
+                // 20/12/2005 - Joanne Brunet
+                long now = OsDateTime::getSecsSinceEpoch();
+                state->mExpirationDate = now + expiration;
                 if(state->mpLastSubscribeRequest)
                 {
                     delete state->mpLastSubscribeRequest;
@@ -403,7 +400,7 @@ UtlBoolean SipSubscriptionMgr::updateDialogInfo(const SipMessage& subscribeReque
                 // Set the contact to the same request URI that came in
                 UtlString contact;
                 subscribeRequest.getRequestUri(&contact);
- 
+
                 // Add the angle brackets for contact
                 Url url(contact);
                 url.includeAngleBrackets();

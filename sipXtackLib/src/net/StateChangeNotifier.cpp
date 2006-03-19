@@ -27,6 +27,11 @@ StateChangeNotifier::StateChangeNotifier()
 {
 }
 
+// Copy constructor
+StateChangeNotifier::StateChangeNotifier(const StateChangeNotifier& rStateChangeNotifier)
+{
+}
+
 // Destructor
 StateChangeNotifier::~StateChangeNotifier()
 {
@@ -34,6 +39,14 @@ StateChangeNotifier::~StateChangeNotifier()
 
 /* ============================ MANIPULATORS ============================== */
 
+
+// Assignment operator
+StateChangeNotifier&
+StateChangeNotifier::operator=(const StateChangeNotifier& rhs)
+{
+   if (this == &rhs)            // handle the assignment to self case
+      return *this;
+}
 
 /* ============================ ACCESSORS ================================= */
 

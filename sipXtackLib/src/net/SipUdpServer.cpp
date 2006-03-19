@@ -16,7 +16,7 @@
 #include <net/SipUserAgent.h>
 #include <net/Url.h>
 #include <os/OsDateTime.h>
-#include <os/OsStunDatagramSocket.h>
+#include <os/OsNatDatagramSocket.h>
 #include <os/HostAdapterAddress.h>
 #include <utl/UtlHashMapIterator.h>
 
@@ -52,11 +52,15 @@ SipUdpServer::SipUdpServer(int port,
                            const char* szBoundIp) :
    SipProtocolServerBase(userAgent, "UDP", "SipUdpServer-%d"),
    mStunRefreshSecs(28), 
-   mStunOptions(0)  
+   mStunPort(PORT_NONE)  
 {
     OsSysLog::add(FAC_SIP, PRI_DEBUG,
                   "SipUdpServer::_ port = %d, bUseNextAvailablePort = %d, szBoundIp = '%s'",
                   port, bUseNextAvailablePort, szBoundIp);
+
+#ifdef _DISABLE_MULTIPLE_INTERFACE_SUPPORT
+    szBoundIp = "0.0.0.0" ;
+#endif
 
     if (szBoundIp && 0 != strcmp(szBoundIp, "0.0.0.0"))
     {
@@ -140,8 +144,8 @@ OsStatus SipUdpServer::createServerSocket(const char* szBoundIp,
                                           int udpReadBufferSize)
 {
     OsStatus rc = OS_FAILED;
-    OsStunDatagramSocket* pSocket =
-      new OsStunDatagramSocket(0, NULL, port, szBoundIp, FALSE);
+    OsNatDatagramSocket* pSocket =
+      new OsNatDatagramSocket(0, NULL, port, szBoundIp, FALSE);
    
     if (pSocket)
     {
@@ -152,7 +156,7 @@ OsStatus SipUdpServer::createServerSocket(const char* szBoundIp,
             for (int i=1; i<=SIP_MAX_PORT_RANGE; i++)
             {
                 delete pSocket ;
-                pSocket = new OsStunDatagramSocket(0, NULL, port+i, szBoundIp, FALSE);
+                pSocket = new OsNatDatagramSocket(0, NULL, port+i, szBoundIp, FALSE);
                 if (pSocket->isOk())
                 {
                     break ;
@@ -171,9 +175,10 @@ OsStatus SipUdpServer::createServerSocket(const char* szBoundIp,
         char szAdapterName[16];
         memset((void*)szAdapterName, 0, sizeof(szAdapterName)); // null out the string
         
-        getContactAdapterName(szAdapterName, contact.cIpAddress);
+        getContactAdapterName(szAdapterName, contact.cIpAddress, false);
 
         strcpy(contact.cInterface, szAdapterName);
+        contact.transportType = OsSocket::UDP;
         mSipUserAgent->addContactAddress(contact);
    
         // add address and port to the maps
@@ -258,7 +263,8 @@ int SipUdpServer::run(void* runArg)
             SipSrvLookup::servers(rawAddress.data(),
                                   "sip",
                                   OsSocket::UDP,
-                                  port);
+                                  port,
+                                  mDefaultIp);
 
         // Do a DNS SRV or A record lookup
         // If we started with an IP address, we will still get an IP
@@ -367,13 +373,13 @@ int SipUdpServer::run(void* runArg)
 
 
 void SipUdpServer::enableStun(const char* szStunServer,
+                              int iStunPort,
                               const char* szLocalIp, 
                               int refreshPeriodInSecs, 
-                              int stunOptions,
                               OsNotification* pNotification) 
 {
     // Store settings
-    mStunOptions = stunOptions ;
+    mStunPort = iStunPort ;
     mStunRefreshSecs = refreshPeriodInSecs ;   
     if (szStunServer)
     {
@@ -412,24 +418,21 @@ void SipUdpServer::enableStun(const char* szStunServer,
         UtlString key(szIpToStun);
         
         pSocketContainer = (UtlVoidPtr*)this->mServerSocketMap.findValue(&key);
-        OsStunDatagramSocket* pSocket = NULL;
+        OsNatDatagramSocket* pSocket = NULL;
         
         if (pSocketContainer)
         {
-            pSocket = (OsStunDatagramSocket*)pSocketContainer->getValue();
+            pSocket = (OsNatDatagramSocket*)pSocketContainer->getValue();
         }                                                                  
         if (pSocket)
         {
-            pSocket->enableStun(false) ;
+            pSocket->disableStun() ;
             
             // Update server client
             if (pSocket && mStunServer.length()) 
             {
-                pSocket->setStunServer(mStunServer) ;
-                pSocket->setKeepAlivePeriod(refreshPeriodInSecs) ;
                 pSocket->setNotifier(pNotification) ;
-                pSocket->setStunOptions(mStunOptions) ;
-                pSocket->enableStun(true) ;
+                pSocket->enableStun(mStunServer,  mStunPort, refreshPeriodInSecs, 0, false) ;
             }  
         }
         if (bStunAll)
@@ -515,10 +518,11 @@ UtlBoolean SipUdpServer::sendTo(const SipMessage& message,
 
 OsSocket* SipUdpServer::buildClientSocket(int hostPort, const char* hostAddress, const char* localIp)
 {
+    OsNatDatagramSocket* pSocket = NULL;
+
     if (mSipUserAgent && mSipUserAgent->getUseRport())
     {
         UtlVoidPtr* pSocketContainer = NULL;
-        OsStunDatagramSocket* pSocket = NULL;
 
         assert(localIp != NULL);
         UtlString localKey(localIp);
@@ -526,16 +530,21 @@ OsSocket* SipUdpServer::buildClientSocket(int hostPort, const char* hostAddress,
         pSocketContainer = (UtlVoidPtr*)mServerSocketMap.findValue(&localKey);
         assert(pSocketContainer);
         
-        pSocket = (OsStunDatagramSocket*)pSocketContainer->getValue();
+        pSocket = (OsNatDatagramSocket*)pSocketContainer->getValue();
         assert(pSocket);
         
-        return pSocket ;
+        
     }
     else
     {
-        return(new OsStunDatagramSocket(hostPort, hostAddress, 0, localIp, 
-            (mStunServer.length() != 0), mStunServer.data(), mStunRefreshSecs, mStunOptions));
+        pSocket = new OsNatDatagramSocket(0, NULL, 0, localIp) ;
+        if (mStunServer.length() != 0)
+        {
+            pSocket->enableStun(mStunServer, mStunPort, mStunRefreshSecs, 0, true) ;
+        }
     }
+
+    return pSocket ;
 }
 
 
@@ -548,6 +557,145 @@ SipUdpServer::operator=(const SipUdpServer& rhs)
 
    return *this;
 }
+
+
+UtlBoolean SipUdpServer::addCrLfKeepAlive(const char* szLocalIp,
+                                          const char* szRemoteIp,
+                                          const int   remotePort,
+                                          const int   keepAliveSecs) 
+{
+    UtlHashMapIterator iterator(mServerSocketMap);
+    UtlString* pKey = NULL;
+    OsNatDatagramSocket* pSocket = NULL;
+    UtlBoolean bSuccess = false ;
+
+    while (pKey = (UtlString*) iterator())
+    {
+        if (    (pKey->compareTo(szLocalIp) == 0) || 
+                (strcmp(szLocalIp, "0.0.0.0") == 0) || 
+                (strlen(szLocalIp) == 0)    )
+        {
+            UtlVoidPtr* pValue = (UtlVoidPtr*) mServerSocketMap.findValue(pKey) ;
+            if (pValue)
+            {
+                pSocket = (OsNatDatagramSocket*) pValue->getValue() ;
+                if (pSocket)
+                {
+                    if (pSocket->addCrLfKeepAlive(szRemoteIp, remotePort, 
+                            keepAliveSecs))
+                    {
+                        bSuccess = true ;
+                    }
+                }
+            }
+        }
+    }
+
+    return bSuccess ;
+}
+
+
+UtlBoolean SipUdpServer::removeCrLfKeepAlive(const char* szLocalIp,
+                                             const char* szRemoteIp,
+                                             const int   remotePort) 
+{
+    UtlHashMapIterator iterator(mServerSocketMap);
+    UtlString* pKey = NULL;
+    OsNatDatagramSocket* pSocket = NULL;
+    UtlBoolean bSuccess = false ;
+
+    while (pKey = (UtlString*) iterator())
+    {
+        if (    (pKey->compareTo(szLocalIp) == 0) || 
+                (strcmp(szLocalIp, "0.0.0.0") == 0) || 
+                (strlen(szLocalIp) == 0)    )
+        {
+            UtlVoidPtr* pValue = (UtlVoidPtr*) mServerSocketMap.findValue(pKey) ;
+            if (pValue)
+            {
+                pSocket = (OsNatDatagramSocket*) pValue->getValue() ;
+                if (pSocket)
+                {
+                    if (pSocket->removeCrLfKeepAlive(szRemoteIp, remotePort))
+                    {
+                        bSuccess = true ;
+                    }
+                }
+            }
+        }
+    }
+
+    return bSuccess ;
+}
+
+UtlBoolean SipUdpServer::addStunKeepAlive(const char* szLocalIp,
+                                          const char* szRemoteIp,
+                                          const int   remotePort,
+                                          const int   keepAliveSecs) 
+{
+    UtlHashMapIterator iterator(mServerSocketMap);
+    UtlString* pKey = NULL;
+    OsNatDatagramSocket* pSocket = NULL;
+    UtlBoolean bSuccess = false ;
+
+    while (pKey = (UtlString*) iterator())
+    {
+        if (    (pKey->compareTo(szLocalIp) == 0) || 
+                (strcmp(szLocalIp, "0.0.0.0") == 0) || 
+                (strlen(szLocalIp) == 0)    )
+        {
+            UtlVoidPtr* pValue = (UtlVoidPtr*) mServerSocketMap.findValue(pKey) ;
+            if (pValue)
+            {
+                pSocket = (OsNatDatagramSocket*) pValue->getValue() ;
+                if (pSocket)
+                {
+                    if (pSocket->addStunKeepAlive(szRemoteIp, remotePort, 
+                            keepAliveSecs))
+                    {
+                        bSuccess = true ;
+                    }
+                }
+            }
+        }
+    }
+
+    return bSuccess ;
+ }
+
+UtlBoolean SipUdpServer::removeStunKeepAlive(const char* szLocalIp,
+                                             const char* szRemoteIp,
+                                             const int   remotePort)
+{
+   UtlHashMapIterator iterator(mServerSocketMap);
+    UtlString* pKey = NULL;
+    OsNatDatagramSocket* pSocket = NULL;
+    UtlBoolean bSuccess = false ;
+
+    while (pKey = (UtlString*) iterator())
+    {
+        if (    (pKey->compareTo(szLocalIp) == 0) || 
+                (strcmp(szLocalIp, "0.0.0.0") == 0) || 
+                (strlen(szLocalIp) == 0)    )
+        {
+            UtlVoidPtr* pValue = (UtlVoidPtr*) mServerSocketMap.findValue(pKey) ;
+            if (pValue)
+            {
+                pSocket = (OsNatDatagramSocket*) pValue->getValue() ;
+                if (pSocket)
+                {
+                    if (pSocket->removeStunKeepAlive(szRemoteIp, remotePort))
+                    {
+                        bSuccess = true ;
+                    }
+                }
+            }
+        }
+    }
+
+    return bSuccess ;
+}
+
 
 /* ============================ ACCESSORS ================================= */
 
@@ -612,7 +760,7 @@ UtlBoolean SipUdpServer::getStunAddress(UtlString* pIpAddress, int* pPort,
                                         const char* szLocalIp) 
 {
     UtlBoolean bRet = false;
-    OsStunDatagramSocket* pSocket = NULL;
+    OsNatDatagramSocket* pSocket = NULL;
     UtlVoidPtr* pSocketContainer = NULL;
 
     if (szLocalIp)
@@ -622,7 +770,7 @@ UtlBoolean SipUdpServer::getStunAddress(UtlString* pIpAddress, int* pPort,
         pSocketContainer = (UtlVoidPtr*)this->mServerSocketMap.findValue(&localIpKey);
         if (pSocketContainer)
         {
-            pSocket = (OsStunDatagramSocket*)pSocketContainer->getValue();
+            pSocket = (OsNatDatagramSocket*)pSocketContainer->getValue();
         }
     }
     else
@@ -633,13 +781,13 @@ UtlBoolean SipUdpServer::getStunAddress(UtlString* pIpAddress, int* pPort,
         pSocketContainer = (UtlVoidPtr*)mServerSocketMap.findValue(&defaultIpKey);
         if (pSocketContainer != NULL )
         {
-            pSocket = (OsStunDatagramSocket*)pSocketContainer->getValue();
+            pSocket = (OsNatDatagramSocket*)pSocketContainer->getValue();
         }
     }
     
     if (pSocket)
     {
-        bRet =  pSocket->getExternalIp(pIpAddress, pPort) ;
+        bRet =  pSocket->getMappedIp(pIpAddress, pPort) ;
     }
     return bRet;
 }

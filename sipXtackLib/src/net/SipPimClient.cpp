@@ -10,7 +10,7 @@
 
 
 // Author: Daniel Petrie
-//         dpetrie AT SIPez DOT com
+//         dgpetrie AT yahoo DOT com
 //////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -18,7 +18,6 @@
 // APPLICATION INCLUDES
 #include <net/SipPimClient.h>
 #include <net/HttpBody.h>
-#include <net/SmimeBody.h>
 #include <net/SipMessage.h>
 #include <net/SipUserAgent.h>
 #include <net/NetMd5Codec.h>
@@ -65,28 +64,6 @@ SipPimClient::~SipPimClient()
 }
 
 /* ============================ MANIPULATORS ============================== */
-
-void SipPimClient::setLocalKeyCert(const char* localPkcs12DerKeyCert,
-                                   int localPkcs12DerKeyCertLength,
-                                   const char* sPkcs12Password)
-{
-    mPkcs12KeyCertContainer.remove(0);
-    if(localPkcs12DerKeyCert && *localPkcs12DerKeyCert &&
-        localPkcs12DerKeyCertLength > 0)
-    {
-        mPkcs12KeyCertContainer.append(localPkcs12DerKeyCert, localPkcs12DerKeyCertLength);
-    }
-
-    if(sPkcs12Password && *sPkcs12Password)
-    {
-        mPkcs12Password = sPkcs12Password;
-    }
-    else
-    {
-        sPkcs12Password = "";
-    }
-}
-
 
 // Assignment operator
 SipPimClient&
@@ -207,19 +184,19 @@ UtlBoolean SipPimClient::handleMessage(OsMsg& eventMessage)
         UtlString method;
         if(sipMessage) sipMessage->getRequestMethod(&method);
         method.toUpper();
-        UtlBoolean responseSent = FALSE;
         if(sipMessage &&
             method.compareTo(SIP_MESSAGE_METHOD) == 0 &&
             !sipMessage->isResponse())
         {
             const HttpBody* messageBody = sipMessage->getBody();
             UtlString contentType = messageBody->getContentType();
-
+            // Trim off the MIME parameters if present
+            contentType.remove(strlen(CONTENT_TYPE_TEXT_PLAIN));
 
             // We have a text body and a callback handler function
             if(messageBody && 
                mpTextHandlerFunction &&
-               contentType.index(CONTENT_TYPE_TEXT_PLAIN, 0, UtlString::ignoreCase) == 0)
+               contentType.compareTo(CONTENT_TYPE_TEXT_PLAIN, UtlString::ignoreCase) == 0)
             {
                 const char* bodyBytes;
                 int bodyLength;
@@ -231,70 +208,13 @@ UtlBoolean SipPimClient::handleMessage(OsMsg& eventMessage)
                 SipMessage response;
                 response.setResponseData(sipMessage, SIP_OK_CODE, SIP_OK_TEXT);
                 mpUserAgent->send(response);
-                responseSent = TRUE;
 
                 // Invoke the call back with the info
                 mpTextHandlerFunction(fromField, bodyBytes, bodyLength, 
                     *sipMessage);
 
             }
-            // S/MIME
-            else if(messageBody && 
-               mpTextHandlerFunction &&
-               contentType.index(CONTENT_SMIME_PKCS7, 0, UtlString::ignoreCase) == 0 &&
-               mPkcs12KeyCertContainer.length() > 0)
-            {
-                SmimeBody* smimeBody = (SmimeBody*) messageBody;
-                UtlBoolean decryptedOk =
-                    smimeBody->decrypt(mPkcs12KeyCertContainer.data(),
-                                       mPkcs12KeyCertContainer.length(),
-                                       mPkcs12Password);
-                const HttpBody* decryptedBody = NULL;
-                UtlString decryptedContentType;
-                if(decryptedOk)
-                {
-                    decryptedBody =
-                        smimeBody->getDecyptedBody();
-
-                    if(decryptedBody)
-                    {
-                        decryptedContentType = 
-                            decryptedBody->getContentType();
-                        if(decryptedContentType.index(CONTENT_TYPE_TEXT_PLAIN, UtlString::ignoreCase) == 0)
-                        {
-                            const char* bodyBytes;
-                            int bodyLength;
-                            messageBody->getBytes(&bodyBytes, &bodyLength);
-                            UtlString fromField;
-                            sipMessage->getFromField(&fromField);
-
-                            // Send back a 200 response
-                            SipMessage response;
-                            response.setResponseData(sipMessage, SIP_OK_CODE, SIP_OK_TEXT);
-                            mpUserAgent->send(response);
-                            responseSent = TRUE;
-
-
-                            // Invoke the call back with the info
-                            mpTextHandlerFunction(fromField, bodyBytes, bodyLength, 
-                                *sipMessage);
-                        }
-                    }
-
-                }
-                else
-                {
-                    UtlString localUri = mPresentityAor.toString();
-
-                    OsSysLog::add(FAC_SIP, PRI_WARNING,
-                        "Unable to decrypt S/MIME MESSAGE Remote: %s Local: %s",
-                        mFromField.data(),
-                        localUri.data());
-                }
-                
-            }
-
-            if(!responseSent)
+            else
             {
                 // Send an error as we do not accept the content type
                 SipMessage badContentResponse;
