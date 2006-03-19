@@ -439,7 +439,7 @@ int NetInTask::run(void *pNotUsed)
         fds = &fdset;
         last = OS_INVALID_SOCKET_DESCRIPTOR;
         Zprintf(" *** NetInTask: pipeFd is %d\n",
-                       mpReadSocket->getSocketDescriptor(), 0,0,0,0,0);
+			mpReadSocket ? mpReadSocket->getSocketDescriptor() : 0, 0,0,0,0,0);
 
         while (mpReadSocket && mpReadSocket->isOk()) {
             if (OS_INVALID_SOCKET_DESCRIPTOR == last) {
@@ -496,6 +496,8 @@ int NetInTask::run(void *pNotUsed)
                 continue;
             }
 #endif /* DEBUG_BY_SUSPEND ] */
+
+			if (!mpReadSocket) continue;
 
             /* is it a request to modify the set of file descriptors? */
             if (FD_ISSET(mpReadSocket->getSocketDescriptor(), fds)) {
