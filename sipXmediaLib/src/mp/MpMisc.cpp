@@ -351,7 +351,13 @@ int showMpMisc(int justAddress)
    if (!justAddress) {
       Zprintf(" MicQ=0x%X, SpkQ=0x%X, EchoQ=0x%X, silence=0x%X\n"
          " micMuteStatus=%d, spkrMuteStatus=%d,",
-         (int) MpMisc.pMicQ, (int) MpMisc.pSpkQ, (int) MpMisc.pEchoQ,
+         (int) MpMisc.pMicQ, (int) MpMisc.pSpkQ, 
+#ifndef EXCLUDE_ECHO_SUPPRESION
+		 (int) MpMisc.pEchoQ,
+#else
+		 0,
+#endif
+
          (int) MpMisc.XXXsilence, MpMisc.micMuteStatus, MpMisc.spkrMuteStatus);
       Zprintf(" audio_on=%d\n frameSamples=%d,"
          " frameBytes=%d, sampleBytes=%d,",
@@ -562,10 +568,12 @@ OsStatus mpStartUp(int sampleRate, int samplesPerFrame,
             delete MpMisc.pSpkQ;
             MpMisc.pSpkQ = NULL;
         }
+#ifndef EXCLUDE_ECHO_SUPPRESION
         if (NULL != MpMisc.pEchoQ) {
             delete MpMisc.pEchoQ;
             MpMisc.pEchoQ = NULL;
         }
+#endif
 #ifdef _VXWORKS /* [ */
         if (NULL != MpMisc.pLoopBackQ) {
             delete MpMisc.pLoopBackQ;
@@ -577,7 +585,9 @@ OsStatus mpStartUp(int sampleRate, int samplesPerFrame,
                                (MpBufPool_getNumBufs(MpMisc.UcbPool)-3));
         MpMisc.pMicQ = new OsMsgQ(MIC_BUFFER_Q_LEN);
         MpMisc.pSpkQ = new OsMsgQ(SPK_BUFFER_Q_LEN);
+#ifndef EXCLUDE_ECHO_SUPPRESION
         MpMisc.pEchoQ = new OsMsgQ(MIC_BUFFER_Q_LEN);
+#endif
 #ifdef _VXWORKS /* [ */
         MpMisc.doLoopBack = 0;
         MpMisc.pLoopBackQ = new OsMsgQ(MIC_BUFFER_Q_LEN);
@@ -605,10 +615,12 @@ OsStatus mpShutdown(void)
             delete MpMisc.pSpkQ;
             MpMisc.pSpkQ = NULL;
         }
+#ifndef EXCLUDE_ECHO_SUPPRESION
         if (NULL != MpMisc.pEchoQ) {
             delete MpMisc.pEchoQ;
             MpMisc.pEchoQ = NULL;
         }
+#endif
 #ifdef _VXWORKS /* [ */
         if (NULL != MpMisc.pLoopBackQ) {
             delete MpMisc.pLoopBackQ;

@@ -297,8 +297,8 @@ UtlBoolean MprToSpkr::doProcessFrame(MpBufPtr inBufs[],
                                     int samplesPerFrame,
                                     int samplesPerSecond)
 {
-	MpBufferMsg* pMsg;
-	MpBufferMsg* pFlush;
+	MpBufferMsg* pMsg = NULL;
+	MpBufferMsg* pFlush = NULL;
 	OsMsgPool*   spkrPool;
 	MpBufPtr     ob;
 	MpBufPtr     out;
@@ -455,6 +455,8 @@ UtlBoolean MprToSpkr::doProcessFrame(MpBufPtr inBufs[],
 		{
 			*inBufs = NULL;
 
+
+#ifndef EXCLUDE_ECHO_SUPPRESION
 		 // Post a copy of this message to the MpMisc.pEchoQ so that it
 		 // can be used in AEC calculations.
 		 MpBufferMsg* pAECMsg = new MpBufferMsg(MpBufferMsg::ACK_EOSTREAM) ;
@@ -469,7 +471,7 @@ UtlBoolean MprToSpkr::doProcessFrame(MpBufPtr inBufs[],
 			 pAECMsg->releaseMsg() ;
 			 MpBuf_delRef(ob) ;
 		 }
-
+#endif
 		} 
 		else 
 		{

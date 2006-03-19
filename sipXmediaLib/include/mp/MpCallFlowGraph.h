@@ -371,7 +371,9 @@ private:
    MprFromFile*  mpFromFile;
    MprFromStream*  mpFromStream;
    MprFromMic*   mpFromMic;
+#ifndef EXCLUDE_ECHO_SUPPRESION
    MprEchoSuppress*   mpEchoSuppress;
+#endif
    MprMixer*     mpTFsMicMixer;
    MprMixer*     mpTFsBridgeMixer;
    MprSplitter*  mpToneFileSplitter;

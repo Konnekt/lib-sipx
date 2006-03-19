@@ -15,6 +15,10 @@
 // #define DOING_ECHO_SUPPRESSION
 #endif
 
+#ifdef EXCLUDE_ECHO_SUPPRESION
+  #undef DOING_ECHO_SUPPRESSION
+#endif
+
 // SYSTEM INCLUDES
 #include <assert.h>
 

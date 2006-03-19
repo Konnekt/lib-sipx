@@ -12,6 +12,7 @@
 // SYSTEM INCLUDES
 #include <assert.h>
 
+#ifndef EXCLUDE_ECHO_SUPPRESION
 #ifndef __pingtel_on_posix__ /* [ */
 /* to use this file with __pingtel_on_posix__, must #include <stdlib.h> */
 
@@ -594,3 +595,5 @@ UtlBoolean MprEchoSuppress::doProcessFrame(MpBufPtr inBufs[],
 #endif /* __pingtel_on_posix ] */
 
 //////////////////////////// End of AGC ///////////////////////////////
+
+#endif /* EXCLUDE_ECHO_SUPPRESION */
