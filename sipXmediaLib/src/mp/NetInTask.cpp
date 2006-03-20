@@ -63,6 +63,9 @@
 static int dummy0 = 0;
 #endif /* _VXWORKS ] */
 
+#include <net/TapiMgr.h> /*RL*/
+
+
 // EXTERNAL FUNCTIONS
 
 // EXTERNAL VARIABLES
@@ -502,11 +505,22 @@ int NetInTask::run(void *pNotUsed)
             /* is it a request to modify the set of file descriptors? */
             if (FD_ISSET(mpReadSocket->getSocketDescriptor(), fds)) {
                 numReady--;
-                if (NET_TASK_MAX_MSG_LEN !=
-                     mpReadSocket->read((char *) &msg, NET_TASK_MAX_MSG_LEN)) {
+				/*RL:if socket disappears we run into infinite loop...*/
+				int bytesRead = mpReadSocket->read((char *) &msg, NET_TASK_MAX_MSG_LEN);
+                if (bytesRead != -1 && NET_TASK_MAX_MSG_LEN != bytesRead ) {
                     osPrintf("NetInTask::run: Invalid request!\n");
-                } else if (-2 == (int) msg.pRtpSocket) {
+				} else if (bytesRead == -1 || -2 == (int) msg.pRtpSocket) {
                     /* request to exit... */
+
+					if (bytesRead == -1) { /*RL: we notify the TAPI so it can shutdown everything*/
+						
+						SIPX_CONFIG_INFO info;
+						info.nSize = sizeof(SIPX_CONFIG_INFO);
+						info.event = CONFIG_NET_FAILURE;
+						info.pData = 0;
+						TapiMgr::getInstance().fireEvent(0, EVENT_CATEGORY_CONFIG, &info);
+					}
+
                     Nprintf(" *** NetInTask: closing pipeFd (%d)\n",
                         mpReadSocket->getSocketDescriptor(), 0,0,0,0,0);
                     OsSysLog::add(FAC_MP, PRI_ERR, " *** NetInTask: closing pipeFd (%d)\n",
@@ -515,10 +529,18 @@ int NetInTask::run(void *pNotUsed)
                     if (mpReadSocket)
                     {
                         mpReadSocket->close();
-                       delete mpReadSocket;
+                        delete mpReadSocket;
                         mpReadSocket = NULL;
                     }
                     sLock.releaseWrite();
+
+					if (bytesRead == -1) { /*RL: We got to "simulate" the normal shutdown*/
+						this->shutdownSockets();
+						sLock.acquireWrite();
+						this->requestShutdown();
+						sLock.releaseWrite();
+					}
+
                 } else if (NULL != msg.fwdTo) {
                     if ((NULL != msg.pRtpSocket) || (NULL != msg.pRtcpSocket)) {
                         /* add a new pair of file descriptors */
@@ -719,6 +741,11 @@ NetInTask::~NetInTask()
 OsStatus shutdownNetInTask()
 {
         NetInTask::getLockObj().acquireWrite();
+
+		if (NetInTask::isCreated() == false) { /*RL: If it's not created - there's nothing to shutdown!*/
+			NetInTask::getLockObj().releaseWrite();
+			return OS_SUCCESS;
+		}
 
         netInTaskMsg msg;
         int wrote;

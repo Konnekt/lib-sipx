@@ -122,6 +122,10 @@ public:
    static NetInTask* getNetInTask();
      //:Return a pointer to the NetIn task, creating it if necessary
 
+   static bool isCreated() { /*RL*/
+	   return spInstance != NULL && spInstance->isStarted();
+   }
+
    virtual
    ~NetInTask();
      //:Destructor
