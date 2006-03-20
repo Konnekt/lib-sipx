@@ -4834,8 +4834,14 @@ SIPXTAPI_API SIPX_RESULT sipxLineAdd(const SIPX_INST hInst,
             else if (lineUrl.contains("transport=tcp"))
             {
                 sipx_protocol = TRANSPORT_TCP;
-            }
-            sipxGetContactHostPort(pInst, (SIPX_CONTACT_TYPE)contactType, uriPreferredContact, sipx_protocol) ;
+			}
+			if (pContact && pContact->eContactType == CONTACT_LOCAL && strcmp(pContact->cIpAddress, "0.0.0.0") != 0) {/*RL:*/
+				uriPreferredContact.setHostAddress(pContact->cIpAddress) ;
+				uriPreferredContact.setHostPort(pContact->iPort) ;
+			} else {
+				sipxGetContactHostPort(pInst, (SIPX_CONTACT_TYPE)contactType, uriPreferredContact, sipx_protocol) ;
+			}
+
             line.setPreferredContactUri(uriPreferredContact) ;
 
             UtlBoolean bRC = pInst->pLineManager->addLine(line, false) ;
