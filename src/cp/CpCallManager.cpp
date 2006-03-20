@@ -509,7 +509,11 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
 
       // Compose the static fields.
 #ifdef WIN32
-      sprintf(buffer, "%d/%I64d/%s", process_id, start_time, thisHost.data());
+	  if (sizeof(start_time) == 8) {
+			sprintf(buffer, "%d/%I64d/%s", process_id, start_time, thisHost.data());
+	  } else {
+			sprintf(buffer, "%d/%u/%s", process_id, start_time, thisHost.data());
+	  }
 #else
       sprintf(buffer, "%d/%lld/%s", process_id, start_time, thisHost.data());
 #endif
@@ -525,7 +529,11 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
 
    // Compose the new Call-Id.
 #ifdef WIN32
-   sprintf(buffer, "%s_%I64d_%s", callIdPrefix, mCallNum, suffix.data());
+   if (sizeof(mCallNum) == 8) {
+		sprintf(buffer, "%s_%I64d_%s", callIdPrefix, mCallNum, suffix.data());
+   } else {
+		sprintf(buffer, "%s_%u_%s", callIdPrefix, mCallNum, suffix.data());
+   }
 #else
    sprintf(buffer, "%s_%lld_%s", callIdPrefix, mCallNum, suffix.data());
 #endif
