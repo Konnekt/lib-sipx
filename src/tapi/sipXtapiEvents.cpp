@@ -377,6 +377,9 @@ static const char* convertConfigEventToString(SIPX_CONFIG_EVENT event)
         case CONFIG_STUN_FAILURE:
             str = "CONFIG_STUN_FAILURE" ;
             break ;
+		case CONFIG_NET_FAILURE:
+			str = "CONFIG_NET_FAILURE" ;
+			break;
         default:
             break ;
     }
@@ -1857,7 +1860,9 @@ bool sipxFireEvent(const void* pSrc,
                 pData->pInst->pMessageObserver == pSrc ||
                 pData->pInst->pSipUserAgent == pSrc ||
 				/*RL*/ 
-				pData->pInst->pSipUserAgent == pSrc)
+				pData->pInst->pSipUserAgent == pSrc ||
+				pSrc == 0
+				)
 			{
 
                 // for security events, fill in the hCall

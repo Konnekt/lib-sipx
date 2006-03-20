@@ -400,6 +400,10 @@ enum SIPX_CONFIG_EVENT
                                        the pData pointer of the info structure will point to a
                                        SIPX_CONTACT_ADDRESS structure. */
     CONFIG_STUN_FAILURE  = 41000, /**< Unable to obtain a STUN binding for signaling purposes. */
+
+	/*RL:*/
+	CONFIG_NET_FAILURE   = 42000, /**< A network failure occured (ie. NIC has gone away). It'd be wise to reinitialize the stack. */
+
 } ;
 
 /*RL*/
