@@ -2314,9 +2314,12 @@ UtlBoolean CpPeerCall::handleCallMessage(OsMsg& eventMessage)
             int remote =  ((CpMultiStringMessage&)eventMessage).getInt3Data();
 
             Connection* connection = findHandlingConnection(remoteAddress);
-            if (connection && mpMediaInterface)
+            if (mpMediaInterface) /*RL: connectionId is not really used by mpMediaInterface, but it's not set for not already connected calls, so you can't use DTMF*/
             {   
-                int connectionId = connection->getConnectionId() ;
+                int connectionId = 0;
+				if (connection) {
+					connectionId = connection->getConnectionId() ;
+				}
                 mpMediaInterface->startChannelTone(connectionId, toneId, local, remote) ;
             }                
         }
@@ -2327,9 +2330,12 @@ UtlBoolean CpPeerCall::handleCallMessage(OsMsg& eventMessage)
             ((CpMultiStringMessage&)eventMessage).getString2Data(remoteAddress) ;
 
             Connection* connection = findHandlingConnection(remoteAddress);
-            if (connection && mpMediaInterface)
+            if (mpMediaInterface) /*RL: connectionId is not really used by mpMediaInterface, but it's not set for not already connected calls, so you can't use DTMF*/
             {   
-                int connectionId = connection->getConnectionId() ;
+                int connectionId = 0;
+				if (connection) {
+					connectionId = connection->getConnectionId() ;
+				}
                 mpMediaInterface->stopChannelTone(connectionId) ;
             }                
         }
