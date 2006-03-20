@@ -4045,7 +4045,7 @@ void SipUserAgent::checkWatchedFields(SipMessage* message) {
 	bool gotNew = false;
 
 	SIPX_HEADERWATCH_INFO info;
-	info.nSize = sizeof(SIPX_HEADERWATCH_INFO);
+	info.nSize = 0;
 
 	while ( (key = static_cast<UtlString*>( it() )) ) {
 		this->watchHeadersMutex.acquireWrite();

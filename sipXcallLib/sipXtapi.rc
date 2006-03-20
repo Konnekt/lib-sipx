@@ -51,8 +51,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION SIPXTAPI_BUILD_WORD
- PRODUCTVERSION SIPXTAPI_BUILD_WORD
+ FILEVERSION 3,3,0,0
+ PRODUCTVERSION 3,3,0,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -70,12 +70,12 @@ BEGIN
             VALUE "Comments", "Credits:  Bob Andreasen, Andy Jorde, Mike Cohen, Dan Petrie"
             VALUE "CompanyName", "Pingtel Corp."
             VALUE "FileDescription", "SIP User-Agent API"
-            VALUE "FileVersion", SIPXTAPI_FULL_VERSION
+            VALUE "FileVersion", "3.3"
             VALUE "InternalName", "sipXtapi"
             VALUE "LegalCopyright", "Copyright (C) 2005 Pingtel Corp."
             VALUE "OriginalFilename", "sipXtapi.dll"
             VALUE "ProductName", "SIPxua SDK"
-            VALUE "ProductVersion", SIPXTAPI_FULL_VERSION
+            VALUE "ProductVersion", "3.3"
         END
     END
     BLOCK "VarFileInfo"
