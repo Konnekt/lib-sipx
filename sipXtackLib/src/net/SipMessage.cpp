@@ -3037,13 +3037,13 @@ UtlBoolean SipMessage::getCSeqField(int* sequenceNum, UtlString* sequenceMethod)
         {
             *sequenceMethod = &value[numStringLen + valueStart];
             NameValueTokenizer::frontBackTrim(sequenceMethod, SIP_SUBFIELD_SEPARATORS);
+        }
 
-            if(numStringLen > MAXIMUM_INTEGER_STRING_LENGTH)
-            {
-                osPrintf("WARNING: SipMessage::getCSeqField CSeq number %d characters: %s.\nTruncating to %d\n",
+        if(numStringLen > MAXIMUM_INTEGER_STRING_LENGTH)
+        {
+            osPrintf("WARNING: SipMessage::getCSeqField CSeq number %d characters: %s.\nTruncating to %d\n",
                     numStringLen, &value[valueStart], MAXIMUM_INTEGER_STRING_LENGTH);
-                numStringLen = MAXIMUM_INTEGER_STRING_LENGTH;
-            }
+            numStringLen = MAXIMUM_INTEGER_STRING_LENGTH;
         }
 
         if(sequenceNum)
@@ -3054,7 +3054,7 @@ UtlBoolean SipMessage::getCSeqField(int* sequenceNum, UtlString* sequenceMethod)
             numBuf[numStringLen] = '\0';
             *sequenceNum = atoi(numBuf);
         }
-   }
+    }
     else
     {
         if(sequenceNum)
