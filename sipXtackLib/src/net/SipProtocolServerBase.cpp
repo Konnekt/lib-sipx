@@ -253,8 +253,8 @@ SipClient* SipProtocolServerBase::createClient(const char* hostAddress,
         if(!isReadyToWrite)
         {
             OsSysLog::add(FAC_SIP, PRI_WARNING,
-                          "SIP %s socket %s:%d not ready for writing after %d seconds",
-                          mProtocolString.data(), hostAddress, hostPort, (int) (writeWait/1000));
+				"SIP %s socket %s:%d not ready for writing after %d seconds (err:%d)",
+                          mProtocolString.data(), hostAddress, hostPort, (int) (writeWait/1000), OsSocketGetERRNO());
         }
 
         if(isOk &&

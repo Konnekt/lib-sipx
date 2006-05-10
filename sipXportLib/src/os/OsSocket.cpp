@@ -167,7 +167,7 @@ int OsSocket::write(const char* buffer, int bufferLength)
    bytesSent = send(socketDescriptor, buffer, bufferLength, flags);
    if (bytesSent != bufferLength)
    {
-      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsSocket::write send returned %d, errno=%d\n", bytesSent, errno);
+      OsSysLog::add(FAC_KERNEL, PRI_ERR, "OsSocket::write send returned %d, errno=%d\n", bytesSent, OsSocketGetERRNO());
    }
 
    // 10038 WSAENOTSOCK not a valid socket descriptor
@@ -649,8 +649,8 @@ UtlBoolean OsSocket::isReadyToWrite(long waitMilliseconds) const
          if(numReady < 0 || numReady > 1 || (numReady == 0 && waitMilliseconds < 0))
          {
              // perror("OsSocket::isReadyToWrite()");
-             OsSysLog::add(FAC_KERNEL, PRI_DEBUG, "OsSocket::isReadyToWrite select returned %d in socket: %d %p\n",
-                 resCode, tempSocketDescr, this);
+			 OsSysLog::add(FAC_KERNEL, PRI_DEBUG, "OsSocket::isReadyToWrite select returned %d (err:%d) in socket: %d %p\n",
+                 resCode, OsSocketGetERRNO(), tempSocketDescr, this);
          }
 
     }     //socketDescriptor > OS_INVALID_SOCKET_DESCRIPTOR
