@@ -62,7 +62,8 @@ SipRefreshMgr::SipRefreshMgr():
     mIsStarted(FALSE),
     mObserverMutex(OsRWMutex::Q_FIFO),
     mUAReadyMutex(OsRWMutex::Q_FIFO),
-    mMyUserAgent(NULL)  
+    mMyUserAgent(NULL),
+    mpTimer(NULL)
 	, mAutoReschedule(TRUE) /*RL*/
 {
 }
@@ -481,17 +482,17 @@ SipRefreshMgr::unRegisterUser (
             UtlString localIp;
             int localPort;
             
-            OsSocket::SocketProtocolTypes protocol = OsSocket::UDP;
+            SIPX_TRANSPORT_TYPE protocol = TRANSPORT_UDP;
             UtlString fromString;
             
             fromUrl.toString(fromString);
             if (fromString.contains("sips:") || fromString.contains("transport=tls"))
             {
-                protocol = OsSocket::SSL_SOCKET;
+                protocol = TRANSPORT_TLS;
             }
             else if (fromString.contains("transport=tcp"))
             {
-                protocol = OsSocket::TCP;
+                protocol = TRANSPORT_TCP;
             }
             mMyUserAgent->getLocalAddress(&localIp, &localPort, protocol);
             sipMsg.setLocalIp(localIp);
@@ -499,9 +500,9 @@ SipRefreshMgr::unRegisterUser (
             fireSipXLineEvent(Uri, lineId.data(), LINESTATE_UNREGISTERING, LINESTATE_UNREGISTERING_NORMAL);
             
             // clear out any pending register requests
-            this->removeAllFromRequestList(&sipMsg);
+            removeAllFromRequestList(&sipMsg);
             sendRequest(sipMsg, SIP_REGISTER_METHOD);
-                addToRegisterList(&sipMsg);
+            addToRegisterList(&sipMsg);
             }
         }
     }
@@ -575,16 +576,16 @@ SipRefreshMgr::sendRequest (
     // Keep a copy for reschedule
     UtlString localIp;
     int localPort;
-    OsSocket::SocketProtocolTypes protocol = OsSocket::UDP;
+    SIPX_TRANSPORT_TYPE protocol = TRANSPORT_UDP;
     UtlString toField;
     request.getToField(&toField);
     if (toField.contains("sips:") || toField.contains("transport=tls"))
     {
-        protocol = OsSocket::SSL_SOCKET;
+        protocol = TRANSPORT_TLS;
     }
     if (toField.contains("transport=tcp"))
     {
-        protocol = OsSocket::TCP;
+        protocol = TRANSPORT_TCP;
     }
     
     mMyUserAgent->getLocalAddress(&localIp, &localPort, protocol);
@@ -611,6 +612,7 @@ SipRefreshMgr::sendRequest (
             }
 
             fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_REGISTER_FAILED_COULD_NOT_CONNECT);
+            rescheduleAfterTime(&request, FAILED_PERCENTAGE_TIMEOUT);
         }
         else if ( methodName.compareTo(SIP_REGISTER_METHOD) == 0 && isExpiresZero(&request)) 
         {
@@ -654,34 +656,9 @@ SipRefreshMgr::sendRequest (
         retval = OS_SUCCESS;
     }
 
-
-    if (!bIsUnregOrUnsub)
-    {
-        // Figure out the refresh period for reschedule
-        if ( request.getExpiresField(&refreshPeriod) == FALSE )
-        {                        
-            if ( methodName.compareTo(SIP_REGISTER_METHOD) == 0 )
-            {
-                refreshPeriod = mDefaultRegistryPeriod;
-            }
-            else //SUBSCRIBE
-            {
-                refreshPeriod = mDefaultSubscribePeriod;
-            }
-        }
-
-		if (this->mAutoReschedule) { /*RL*/
-	        // Reschedule in case of failure
-	        rescheduleRequest(
-	                &request,
-	                refreshPeriod,
-	                method,
-	                FAILED_PERCENTAGE_TIMEOUT );
-    	}
-    }
-
     return retval;
 }
+
 
 void 
 SipRefreshMgr::rescheduleRequest(
@@ -797,6 +774,7 @@ SipRefreshMgr::rescheduleRequest(
         SipMessage* timerRegisterMessage = new SipMessage(*request);
 
         OsTimer* timer = new OsTimer(&mIncomingQ, (int)timerRegisterMessage);
+        mpTimer = timer;
 
         int maxSipTransactionTimeSecs = 
             (mMyUserAgent->getSipStateTransactionTimeout()/1000);
@@ -840,16 +818,25 @@ SipRefreshMgr::processResponse(
     SipMessage *request)
 {
     SipMessage* response = (SipMessage*)((SipMessageEvent&)eventMessage).getMessage();
+    SipMessage* requestCopy = mRegisterList.getRequestFor(response);
+    if (requestCopy)
+    {
+        requestCopy = new SipMessage(*requestCopy);
+    }
+    
 
+    SipMessage* responseCopy = new SipMessage(*response);
     UtlBoolean sendEventToUpperlayer = FALSE;
 
+    removeAllFromRequestList(response);
+
     UtlString method;
-    request->getRequestMethod( &method) ;
+    requestCopy->getRequestMethod( &method) ;
     
     // ensure that this is a response first
-    if ( response->isResponse() )
+    if ( responseCopy->isResponse() )
     {
-        int responseCode = response->getResponseStatusCode();
+        int responseCode = responseCopy->getResponseStatusCode();
 
         if ( request && responseCode < SIP_2XX_CLASS_CODE )
         {   
@@ -860,12 +847,12 @@ SipRefreshMgr::processResponse(
                     (responseCode < SIP_3XX_CLASS_CODE) ) )
         {
             // Success Class response 2XX
-            processOKResponse(response, request );
+            processOKResponse(responseCopy, requestCopy );
         }
         else  // failure case 
         {
             // unregister/unsubscribe?
-            if ( isExpiresZero(request) )
+            if ( isExpiresZero(requestCopy) )
             {
                 // reschedule only if expires value id not zero otherwise 
                 // it means we just did an unregister
@@ -873,7 +860,7 @@ SipRefreshMgr::processResponse(
                 {
                         Url url;
                         UtlString lineId;
-                        request->getToUrl(url);
+                        requestCopy->getToUrl(url);
                         url.getIdentity(lineId);
                         lineId = "sip:" + lineId; 
                         if (responseCode == 401 || responseCode == 403 || responseCode == 407)
@@ -902,7 +889,7 @@ SipRefreshMgr::processResponse(
                 {
                     Url url;
                     UtlString lineId;
-                    request->getToUrl(url);
+                    requestCopy->getToUrl(url);
                     url.getIdentity(lineId);
                     
                     if (getLineMgr())
@@ -918,13 +905,16 @@ SipRefreshMgr::processResponse(
                     else if (responseCode == 408)
                     {
                         fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_REGISTER_FAILED_TIMEOUT);
+                        rescheduleAfterTime(requestCopy, FAILED_PERCENTAGE_TIMEOUT );
+                        
                     }
                     else
                     {
                         fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_CAUSE_UNKNOWN);
+                        // Reschedule in case of failure
+                        rescheduleAfterTime(requestCopy, FAILED_PERCENTAGE_TIMEOUT );
                     }
                 }
-                // /*RL*/ rescheduleAfterTime(request, FAILED_PERCENTAGE_TIMEOUT);
             }
         }
     }
@@ -934,7 +924,7 @@ SipRefreshMgr::processResponse(
         {
             Url url;
             UtlString lineId;
-            request->getToUrl(url);
+            requestCopy->getToUrl(url);
             url.getIdentity(lineId);
             
             mpLineMgr->setStateForLine(url, SipLine::LINE_STATE_FAILED);
@@ -942,7 +932,7 @@ SipRefreshMgr::processResponse(
 
             Url url;
             UtlString lineId;
-            request->getToUrl(url);
+            requestCopy->getToUrl(url);
             url.getIdentity(lineId);
             lineId = "sip:" + lineId; 
             fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_CAUSE_UNKNOWN);
@@ -950,12 +940,10 @@ SipRefreshMgr::processResponse(
 
     if ( sendEventToUpperlayer )
     {
-        sendToObservers(eventMessage, request);
+        sendToObservers(eventMessage, requestCopy);
     }
-    else
-    {
-        this->removeAllFromRequestList(response);
-    }
+    delete responseCopy;
+    delete requestCopy;
 }
 
 void 
@@ -997,7 +985,6 @@ SipRefreshMgr::processOKResponse(
                 // if its an unregister, remove all related messasges 
                 // from the appropriate request list
                 response->setCSeqField(-1, method);
-                this->removeAllFromRequestList(response);
                 // TODO - should also destroy the timer now
 
                 Url url;
@@ -1017,12 +1004,12 @@ SipRefreshMgr::processOKResponse(
             }
 			/*RL*/
             rescheduleRequest(request, responseRefreshPeriod, SIP_REGISTER_METHOD);
-                Url url;
-                UtlString lineId;
-                request->getToUrl(url);
-                url.getIdentity(lineId);            
-                lineId = "sip:" + lineId; 
-                fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTERED, LINESTATE_REGISTERED_NORMAL);
+            Url url;
+            UtlString lineId;
+            request->getToUrl(url);
+            url.getIdentity(lineId);            
+            lineId = "sip:" + lineId; 
+            fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTERED, LINESTATE_REGISTERED_NORMAL);
 
             // /*RL*/ rescheduleRequest(request, responseRefreshPeriod, SIP_REGISTER_METHOD);
         }
@@ -1065,7 +1052,7 @@ SipRefreshMgr::processOKResponse(
                 // if its an unregister, remove all related messasges 
                 // from the appropriate request list
                 response->setCSeqField(-1, method);
-                this->removeAllFromRequestList(response);
+                removeAllFromRequestList(response);
                 // TODO - should also destroy the timer now
         }
         else if ( responseRefreshPeriod > 0 )
@@ -1255,16 +1242,16 @@ SipRefreshMgr::registerUrl(
     {       
         UtlString localIp;
         int localPort;
-        OsSocket::SocketProtocolTypes protocol = OsSocket::UDP;
+        SIPX_TRANSPORT_TYPE protocol = TRANSPORT_UDP;
         
         UtlString uri(registerUri);
         if (uri.contains("sips:") || uri.contains("transport=tls"))
         {
-            protocol = OsSocket::SSL_SOCKET;
+            protocol = TRANSPORT_TLS;
         }
         if (uri.contains("transport=tcp"))
         {
-            protocol = OsSocket::TCP;
+            protocol = TRANSPORT_TCP;
         }
 
         mMyUserAgent->getLocalAddress(&localIp, &localPort, protocol);
@@ -1676,16 +1663,16 @@ void SipRefreshMgr::unSubscribeAll()
             UtlString localIp;
             int localPort;
 
-            OsSocket::SocketProtocolTypes protocol = OsSocket::UDP;
+            SIPX_TRANSPORT_TYPE protocol = TRANSPORT_UDP;
             UtlString url;
             listMessage->getToField(&url);
             if (url.contains("sips:") || url.contains("transport=tls"))
             {
-                protocol = OsSocket::SSL_SOCKET;
+                protocol = TRANSPORT_TLS;
             }
             if (url.contains("transport=tcp"))
             {
-                protocol = OsSocket::TCP;
+                protocol = TRANSPORT_TCP;
             }
 
             mMyUserAgent->getLocalAddress(&localIp, &localPort, protocol);
@@ -1985,10 +1972,16 @@ SipRefreshMgr::rescheduleAfterTime(
 {
     int iOriginalExpiration ;
     UtlString method ;
-    request->getRequestMethod(&method);
+    int dummy;
+    request->getCSeqField(&dummy, &method);
+    
+    if (request->isResponse())
+    {    
+        assert(false);
+    }
     
     // Figure out expiration
-    if (!request->getExpiresField(&iOriginalExpiration))
+    if (request && !request->getExpiresField(&iOriginalExpiration))
     {
         if ( method.compareTo(SIP_REGISTER_METHOD) == 0 )
         {
@@ -1999,12 +1992,14 @@ SipRefreshMgr::rescheduleAfterTime(
             iOriginalExpiration = mDefaultSubscribePeriod ;
         } 
     }
-        
-    rescheduleRequest( 
-        request, 
-        iOriginalExpiration, 
-        method.data(), 
-        percentage);
+    if (request)
+    {
+        rescheduleRequest( 
+            request, 
+            iOriginalExpiration, 
+            method.data(), 
+            percentage);
+    }        
 }
 
 void 

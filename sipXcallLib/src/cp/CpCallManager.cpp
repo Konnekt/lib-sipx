@@ -37,7 +37,7 @@ const int    CpCallManager::CALLMANAGER_MAX_REQUEST_MSGS = 6000;
 const int    CpCallManager::CALLMANAGER_MAX_REQUEST_MSGS = 1000;
 #endif  
 
-unsigned long CpCallManager::mCallNum = 0;
+intll CpCallManager::mCallNum = 0;
 OsMutex CpCallManager::mCallNumMutex(OsMutex::Q_FIFO);
 
 /* //////////////////////////// PUBLIC //////////////////////////////////// */
@@ -494,8 +494,8 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
       // Get the start time.
       OsTime current_time;
       OsDateTime::getCurTime(current_time);
-      unsigned long start_time =
-         ((unsigned long) current_time.seconds()) * 1000000 + current_time.usecs();
+      intll start_time =
+         ((intll) current_time.seconds()) * 1000000 + current_time.usecs();
 
       // Get the process ID.
       int process_id;
@@ -508,14 +508,8 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
       thisHost.replace('@','*');
 
       // Compose the static fields.
-#ifdef WIN32
-	  if (sizeof(start_time) == 8) {
-			sprintf(buffer, "%d/%I64d/%s", process_id, start_time, thisHost.data());
-	  } else {
-			sprintf(buffer, "%d/%u/%s", process_id, start_time, thisHost.data());
-	  }
-#else
-      sprintf(buffer, "%d/%lld/%s", process_id, start_time, thisHost.data());
+      sprintf(buffer, "%d_%" FORMAT_INTLL "d_%s",
+              process_id, start_time, thisHost.data());
 #endif
       // Hash them.
       NetMd5Codec encoder;
@@ -528,14 +522,8 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
    }
 
    // Compose the new Call-Id.
-#ifdef WIN32
-   if (sizeof(mCallNum) == 8) {
-		sprintf(buffer, "%s_%I64d_%s", callIdPrefix, mCallNum, suffix.data());
-   } else {
-		sprintf(buffer, "%s_%u_%s", callIdPrefix, mCallNum, suffix.data());
-   }
-#else
-   sprintf(buffer, "%s_%lld_%s", callIdPrefix, mCallNum, suffix.data());
+   sprintf(buffer, "%s_%" FORMAT_INTLL "d_%s",
+           callIdPrefix, mCallNum, suffix.data());
 #endif
 
    // Copy it to the destination.

@@ -3,7 +3,7 @@ $verbose = 2;
 include('adv_copy.php');
 
 $srcDir = './';
-$destDir = '_sipX_SC/';
+$destDir = '__rozne/_sipX_noweTAPI_SC/';
 $svnNotMask = 'D::.+/(\.svn|Debug|Release)/?';
 $srcMask = '(D::)|(\.(cpp|c|hpp|h|wav|txt|vcproj|sln|rc|am|bat|xml)$)';
 $srcRootMask = '^F::.+?/([^/.]+|[^/]+\.(sln|vcproj|txt|rc|h))$';
@@ -22,10 +22,12 @@ $dest = $destDir;
 
 // --------------------------
 
+/*
 $src = $srcDir . "doc/";
 $dest = $destDir . "doc/";
 
 advCopy2("{$src}", "{$dest}", '^F::/.+\.(html|css)', '', $copyFlag);
+*/
 
 // --------------------------
 
@@ -94,11 +96,11 @@ advCopy2("{$src}syslog2siptrace", "{$dest}syslog2siptrace", $srcMask, $svnNotMas
 
 
 // --------------------------
-
+/*
 $src = $srcDir . "sipXtest/";
 $dest = $destDir . "sipXtest/";
 
 advCopy2("{$src}", "{$dest}", $srcMask, $svnNotMask, $copyFlag | ACOPY_RECURSIVE | ACOPY_APPLYTODIRS);
-
+*/
 
 ?>
