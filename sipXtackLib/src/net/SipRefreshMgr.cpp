@@ -612,7 +612,9 @@ SipRefreshMgr::sendRequest (
             }
 
             fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_REGISTER_FAILED_COULD_NOT_CONNECT);
-            rescheduleAfterTime(&request, FAILED_PERCENTAGE_TIMEOUT);
+			if (this->mAutoReschedule) { /*RL*/
+				rescheduleAfterTime(&request, FAILED_PERCENTAGE_TIMEOUT);
+			}
         }
         else if ( methodName.compareTo(SIP_REGISTER_METHOD) == 0 && isExpiresZero(&request)) 
         {
@@ -905,14 +907,17 @@ SipRefreshMgr::processResponse(
                     else if (responseCode == 408)
                     {
                         fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_REGISTER_FAILED_TIMEOUT);
-                        rescheduleAfterTime(requestCopy, FAILED_PERCENTAGE_TIMEOUT );
-                        
+						if (this->mAutoReschedule) {
+							rescheduleAfterTime(requestCopy, FAILED_PERCENTAGE_TIMEOUT );
+						}   
                     }
                     else
                     {
                         fireSipXLineEvent(url, lineId.data(), LINESTATE_REGISTER_FAILED, LINESTATE_CAUSE_UNKNOWN);
                         // Reschedule in case of failure
-                        rescheduleAfterTime(requestCopy, FAILED_PERCENTAGE_TIMEOUT );
+						if (this->mAutoReschedule) {
+	                        rescheduleAfterTime(requestCopy, FAILED_PERCENTAGE_TIMEOUT );
+						}
                     }
                 }
             }

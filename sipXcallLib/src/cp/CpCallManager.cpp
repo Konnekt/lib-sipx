@@ -510,7 +510,7 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
       // Compose the static fields.
       sprintf(buffer, "%d_%" FORMAT_INTLL "d_%s",
               process_id, start_time, thisHost.data());
-#endif
+
       // Hash them.
       NetMd5Codec encoder;
       encoder.encode(buffer, suffix);
@@ -524,7 +524,6 @@ void CpCallManager::getNewCallId(const char* callIdPrefix, UtlString* callId)
    // Compose the new Call-Id.
    sprintf(buffer, "%s_%" FORMAT_INTLL "d_%s",
            callIdPrefix, mCallNum, suffix.data());
-#endif
 
    // Copy it to the destination.
    *callId = buffer;

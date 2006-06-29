@@ -51,7 +51,7 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 3,3,1,0
+ FILEVERSION 3,3,2,0
  PRODUCTVERSION 3,3,0,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
@@ -70,7 +70,7 @@ BEGIN
             VALUE "Comments", "Credits:  Bob Andreasen, Andy Jorde, Mike Cohen, Dan Petrie"
             VALUE "CompanyName", "Pingtel Corp."
             VALUE "FileDescription", "SIP User-Agent API"
-            VALUE "FileVersion", "3.3.1"
+            VALUE "FileVersion", "3.3.2"
             VALUE "InternalName", "sipXtapi"
             VALUE "LegalCopyright", "Copyright (C) 2006 Pingtel Corp."
             VALUE "OriginalFilename", "sipXtapi.dll"
