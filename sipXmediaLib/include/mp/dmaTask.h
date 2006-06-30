@@ -53,6 +53,7 @@ typedef void (*MuteListenerFuncPtr)(bool);
 // FORWARD DECLARATIONS
 extern OsStatus dmaStartup(int samplesPerFrame);/* initialize the DMA driver */
 extern void dmaShutdown(void);                  /* release the DMA driver */
+extern void dmaSignalMicDeviceChange(void);		/* Signal a device change to the Mic Thread */
 
 extern int unMuteSpkr(void);
 extern int muteSpkr(void);

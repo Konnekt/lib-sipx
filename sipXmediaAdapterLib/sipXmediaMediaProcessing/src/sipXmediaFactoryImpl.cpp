@@ -210,6 +210,7 @@ OsStatus sipXmediaFactoryImpl::setMicrophoneDevice(const UtlString& device)
     OsStatus rc = OS_SUCCESS ;
 #ifdef WIN32
     DmaTask::setInputDevice(device.data()) ;
+	dmaSignalMicDeviceChange();
 #endif
     return rc ;    
 }
@@ -332,6 +333,10 @@ OsStatus sipXmediaFactoryImpl::getSpeakerVolume(int& iVolume) const
 
 //#ifdef WIN32
     iVolume = MpCodec_getVolume() ;
+	if (iVolume==-1) {
+		rc = OS_FAILED;
+		iVolume = 0;
+	}
 //#endif
     return rc ;
 }

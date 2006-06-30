@@ -54,7 +54,6 @@ static int lastOut;
 HWAVEOUT audioOutH;         // Referenced in MpCodec (vol)
 HWAVEOUT audioOutCallH;     // Referenced in MpCodec (vol)
 
-
 /* ============================ FUNCTIONS ================================= */
 
 // Determine which speaker handle should be used
@@ -532,6 +531,7 @@ unsigned int __stdcall SpkrThread(LPVOID Unused)
     OsStatus res;
     static bool bRunning = false ;
     HWAVEOUT hOut = NULL;
+	UINT	timerid=0;
 
     // Verify that only 1 instance of the MicThread is running
     if (bRunning) 
@@ -572,7 +572,7 @@ unsigned int __stdcall SpkrThread(LPVOID Unused)
     {
         // NOT using a sound card
         // Set up a 10ms timer to call back to this routine
-        timeSetEvent(10, 0, TimerCallbackProc, GetCurrentThreadId(), TIME_PERIODIC);
+        timerid = timeSetEvent(10, 0, TimerCallbackProc, GetCurrentThreadId(), TIME_PERIODIC);
     }
 
     played = 0;   
@@ -613,6 +613,30 @@ unsigned int __stdcall SpkrThread(LPVOID Unused)
                         // Should bump missed frame statistic
                         break;
                 }
+				// Check for a changed speaker device
+                if (DmaTask::isOutputDeviceChanged())
+                {                    
+                    DmaTask::clearOutputDeviceChanged() ;
+                    closeSpeakerDevices() ;
+					if (audioOutH)
+					{
+						waveOutReset(audioOutH);
+					}
+					if (audioOutCallH)
+					{
+						waveOutReset(audioOutCallH);
+					}
+					//Sleep(100);
+					// Kill the hearbeat timer if it exists
+					if (timerid>0)
+						timeKillEvent(timerid);
+                    if (openSpeakerDevices(pWH, hOut))
+                    {
+						// Open failed - so start the heartbeat timer
+                        timerid = timeSetEvent(10, 0, TimerCallbackProc, GetCurrentThreadId(), TIME_PERIODIC);                    
+                    }
+                    continue ;                    
+                }
                 break ;
             case WOM_DONE:
                 pWH = (WAVEHDR *) tMsg.wParam;
@@ -644,7 +668,9 @@ unsigned int __stdcall SpkrThread(LPVOID Unused)
                     closeSpeakerDevices() ;
                     if (openSpeakerDevices(pWH, hOut))
                     {
-                        timeSetEvent(10, 0, TimerCallbackProc, GetCurrentThreadId(), TIME_PERIODIC);                    
+						if (timerid>0)
+							timeKillEvent(timerid);
+                        timerid = timeSetEvent(10, 0, TimerCallbackProc, GetCurrentThreadId(), TIME_PERIODIC);                    
                     }
                     continue ;                    
                 }

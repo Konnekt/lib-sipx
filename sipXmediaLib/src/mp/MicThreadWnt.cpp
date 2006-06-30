@@ -178,7 +178,7 @@ bool inPostUnprep(int n, int discard, DWORD bufLen, bool bFree)
 
          micQLen[in] = MpMisc.pMicQ->numMsgs();
          if (in == 1023) {
-            osPrintf("\n\n Microphone Queue lengths [%d,%d]:\n", iPU, frameCount);
+            osPrintf("\n\n Microphone Queue lengths [%d,%d]:\n", iPU, 1);
             for (i=0; i<1024; i+=32) {
                for (j=i; j<(i+32); j++) {
                   osPrintf("%3d", micQLen[j]);
@@ -377,6 +377,8 @@ void closeMicDevice()
     int        i ;
 
     // Cleanup
+	if (!audioInH)
+		return;
     ret = waveInReset(audioInH);
     if (ret != MMSYSERR_NOERROR)
     {
@@ -481,9 +483,6 @@ unsigned int __stdcall MicThread(LPVOID Unused)
     // Start up Speaker thread
     ResumeThread(hSpkrThread);
 
-#ifdef DEBUG_WINDOZE
-    frameCount = 0;
-#endif
     recorded = 0;
     bDone = false ;
     while (!bDone) 
@@ -494,6 +493,18 @@ unsigned int __stdcall MicThread(LPVOID Unused)
             switch (tMsg.message) 
             {
             case WIM_DATA:
+				// Check if we got data - if not - then this signals a device change
+				if (!tMsg.wParam) {
+					if (DmaTask::isInputDeviceChanged())
+					{                    
+						DmaTask::clearInputDeviceChanged() ;
+
+						closeMicDevice() ;
+						openMicDevice(bRunning, pWH) ;
+
+					}
+					break;
+				}
                 pWH = (WAVEHDR *) tMsg.wParam;
                 n = (pWH->dwUser) & USER_BUFFER_MASK;
 
