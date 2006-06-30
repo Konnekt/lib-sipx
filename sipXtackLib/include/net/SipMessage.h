@@ -426,7 +426,7 @@ public:
 
     void setCancelData(const char* fromAddress, const char* toAddress,
                        const char* callId,
-                       int sequenceNumber = 1);
+                       int sequenceNumber = 1, const char* contactUrl = 0);
 
     void setCancelData(const SipMessage* inviteResponse);
 

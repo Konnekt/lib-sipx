@@ -77,7 +77,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="include,include\glib"
+				AdditionalIncludeDirectories="include;include\glib;..\..\sipXportLib\include;..\sipXcallLib\include"
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;DISABLE_MEM_POOLS"
 				StringPooling="TRUE"
 				RuntimeLibrary="2"

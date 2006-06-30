@@ -1714,11 +1714,11 @@ void SipMessage::setByeErrorData(const SipMessage* byeRequest)
 
 void SipMessage::setCancelData(const char* fromField, const char* toField,
                const char* callId,
-               int sequenceNumber)
+               int sequenceNumber, const char* contactUrl)
 {
    setRequestData(SIP_CANCEL_METHOD, toField,
                      fromField, toField,
-                     callId, sequenceNumber);
+                     callId, sequenceNumber, contactUrl);
 }
 
 void SipMessage::setCancelData(const SipMessage* inviteRequest)
@@ -1738,10 +1738,14 @@ void SipMessage::setCancelData(const SipMessage* inviteRequest)
    inviteRequest->getCSeqField(&sequenceNum, &sequenceMethod);
     inviteRequest->getRequestUri(&uri);
 
+	/*RL: If no contact field is provided in CANCEL request, than VIA headers are set improperly*/
+	UtlString contact;
+	inviteRequest->getContactField(0, contact);
+
    //setCancelData(fromField.data(), toField.data(), callId, sequenceNum);
     setRequestData(SIP_CANCEL_METHOD, uri,
                   fromField, toField,
-                  callId, sequenceNum);
+                  callId, sequenceNum, contact);
 }
 
 
